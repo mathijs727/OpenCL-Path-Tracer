@@ -20,3 +20,13 @@ bool raytracer::intersect(const Ray& ray, const Sphere& sphere, float& time) {
 	}
 	return false;
 }
+
+bool raytracer::intersect(const Ray & ray, const Plane & sphere, float & time)
+{
+	return false;
+}
+
+bool raytracer::intersect(const Ray & ray, const Triangle & sphere, float & time)
+{
+	return false;
+}

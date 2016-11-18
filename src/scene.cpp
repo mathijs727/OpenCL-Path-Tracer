@@ -29,18 +29,18 @@ glm::vec3 raytracer::Scene::trace_ray(const Ray& ray) const {
 		}
 	}
 	// Check plane intersections
-	for (unsigned int i = 0; i < _spheres.size(); ++i) {
+	for (unsigned int i = 0; i < _planes.size(); ++i) {
 		float intersect_time;
-		if (intersect(ray, _spheres[i], intersect_time) && intersect_time < min_intersect_time) {
+		if (intersect(ray, _planes[i], intersect_time) && intersect_time < min_intersect_time) {
 			min_intersect_time = intersect_time;
 			type_current_hit = Type::Plane;
 			i_current_hit = i;
 		}
 	}
 	// Check triangle intersections
-	for (unsigned int i = 0; i < _spheres.size(); ++i) {
+	for (unsigned int i = 0; i < _triangles.size(); ++i) {
 		float intersect_time;
-		if (intersect(ray, _spheres[i], intersect_time) && intersect_time < min_intersect_time) {
+		if (intersect(ray, _triangles[i], intersect_time) && intersect_time < min_intersect_time) {
 			min_intersect_time = intersect_time;
 			type_current_hit = Type::Triangle;
 			i_current_hit = i;
