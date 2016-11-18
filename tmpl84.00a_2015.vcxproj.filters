@@ -17,6 +17,9 @@
       <Filter>template code</Filter>
     </ClCompile>
     <ClCompile Include="src\camera.cpp" />
+    <ClCompile Include="src\shapes.cpp" />
+    <ClCompile Include="src\scene.cpp" />
+    <ClCompile Include="src\raytracer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
@@ -35,5 +38,8 @@
     <ClInclude Include="src\shapes.h" />
     <ClInclude Include="src\transform.h" />
     <ClInclude Include="src\types.h" />
+    <ClInclude Include="src\ray.h" />
+    <ClInclude Include="src\raytracer.h" />
+    <ClInclude Include="src\pixel.h" />
   </ItemGroup>
 </Project>

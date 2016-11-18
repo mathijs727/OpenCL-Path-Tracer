@@ -18,7 +18,7 @@ struct IntersectionResult
 	float time;
 };
 
-bool intersect(const Ray& ray, const Sphere& sphere, IntersectionResult& intersection);
+bool intersect(const Ray& ray, const Sphere& sphere, float& time);
 
 struct Plane {
 	glm::vec3 normal;

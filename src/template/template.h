@@ -7,6 +7,8 @@ typedef unsigned int uint;
 typedef unsigned char uchar;
 typedef unsigned char byte;
 
+#define NOMINMAX
+
 #ifdef _WIN32
 #include "SDL.h"
 #include "SDL_syswm.h"

@@ -21,6 +21,9 @@
   <ItemGroup>
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\game.cpp" />
+    <ClCompile Include="src\raytracer.cpp" />
+    <ClCompile Include="src\scene.cpp" />
+    <ClCompile Include="src\shapes.cpp" />
     <ClCompile Include="src\template\surface.cpp" />
     <ClCompile Include="src\template\template.cpp" />
     <ClCompile Include="src\template\threads.cpp" />
@@ -29,6 +32,9 @@
     <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\game.h" />
     <ClInclude Include="src\material.h" />
+    <ClInclude Include="src\pixel.h" />
+    <ClInclude Include="src\ray.h" />
+    <ClInclude Include="src\raytracer.h" />
     <ClInclude Include="src\scene.h" />
     <ClInclude Include="src\shapes.h" />
     <ClInclude Include="src\template\surface.h" />
@@ -85,8 +91,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\build\$(Platform)</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\build\int\$(Platform)</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\build\$(Platform)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\build\int\$(Platform)\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkIncremental>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)\build\$(Platform)</OutDir>
@@ -101,8 +107,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <OutDir>$(SolutionDir)\build\$(Platform)</OutDir>
-    <IntDir>$(SolutionDir)\build\int\$(Platform)</IntDir>
+    <OutDir>$(SolutionDir)\build\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)\build\int\$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(UniversalCRT_IncludePath);$(IncludePath)</IncludePath>
