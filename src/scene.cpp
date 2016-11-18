@@ -8,7 +8,7 @@ raytracer::Scene::Scene() {
 glm::vec3 raytracer::Scene::trace_ray(const Ray& ray) const {
 	float min_intersect_time = std::numeric_limits<float>::max();
 	int i_current_hit_sphere = -1;
-	for (int i = 0; i < _spheres.size(); ++i) {
+	for (unsigned int i = 0; i < _spheres.size(); ++i) {
 		float intersect_time;
 		if (intersect(ray, _spheres[i], intersect_time) && intersect_time < min_intersect_time) {
 			min_intersect_time = intersect_time;
