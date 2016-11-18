@@ -15,7 +15,7 @@ void Game::Init()
 {
 	_scene = std::make_unique<Scene>();
 	Transform camera_transform;
-	camera_transform.orientation = glm::quat(1, 0, 0, 0); // identity
+	camera_transform.orientation = glm::quat(); // identity
 	camera_transform.location = glm::vec3(0, 0, 0);
 	_camera = std::make_unique<Camera>(camera_transform, 100, 9.f / 16.f, 1);
 

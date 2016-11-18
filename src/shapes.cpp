@@ -9,7 +9,7 @@ bool raytracer::intersect(const Ray& ray, const Sphere& sphere, float& time) {
 	float component_parallel = glm::dot(distance, ray.direction);
 	glm::vec3 vec_parallel = component_parallel * ray.direction;
 	// calculates the normal component to compare it with the radius
-	glm::vec3 vec_normal = distance - component_parallel;
+	glm::vec3 vec_normal = distance - vec_parallel;
 	float component_normal_squared = glm::length2(vec_normal);
 	float radius_squared = sphere.radius * sphere.radius;
 	if (component_normal_squared < radius_squared) {

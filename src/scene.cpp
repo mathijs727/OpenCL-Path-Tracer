@@ -12,7 +12,7 @@ glm::vec3 raytracer::Scene::trace_ray(const Ray& ray) const {
 		float intersect_time;
 		if (intersect(ray, _spheres[i], intersect_time) && intersect_time < min_intersect_time) {
 			min_intersect_time = intersect_time;
-			i = i_current_hit_sphere;
+			i_current_hit_sphere = i;
 		}
 	}
 	if (i_current_hit_sphere >= 0) {

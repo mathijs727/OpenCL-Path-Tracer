@@ -1,10 +1,11 @@
 #include "camera.h"
+#include "detail\func_trigonometric.hpp"
 
 raytracer::Camera::Camera(const Transform& transform, float fov, float aspectRatio, float width) {
 	_transform = transform;
 	_aspectRatio = aspectRatio;
 	_worldspaceHalfWidth = width * 0.5f;
-	_eyeDistance = _worldspaceHalfWidth / tan(fov * 0.5f);
+	_eyeDistance = _worldspaceHalfWidth / std::tan(glm::radians(fov * 0.5f));
 }
 
 void raytracer::Camera::get_frustum(glm::vec3& eye, glm::vec3& scr_base_origin, glm::vec3& scr_base_u, glm::vec3& scr_base_v) const {
