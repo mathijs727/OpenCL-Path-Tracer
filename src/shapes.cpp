@@ -25,10 +25,9 @@ bool raytracer::intersect(const Ray& ray, const Plane& plane, float& time)
 {
 	// http://stackoverflow.com/questions/23975555/how-to-do-ray-plane-intersection
 	float denom = glm::dot(plane.normal, ray.direction);
-	if (abs(denom > 1e-6))// Check that ray not parallel to plane
+	if (abs(denom) > 1e-6)// Check that ray not parallel to plane
 	{
 		// A known point on the plane
-		// For whatever reason i had to switch ray.origin and center
 		glm::vec3 center = plane.offset * plane.normal;
 		float t = glm::dot(center - ray.origin, plane.normal) / denom;
 		if (t >= 0.0f)

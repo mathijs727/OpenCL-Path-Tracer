@@ -25,13 +25,13 @@ void Game::Init()
 	}
 
 	{
-		Plane plane(glm::vec3(0, 1, 0), glm::vec3(0, -0.5f, 0));
+		Plane plane(glm::vec3(0, 1, 0), glm::vec3(0, -1.f, 0));
 		Material material = Material::Diffuse(glm::vec3(0, 0, 1));
 		_scene->add_primitive(plane, material);
 	}
 
-	Light light = Light::Directional(glm::vec3(0.4f, 0.3f, 0.2f), glm::vec3(0, -1, 0));
-	//Light light = Light::Point(glm::vec3(0.4f, 0.3f, 0.2f), glm::vec3(0, 3, 5));
+	//Light light = Light::Directional(glm::vec3(0.4f, 0.3f, 0.2f), glm::vec3(0, -1, 0));
+	Light light = Light::Point(glm::vec3(0.4f, 0.3f, 0.2f), glm::vec3(0, 3, 5));
 	_scene->add_light(light);
 
 	raytrace(*_camera, *_scene, *_screen);
