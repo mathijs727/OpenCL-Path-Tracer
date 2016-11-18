@@ -25,6 +25,7 @@ void raytracer::raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surfac
 			glm::vec3 scr_point = scr_base_origin + u_step * (float) x + v_step * (float) y;
 			Ray ray(eye, glm::normalize(scr_point - eye));
 			glm::vec3 colour = scene.trace_ray(ray);
+
 			PixelRGBA pixel;
 			pixel.r = (u8) std::min((u32)(colour.r * 255), 255U);
 			pixel.g = (u8) std::min((u32)(colour.g * 255), 255U);

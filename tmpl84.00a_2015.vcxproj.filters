@@ -20,6 +20,7 @@
     <ClCompile Include="src\shapes.cpp" />
     <ClCompile Include="src\scene.cpp" />
     <ClCompile Include="src\raytracer.cpp" />
+    <ClCompile Include="src\light.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
@@ -41,5 +42,6 @@
     <ClInclude Include="src\ray.h" />
     <ClInclude Include="src\raytracer.h" />
     <ClInclude Include="src\pixel.h" />
+    <ClInclude Include="src\light.h" />
   </ItemGroup>
 </Project>

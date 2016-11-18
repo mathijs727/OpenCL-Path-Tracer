@@ -3,7 +3,6 @@
 #include "scene.h"
 #include "camera.h"
 #include "transform.h"
-#include "camera.h"
 #include "raytracer.h"
 
 using namespace raytracer;
@@ -22,6 +21,9 @@ void Game::Init()
 	Sphere sphere(glm::vec3(0, 0, 5), 1);
 	Material material = Material::Diffuse(glm::vec3(0,1,0));
 	_scene->add_primitive(sphere, material);
+
+	Light light = Light::Directional(glm::vec3(0.4f, 0.3f, 0.2f), glm::vec3(2.f, 3.f, 4.f));
+	_scene->add_light(light);
 
 	raytrace(*_camera, *_scene, *_screen);
 }
