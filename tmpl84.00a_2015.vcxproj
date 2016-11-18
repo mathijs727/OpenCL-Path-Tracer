@@ -19,22 +19,23 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="camera.cpp" />
+    <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\game.cpp" />
     <ClCompile Include="src\template\surface.cpp" />
     <ClCompile Include="src\template\template.cpp" />
     <ClCompile Include="src\template\threads.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="camera.h" />
-    <ClInclude Include="material.h" />
-    <ClInclude Include="shapes.h" />
+    <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\game.h" />
+    <ClInclude Include="src\material.h" />
+    <ClInclude Include="src\scene.h" />
+    <ClInclude Include="src\shapes.h" />
     <ClInclude Include="src\template\surface.h" />
     <ClInclude Include="src\template\template.h" />
     <ClInclude Include="src\template\threads.h" />
-    <ClInclude Include="transform.h" />
-    <ClInclude Include="types.h" />
+    <ClInclude Include="src\transform.h" />
+    <ClInclude Include="src\types.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectName>Template</ProjectName>

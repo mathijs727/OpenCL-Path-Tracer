@@ -16,7 +16,7 @@
     <ClCompile Include="src\template\threads.cpp">
       <Filter>template code</Filter>
     </ClCompile>
-    <ClCompile Include="camera.cpp" />
+    <ClCompile Include="src\camera.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
@@ -29,10 +29,11 @@
     <ClInclude Include="src\template\threads.h">
       <Filter>template code</Filter>
     </ClInclude>
-    <ClInclude Include="shapes.h" />
-    <ClInclude Include="material.h" />
-    <ClInclude Include="types.h" />
-    <ClInclude Include="camera.h" />
-    <ClInclude Include="transform.h" />
+    <ClInclude Include="src\camera.h" />
+    <ClInclude Include="src\material.h" />
+    <ClInclude Include="src\scene.h" />
+    <ClInclude Include="src\shapes.h" />
+    <ClInclude Include="src\transform.h" />
+    <ClInclude Include="src\types.h" />
   </ItemGroup>
 </Project>
