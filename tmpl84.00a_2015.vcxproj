@@ -20,15 +20,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\game.cpp" />
-    <ClCompile Include="src\surface.cpp" />
-    <ClCompile Include="src\template.cpp" />
-    <ClCompile Include="src\threads.cpp" />
+    <ClCompile Include="src\template\surface.cpp" />
+    <ClCompile Include="src\template\template.cpp" />
+    <ClCompile Include="src\template\threads.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
-    <ClInclude Include="src\surface.h" />
-    <ClInclude Include="src\template.h" />
-    <ClInclude Include="src\threads.h" />
+    <ClInclude Include="src\template\surface.h" />
+    <ClInclude Include="src\template\template.h" />
+    <ClInclude Include="src\template\threads.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectName>Template</ProjectName>
@@ -103,7 +103,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>lib;lib\OpenGL;lib\SDL2-2.0.3\include;lib\freeimage</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -118,9 +118,9 @@
       <PrecompiledHeaderFile>template.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;opengl32.lib;freeimage.lib</AdditionalDependencies>
+      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2-2.0.3\lib\x86;lib\OpenGL;lib\freeimage\lib32</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -130,11 +130,18 @@
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>xcopy "$(SolutionDir)dll\$(Platform)\*" "$(TargetDir)" /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>lib;lib\OpenGL;lib\SDL2-2.0.3\include;lib\freeimage</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -149,9 +156,9 @@
       <PrecompiledHeaderFile>template.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;opengl32.lib;freeimage.lib</AdditionalDependencies>
+      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2-2.0.3\lib\x64;lib\OpenGL;lib\freeimage\lib64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -159,6 +166,13 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
     </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>xcopy "$(SolutionDir)dll\$(Platform)\*" "$(TargetDir)" /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

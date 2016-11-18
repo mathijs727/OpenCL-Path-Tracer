@@ -1,4 +1,4 @@
-#include "template.h"
+#include "template/template.h"
 
 // -----------------------------------------------------------
 // Initialize the game

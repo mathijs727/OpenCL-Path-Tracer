@@ -6,27 +6,27 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\threads.cpp">
-      <Filter>template code</Filter>
-    </ClCompile>
-    <ClCompile Include="src\surface.cpp">
-      <Filter>template code</Filter>
-    </ClCompile>
-    <ClCompile Include="src\template.cpp">
-      <Filter>template code</Filter>
-    </ClCompile>
     <ClCompile Include="src\game.cpp" />
+    <ClCompile Include="src\template\surface.cpp">
+      <Filter>template code</Filter>
+    </ClCompile>
+    <ClCompile Include="src\template\template.cpp">
+      <Filter>template code</Filter>
+    </ClCompile>
+    <ClCompile Include="src\template\threads.cpp">
+      <Filter>template code</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\threads.h">
-      <Filter>template code</Filter>
-    </ClInclude>
-    <ClInclude Include="src\surface.h">
-      <Filter>template code</Filter>
-    </ClInclude>
-    <ClInclude Include="src\template.h">
-      <Filter>template code</Filter>
-    </ClInclude>
     <ClInclude Include="src\game.h" />
+    <ClInclude Include="src\template\surface.h">
+      <Filter>template code</Filter>
+    </ClInclude>
+    <ClInclude Include="src\template\template.h">
+      <Filter>template code</Filter>
+    </ClInclude>
+    <ClInclude Include="src\template\threads.h">
+      <Filter>template code</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
