@@ -4,7 +4,7 @@ bool raytracer::get_light_vector(const Light& light, const glm::vec3 position, g
 {
 	if (light.type == Light::Type::Point)
 	{
-		lightDirection = light.point.position - position;
+		lightDirection = glm::normalize(light.point.position - position);
 		return true;
 	}
 	else if (light.type == Light::Type::Directional)
