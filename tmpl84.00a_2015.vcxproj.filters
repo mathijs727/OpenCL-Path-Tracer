@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="template code">
+      <UniqueIdentifier>{bf32dd6e-4be7-4889-8ac6-49e7ee163c40}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\threads.cpp">
+      <Filter>template code</Filter>
+    </ClCompile>
+    <ClCompile Include="src\surface.cpp">
+      <Filter>template code</Filter>
+    </ClCompile>
+    <ClCompile Include="src\template.cpp">
+      <Filter>template code</Filter>
+    </ClCompile>
+    <ClCompile Include="src\game.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\threads.h">
+      <Filter>template code</Filter>
+    </ClInclude>
+    <ClInclude Include="src\surface.h">
+      <Filter>template code</Filter>
+    </ClInclude>
+    <ClInclude Include="src\template.h">
+      <Filter>template code</Filter>
+    </ClInclude>
+    <ClInclude Include="src\game.h" />
+  </ItemGroup>
+</Project>
