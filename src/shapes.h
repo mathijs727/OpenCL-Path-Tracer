@@ -15,6 +15,11 @@ struct Sphere
 };
 
 struct Plane {
+	Plane(const glm::vec3& normal, const glm::vec3 pos)
+	{
+		this->normal = glm::normalize(normal);
+		offset = glm::dot(pos, this->normal);
+	}
 	glm::vec3 normal;
 	float offset;
 };
@@ -25,8 +30,8 @@ struct Triangle
 };
 
 bool intersect(const Ray& ray, const Sphere& sphere, float& time);
-bool intersect(const Ray& ray, const Plane& sphere, float& time);
-bool intersect(const Ray& ray, const Triangle& sphere, float& time);
+bool intersect(const Ray& ray, const Plane& plane, float& time);
+bool intersect(const Ray& ray, const Triangle& triangle, float& time);
 
 }
 
