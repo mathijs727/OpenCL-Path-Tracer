@@ -12,6 +12,11 @@ public:
 	Scene();
 	// traces a ray through the objects in the scene, returns a colour
 	glm::vec3 trace_ray(const Ray& ray) const;
+	template<typename TShape>
+	void add_primitive(TShape&& primitive, const Material& material) {
+		_spheres.push_back(primitive);
+		_materials.push_back(material);
+	}
 private:
 	std::vector<Sphere> _spheres;
 	std::vector<Material> _materials;

@@ -1,5 +1,8 @@
 #pragma once
 
+#include "camera.h"
+#include "scene.h"
+
 #define SCRWIDTH	 1280
 #define SCRHEIGHT	 800
 
@@ -9,7 +12,7 @@ class Surface;
 class Game
 {
 public:
-	void SetTarget( Surface* _Surface ) { screen = _Surface; }
+	void SetTarget( Surface* surface ) { _screen = surface; }
 	void Init();
 	void Shutdown() { /* implement if you want code to be executed upon app exit */ };
 	void HandleInput( float dt );
@@ -20,7 +23,9 @@ public:
 	void KeyUp( int a_Key ) { /* implement if you want to handle keys */ }
 	void KeyDown( int a_Key ) { /* implement if you want to handle keys */ }
 private:
-	Surface* screen;
+	Surface* _screen;
+	std::unique_ptr<raytracer::Scene> _scene;
+	std::unique_ptr<raytracer::Camera> _camera;
 };
 
 }; // namespace Tmpl8

@@ -9,7 +9,7 @@
 
 using namespace raytracer;
 
-void raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surface& target_surface) {
+void raytracer::raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surface& target_surface) {
 	glm::vec3 eye;
 	glm::vec3 scr_base_origin;
 	glm::vec3 scr_base_u;
@@ -27,7 +27,9 @@ void raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surface& target_s
 			glm::vec3 colour = scene.trace_ray(ray);
 			PixelRGBA pixel;
 			pixel.r = (u8) std::min((u32)(colour.r * 255), 255U);
-			pixel.g = (u8) std::min((u32)(colour.r * 255), 255U);
+			pixel.g = (u8) std::min((u32)(colour.g * 255), 255U);
+			pixel.b = (u8) std::min((u32)(colour.b * 255), 255U);
+			pixel.a = 255;
 			*buffer = pixel.value;
 			++buffer;
 		}
