@@ -7,15 +7,11 @@ namespace raytracer {
 
 struct Sphere
 {
+	Sphere(const glm::vec3& centre, float radius) {
+		this->centre = centre; this->radius = radius;
+	}
 	glm::vec3 centre;
 	float radius;
-};
-
-struct IntersectionResult
-{
-	glm::vec3 normal;
-	glm::vec3 point;
-	float time;
 };
 
 bool intersect(const Ray& ray, const Sphere& sphere, float& time);
