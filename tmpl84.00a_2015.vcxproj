@@ -19,16 +19,22 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="camera.cpp" />
     <ClCompile Include="src\game.cpp" />
     <ClCompile Include="src\template\surface.cpp" />
     <ClCompile Include="src\template\template.cpp" />
     <ClCompile Include="src\template\threads.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="camera.h" />
+    <ClInclude Include="material.h" />
+    <ClInclude Include="shapes.h" />
     <ClInclude Include="src\game.h" />
     <ClInclude Include="src\template\surface.h" />
     <ClInclude Include="src\template\template.h" />
     <ClInclude Include="src\template\threads.h" />
+    <ClInclude Include="transform.h" />
+    <ClInclude Include="types.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectName>Template</ProjectName>
@@ -103,7 +109,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -141,7 +147,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Sync</ExceptionHandling>
