@@ -27,6 +27,13 @@ struct Material
 			i8 waddup;
 		} diffuse;
 	};
+
+	static Material Diffuse(const glm::vec3& colour) {
+		Material result;
+		result.type = Type::Diffuse;
+		result.colour = colour;
+		return result;
+	}
 };
 
 }

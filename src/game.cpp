@@ -19,12 +19,8 @@ void Game::Init()
 	camera_transform.location = glm::vec3(0, 0, 0);
 	_camera = std::make_unique<Camera>(camera_transform, 100, 9.f / 16.f, 1);
 
-	Sphere sphere;
-	sphere.centre = glm::vec3(0, 0, 5);
-	sphere.radius = 1;
-	Material material;
-	material.type = Material::Type::Diffuse;
-	material.colour = glm::vec3(0,1,0);
+	Sphere sphere(glm::vec3(0, 0, 5), 1);
+	Material material = Material::Diffuse(glm::vec3(0,1,0));
 	_scene->add_primitive(sphere, material);
 
 	raytrace(*_camera, *_scene, *_screen);
