@@ -8,7 +8,8 @@ namespace raytracer {
 class Scene
 {
 public:
-	glm::vec3 trace_ray();
+	// traces a ray through the objects in the scene, returns a colour
+	glm::vec3 trace_ray(const Ray& ray);
 private:
 	std::vector<Sphere> _spheres;
 };
