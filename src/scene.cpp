@@ -83,7 +83,8 @@ glm::vec3 raytracer::Scene::trace_ray(const Ray& ray) const {
 				// TODO: move this to the material class
 				if (material.type == Material::Type::Diffuse)
 				{
-					colour += material.colour * std::max(0.0f, glm::dot(normal, lightDir));
+					float NdotL = std::max(0.0f, glm::dot(normal, lightDir));
+					colour += material.colour * NdotL * light.colour;
 				}
 				else if (material.type == Material::Type::Mirror)
 				{
