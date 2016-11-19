@@ -6,27 +6,42 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\threads.cpp">
-      <Filter>template code</Filter>
-    </ClCompile>
-    <ClCompile Include="src\surface.cpp">
-      <Filter>template code</Filter>
-    </ClCompile>
-    <ClCompile Include="src\template.cpp">
-      <Filter>template code</Filter>
-    </ClCompile>
     <ClCompile Include="src\game.cpp" />
+    <ClCompile Include="src\template\surface.cpp">
+      <Filter>template code</Filter>
+    </ClCompile>
+    <ClCompile Include="src\template\template.cpp">
+      <Filter>template code</Filter>
+    </ClCompile>
+    <ClCompile Include="src\template\threads.cpp">
+      <Filter>template code</Filter>
+    </ClCompile>
+    <ClCompile Include="src\camera.cpp" />
+    <ClCompile Include="src\shapes.cpp" />
+    <ClCompile Include="src\scene.cpp" />
+    <ClCompile Include="src\raytracer.cpp" />
+    <ClCompile Include="src\light.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\threads.h">
-      <Filter>template code</Filter>
-    </ClInclude>
-    <ClInclude Include="src\surface.h">
-      <Filter>template code</Filter>
-    </ClInclude>
-    <ClInclude Include="src\template.h">
-      <Filter>template code</Filter>
-    </ClInclude>
     <ClInclude Include="src\game.h" />
+    <ClInclude Include="src\template\surface.h">
+      <Filter>template code</Filter>
+    </ClInclude>
+    <ClInclude Include="src\template\template.h">
+      <Filter>template code</Filter>
+    </ClInclude>
+    <ClInclude Include="src\template\threads.h">
+      <Filter>template code</Filter>
+    </ClInclude>
+    <ClInclude Include="src\camera.h" />
+    <ClInclude Include="src\material.h" />
+    <ClInclude Include="src\scene.h" />
+    <ClInclude Include="src\shapes.h" />
+    <ClInclude Include="src\transform.h" />
+    <ClInclude Include="src\types.h" />
+    <ClInclude Include="src\ray.h" />
+    <ClInclude Include="src\raytracer.h" />
+    <ClInclude Include="src\pixel.h" />
+    <ClInclude Include="src\light.h" />
   </ItemGroup>
 </Project>
