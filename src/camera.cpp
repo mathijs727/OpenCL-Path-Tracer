@@ -1,5 +1,5 @@
 #include "camera.h"
-#include "detail\func_trigonometric.hpp"
+#include "detail/func_trigonometric.hpp"
 
 raytracer::Camera::Camera(const Transform& transform, float fov, float aspectRatio, float width) {
 	_transform = transform;

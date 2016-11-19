@@ -12,7 +12,9 @@
 
 #include "template.h"
 #include "../game.h"
-#include "io.h"
+#ifdef _WIN32
+#include <io.h>
+#endif
 
 using namespace Tmpl8;
 

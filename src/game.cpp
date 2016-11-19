@@ -25,7 +25,7 @@ void Game::Init()
 	}
 
 	{
-		Plane plane(glm::vec3(0, 1, 0), glm::vec3(0, -1.f, 0));
+		Plane plane(glm::vec3(0, 1, 0), glm::vec3(0, -2.f, 0));
 		Material material = Material::Diffuse(glm::vec3(0, 0, 1));
 		_scene->add_primitive(plane, material);
 	}
