@@ -1,6 +1,7 @@
 # CMake build folder
 build/
 build_xcode/
+xcode_build/
 build_make/
 *.exe
 *.sublime-workspace
