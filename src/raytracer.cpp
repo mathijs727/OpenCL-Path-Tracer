@@ -20,7 +20,7 @@ void raytracer::raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surfac
 	glm::vec3 v_step = scr_base_v / (float) target_surface.GetHeight();
 
 	u32* buffer = target_surface.GetBuffer();
-	for (int y = target_surface.GetHeight() - 1; y >= 0; --y) {
+	for (int y = 0; y < target_surface.GetHeight(); ++y) {
 		for (int x = 0; x < target_surface.GetWidth(); ++x) {
 			glm::vec3 scr_point = scr_base_origin + u_step * (float) x + v_step * (float) y;
 			Ray ray(eye, glm::normalize(scr_point - eye));
