@@ -16,7 +16,7 @@ void Game::Init()
 	Transform camera_transform;
 	camera_transform.orientation = glm::quat(); // identity
 	camera_transform.location = glm::vec3(0, 0, 0);
-	_camera = std::make_unique<Camera>(camera_transform, 100, 9.f / 16.f, 1);
+	_camera = std::make_unique<Camera>(camera_transform, 100, (float) SCRHEIGHT / SCRWIDTH, 1);
 
 	{
 		Sphere sphere(glm::vec3(0, 1, 5), 1);
