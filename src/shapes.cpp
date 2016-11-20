@@ -30,7 +30,7 @@ bool raytracer::intersect(const Ray& ray, const Plane& plane, float& time)
 		// A known point on the plane
 		glm::vec3 center = plane.offset * plane.normal;
 		float t = glm::dot(center - ray.origin, plane.normal) / denom;
-		if (t >= 0.0f)
+		if (t > 0.0f)
 		{
 			time = t;
 			return true;
@@ -41,5 +41,46 @@ bool raytracer::intersect(const Ray& ray, const Plane& plane, float& time)
 
 bool raytracer::intersect(const Ray& ray, const Triangle& triangle, float& time)
 {
+	return false;
+}
+
+
+
+bool raytracer::intersect(const Line& line, const Sphere& sphere, float& time)
+{
+	float t;
+	glm::vec3 dir = line.dest - line.origin;
+	float maxT2 = glm::length2(dir);
+	if (intersect(Ray(line.origin, glm::normalize(dir)), sphere, t) && (t*t) < maxT2)
+	{
+		time = t;
+		return true;
+	}
+	return false;
+}
+
+bool raytracer::intersect(const Line& line, const Plane& plane, float & time)
+{
+	float t;
+	glm::vec3 dir = line.dest - line.origin;
+	float maxT2 = glm::length2(dir);
+	if (intersect(Ray(line.origin, glm::normalize(dir)), plane, t) && (t*t) < maxT2)
+	{
+		time = t;
+		return true;
+	}
+	return false;
+}
+
+bool raytracer::intersect(const Line& line, const Triangle& triangle, float & time)
+{
+	float t;
+	glm::vec3 dir = line.dest - line.origin;
+	float maxT2 = glm::length2(dir);
+	if (intersect(Ray(line.origin, glm::normalize(dir)), triangle, t) && (t*t) < maxT2)
+	{
+		time = t;
+		return true;
+	}
 	return false;
 }

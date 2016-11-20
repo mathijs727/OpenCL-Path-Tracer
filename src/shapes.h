@@ -33,5 +33,8 @@ bool intersect(const Ray& ray, const Sphere& sphere, float& time);
 bool intersect(const Ray& ray, const Plane& plane, float& time);
 bool intersect(const Ray& ray, const Triangle& triangle, float& time);
 
+bool intersect(const Line& line, const Sphere& sphere, float& time);
+bool intersect(const Line& line, const Plane& plane, float& time);
+bool intersect(const Line& line, const Triangle& triangle, float& time);
 }
 

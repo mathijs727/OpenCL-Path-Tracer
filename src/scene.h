@@ -13,6 +13,8 @@ public:
 	Scene();
 	// traces a ray through the objects in the scene, returns a colour
 	glm::vec3 trace_ray(const Ray& ray) const;
+	bool check_ray(const Ray& ray) const;
+	bool check_line(const Line& line) const;
 
 	void add_primitive(const Sphere& primitive, const Material& material) {
 		_spheres.push_back(primitive);

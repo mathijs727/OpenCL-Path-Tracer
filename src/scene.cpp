@@ -77,7 +77,7 @@ glm::vec3 raytracer::Scene::trace_ray(const Ray& ray) const {
 		glm::vec3 colour = glm::vec3(0);
 		for (auto& light : _lights)
 		{
-			glm::vec3 lightDir;
+			/*glm::vec3 lightDir;
 			if (get_light_vector(light, point, lightDir))
 			{
 				// TODO: move this to the material class
@@ -94,10 +94,69 @@ glm::vec3 raytracer::Scene::trace_ray(const Ray& ray) const {
 				else if (material.type == Material::Type::Diffuse)
 				{
 				}
+			}*/
+			glm::vec3 lightDir;
+			if (get_light_vector(light, point, lightDir))
+			{
+				colour += whittedShading(light, ray.direction, point, normal, lightDir, material, *this);
 			}
 		}
 		
 		return colour;
 	}
 	else return glm::vec3(0,0,0);
+}
+
+bool raytracer::Scene::check_ray(const Ray & ray) const
+{
+	// Check sphere intersections
+	for (unsigned int i = 0; i < _spheres.size(); ++i) {
+		float intersect_time;
+		if (intersect(ray, _spheres[i], intersect_time)) {
+			return true;
+		}
+	}
+	// Check plane intersections
+	for (unsigned int i = 0; i < _planes.size(); ++i) {
+		float intersect_time;
+		if (intersect(ray, _planes[i], intersect_time)) {
+			return true;
+		}
+	}
+	// Check triangle intersections
+	for (unsigned int i = 0; i < _triangles.size(); ++i) {
+		float intersect_time;
+		if (intersect(ray, _triangles[i], intersect_time)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool raytracer::Scene::check_line(const Line & line) const
+{
+	// Check sphere intersections
+	for (unsigned int i = 0; i < _spheres.size(); ++i) {
+		float intersect_time;
+		if (intersect(line, _spheres[i], intersect_time)) {
+			return true;
+		}
+	}
+	// Check plane intersections
+	for (unsigned int i = 0; i < _planes.size(); ++i) {
+		float intersect_time;
+		if (intersect(line, _planes[i], intersect_time)) {
+			return true;
+		}
+	}
+	// Check triangle intersections
+	for (unsigned int i = 0; i < _triangles.size(); ++i) {
+		float intersect_time;
+		if (intersect(line, _triangles[i], intersect_time)) {
+			return true;
+		}
+	}
+
+	return false;
 }

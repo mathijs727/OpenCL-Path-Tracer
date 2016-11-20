@@ -21,6 +21,7 @@
     <ClCompile Include="src\scene.cpp" />
     <ClCompile Include="src\raytracer.cpp" />
     <ClCompile Include="src\light.cpp" />
+    <ClCompile Include="src\material.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />

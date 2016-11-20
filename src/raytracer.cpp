@@ -32,8 +32,8 @@ void raytracer::raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surfac
 			Ray ray(eye, glm::normalize(scr_point - eye));
 			glm::vec3 colour = scene.trace_ray(ray);
 
+#if FALSE
 			PixelRGBA pixel;
-#if TRUE
 			pixel.r = (u8) std::min((u32)(colour.r * 255), 255U);
 			pixel.g = (u8) std::min((u32)(colour.g * 255), 255U);
 			pixel.b = (u8) std::min((u32)(colour.b * 255), 255U);
@@ -53,7 +53,7 @@ void raytracer::raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surfac
 			u8 u8_color[16];
 			_mm_storeu_si128((__m128i*)u8_color, sse_i_colour);
 
-			memcpy(buffer, u8_color, sizeof(PixelRGBA));
+			memcpy(buffer, u8_color, 4);
 #endif
 			++buffer;
 		}

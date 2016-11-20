@@ -22,6 +22,7 @@
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\game.cpp" />
     <ClCompile Include="src\light.cpp" />
+    <ClCompile Include="src\material.cpp" />
     <ClCompile Include="src\raytracer.cpp" />
     <ClCompile Include="src\scene.cpp" />
     <ClCompile Include="src\shapes.cpp" />
