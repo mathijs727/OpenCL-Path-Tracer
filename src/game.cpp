@@ -25,6 +25,12 @@ void Game::Init()
 	}
 
 	{
+		Sphere sphere(glm::vec3(2, 1, 4), 1);
+		Material material = Material::Mirror(glm::vec3(0.5f, 0.3f, 0.1f));
+		_scene->add_primitive(sphere, material);
+	}
+
+	{
 		Plane plane(glm::vec3(0, 1, 0), glm::vec3(0, -2.f, 0));
 		Material material = Material::Diffuse(glm::vec3(0.8f, 0.2f, 0.4f));
 		_scene->add_primitive(plane, material);

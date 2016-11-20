@@ -15,23 +15,38 @@ struct Material
 		Fresnel
 	};
 
+	Material() { }
+	Material(const Material& m)
+	{
+		memcpy(this, &m, sizeof(Material));
+	}
+	Material& operator=(const Material& m)
+	{
+		memcpy(this, &m, sizeof(Material));
+		return *this;
+	}
+
 	Type type;
 	glm::vec3 colour;
 	union
 	{
 		struct
 		{
-			i8 shit;
-		} mirror;
-		struct
-		{
-			i8 waddup;
+			int x;
 		} diffuse;
 	};
 
 	static Material Diffuse(const glm::vec3& colour) {
 		Material result;
 		result.type = Type::Diffuse;
+		result.colour = colour;
+		return result;
+	}
+
+	static Material Mirror(const glm::vec3& colour)
+	{
+		Material result;
+		result.type = Type::Mirror;
 		result.colour = colour;
 		return result;
 	}
