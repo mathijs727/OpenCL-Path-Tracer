@@ -33,6 +33,10 @@ bool intersect(const Ray& ray, const Sphere& sphere, float& time);
 bool intersect(const Ray& ray, const Plane& plane, float& time);
 bool intersect(const Ray& ray, const Triangle& triangle, float& time);
 
+float intersect_inside(const Ray& ray, const Sphere& sphere, glm::vec3& out_normal);
+float intersect_inside(const Ray& ray, const Plane& sphere, glm::vec3& out_normal);
+float intersect_inside(const Ray& ray, const Triangle& sphere, glm::vec3& out_normal);
+
 bool intersect(const Line& line, const Sphere& sphere, float& time);
 bool intersect(const Line& line, const Plane& plane, float& time);
 bool intersect(const Line& line, const Triangle& triangle, float& time);

@@ -109,7 +109,7 @@ glm::vec3 raytracer::Scene::trace_ray(const TRay& ray) const {
 
 	if (i_current_hit >= 0) {
 		// Calculate the normal of the hit surface and retrieve the material
-		glm::vec3 direction = ray.get_direction();
+		glm::vec3 direction = glm::normalize(ray.get_direction());
 		glm::vec3 point = min_intersect_time * direction + ray.origin;
 		glm::vec3 normal;
 		Material material;
@@ -117,11 +117,13 @@ glm::vec3 raytracer::Scene::trace_ray(const TRay& ray) const {
 		{
 			normal = glm::normalize(point - _spheres[i_current_hit].centre);
 			material = _sphere_materials[i_current_hit];
+			return whittedShading(direction, point, normal, material, _spheres[i_current_hit], *this);
 		}
 		else if (type_current_hit == Type::Plane)
 		{
 			normal = _planes[i_current_hit].normal;
 			material = _planes_materials[i_current_hit];
+			return whittedShading(direction, point, normal, material, _planes[i_current_hit], *this);
 		}
 		else if (type_current_hit == Type::Triangle)
 		{
@@ -131,10 +133,8 @@ glm::vec3 raytracer::Scene::trace_ray(const TRay& ray) const {
 				points[1] - points[0],
 				points[2] - points[0]);
 			material = _triangles_materials[i_current_hit];
+			return whittedShading(direction, point, normal, material, _triangles[i_current_hit], *this);
 		}
-
-		glm::vec3 colour = glm::vec3(0);
-		return whittedShading(direction, point, normal, material, *this);
 	}
 	else return glm::vec3(0,0,0);
 }

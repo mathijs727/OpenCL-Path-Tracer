@@ -7,7 +7,7 @@ struct Ray
 	Ray() = default;
 	Ray(const glm::vec3& origin, const glm::vec3& direction) {
 		this->origin = origin;
-		this->direction = direction;
+		this->direction = glm::normalize(direction);
 	}
 	glm::vec3 origin;
 	glm::vec3 direction;

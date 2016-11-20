@@ -42,9 +42,9 @@ void raytracer::raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surfac
 			*buffer = pixel.value;
 #else
 			float f_color[4];
-			f_color[0] = colour.r;
+			f_color[0] = colour.b;
 			f_color[1] = colour.g;
-			f_color[2] = colour.b;
+			f_color[2] = colour.r;
 			__m128 sse_f_colour = _mm_loadu_ps(f_color);
 			sse_f_colour = _mm_mul_ps(sse_f_colour, sse_f_255);// Mul with 255
 			__m128i sse_i_colour = _mm_cvtps_epi32(sse_f_colour);// Cast to int

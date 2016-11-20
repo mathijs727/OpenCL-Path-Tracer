@@ -26,7 +26,7 @@ void Game::Init()
 
 	{
 		Sphere sphere(glm::vec3(2, -1, 4), 1);
-		Material material = Material::Fresnel(glm::vec3(0.8f, 0.5f, 0.1f), 1.2f);
+		Material material = Material::Fresnel(glm::vec3(0.9f, 0.9f, 0.9f), 1.52f);
 		_scene->add_primitive(sphere, material);
 	}
 
