@@ -27,17 +27,17 @@ glm::vec3 diffuse_shade(
 }
 
 bool calc_refractive_ray(
-	float refractive_index_in,
-	float refractive_index_out,
+	float n1,
+	float n2,
 	const glm::vec3& rayDirection,
 	const glm::vec3& intersection,
 	const glm::vec3& normal,
 	Ray& out_ray) {
-	float cosine = glm::dot(rayDirection, -normal);
-	float refractive_ratio = refractive_index_in / refractive_index_out;
-	float k = 1 - refractive_ratio*refractive_ratio * (1 - cosine*cosine); 
+	float cosine = glm::dot(-rayDirection, normal);
+	float refractive_ratio = n1 / n2;
+	float k = 1 - ( pow(refractive_ratio,2) * (1 - pow(cosine,2)) ); 
 	if (k >= 0) {
-		out_ray.direction = rayDirection * refractive_ratio + normal * (refractive_ratio * cosine - sqrt(k));
+		out_ray.direction = rayDirection * refractive_ratio - normal * (refractive_ratio * cosine + sqrt(k));
 		out_ray.direction = glm::normalize(out_ray.direction);
 		out_ray.origin = intersection - normal * RAYTRACER_EPSILON;
 		return true;

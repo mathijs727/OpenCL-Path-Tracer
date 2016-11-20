@@ -84,8 +84,8 @@ glm::vec3 diffuse_shade(
 	const Scene& scene);
 
 bool calc_refractive_ray(
-	float refractive_index_in,
-	float refractive_index_out,
+	float n1,
+	float n2,
 	const glm::vec3& rayDirection,
 	const glm::vec3& intersection,
 	const glm::vec3& normal,
@@ -105,17 +105,18 @@ glm::vec3 whittedShading(
 	const glm::vec3& normal,
 	const Material& material,
 	const TShape& shape,
-	const Scene& scene) {
+	const Scene& scene,
+	int current_depth) {
 
 	// TODO: move this to the material class
 	if (material.type == Material::Type::Diffuse) {
 		return material.colour * diffuse_shade(rayDirection, intersection, normal, scene);
 	}
 	else if (material.type == Material::Type::Reflective) {
-		return material.colour * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal));
+		return material.colour * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal), current_depth);
 	}
 	else if (material.type == Material::Type::Glossy) {
-		glm::vec3 reflective_component = material.glossy.specularity * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal));
+		glm::vec3 reflective_component = material.glossy.specularity * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal), current_depth);
 		glm::vec3 diffuse_component = (1 - material.glossy.specularity) * diffuse_shade(rayDirection, intersection, normal, scene);
 		return material.colour * (diffuse_component + reflective_component);
 	}
@@ -133,17 +134,18 @@ glm::vec3 whittedShading(
 			float intersect_inside_distance = intersect_inside(refractive_ray, shape, intersect_inside_normal);
 			glm::vec3 inside_refraction_point = refractive_ray.origin + refractive_ray.direction * intersect_inside_distance;
 
+			Ray second_refractive_ray;
 			if (calc_refractive_ray(n2, n1,
-				refractive_ray.direction, inside_refraction_point, intersect_inside_normal, refractive_ray))
+				refractive_ray.direction, inside_refraction_point, intersect_inside_normal, second_refractive_ray))
 			{
-				glm::vec3 reflective_component = reflection_coeff * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal));
-				glm::vec3 refractive_component = (1 - reflection_coeff) * scene.trace_ray(refractive_ray);
+				glm::vec3 reflective_component = reflection_coeff * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal), current_depth);
+				glm::vec3 refractive_component = (1 - reflection_coeff) * scene.trace_ray(second_refractive_ray, current_depth);
 				return material.colour * (refractive_component + reflective_component);
 			}
-			else return glm::vec3(0,1,0);
+			else return glm::vec3(1,1,1);
 		}
 		else {
-			material.colour * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal));
+			material.colour * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal), current_depth);
 		}
 	}
 	return glm::vec3(0);

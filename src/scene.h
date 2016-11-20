@@ -5,6 +5,8 @@
 #include "material.h"
 #include "light.h"
 
+#define MAX_TRACE_DEPTH 6
+
 namespace raytracer {
 
 class Scene
@@ -13,7 +15,7 @@ public:
 	Scene();
 	// traces a ray through the objects in the scene, returns a colour
 	template<typename TRay>
-	glm::vec3 trace_ray(const TRay& ray) const;
+	glm::vec3 trace_ray(const TRay& ray, int current_depth = 0) const;
 	bool check_ray(const Ray& ray) const;
 	bool check_line(const Line& line) const;
 
@@ -66,7 +68,10 @@ private:
 };
 
 template<typename TRay>
-glm::vec3 raytracer::Scene::trace_ray(const TRay& ray) const {
+glm::vec3 raytracer::Scene::trace_ray(const TRay& ray, int current_depth) const {
+	current_depth++;
+	if (current_depth >= MAX_TRACE_DEPTH) return glm::vec3(0,0,0);
+
 	enum class Type
 	{
 		Sphere,
@@ -117,13 +122,13 @@ glm::vec3 raytracer::Scene::trace_ray(const TRay& ray) const {
 		{
 			normal = glm::normalize(point - _spheres[i_current_hit].centre);
 			material = _sphere_materials[i_current_hit];
-			return whittedShading(direction, point, normal, material, _spheres[i_current_hit], *this);
+			return whittedShading(direction, point, normal, material, _spheres[i_current_hit], *this, current_depth);
 		}
 		else if (type_current_hit == Type::Plane)
 		{
 			normal = _planes[i_current_hit].normal;
 			material = _planes_materials[i_current_hit];
-			return whittedShading(direction, point, normal, material, _planes[i_current_hit], *this);
+			return whittedShading(direction, point, normal, material, _planes[i_current_hit], *this, current_depth);
 		}
 		else if (type_current_hit == Type::Triangle)
 		{
@@ -133,7 +138,7 @@ glm::vec3 raytracer::Scene::trace_ray(const TRay& ray) const {
 				points[1] - points[0],
 				points[2] - points[0]);
 			material = _triangles_materials[i_current_hit];
-			return whittedShading(direction, point, normal, material, _triangles[i_current_hit], *this);
+			return whittedShading(direction, point, normal, material, _triangles[i_current_hit], *this, current_depth);
 		}
 	}
 	else return glm::vec3(0,0,0);

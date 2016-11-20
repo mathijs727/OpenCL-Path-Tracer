@@ -29,7 +29,7 @@ bool raytracer::intersect(const Ray& ray, const Sphere& sphere, float& time) {
 }
 
 float raytracer::intersect_inside(const Ray& ray, const Sphere& sphere, glm::vec3& out_normal) {
-	assert(glm::length2(ray - sphere.centre) < pow(sphere.radius,2));
+	assert(glm::length2(ray.origin - sphere.centre) < pow(sphere.radius,2));
 	glm::vec3 distance = sphere.centre - ray.origin;
 	// calculates the projection of the distance on the ray
 	float component_parallel = glm::dot(distance, ray.direction);
