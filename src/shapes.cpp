@@ -43,7 +43,7 @@ float raytracer::intersect_inside(const Ray& ray, const Sphere& sphere, glm::vec
 	// we use pythagoras's theorem to calc the missing cathetus
 	float t = component_parallel + sqrt(radius_squared - component_normal_squared);
 	assert(t > 0.0f);
-	out_normal = glm::normalize(ray.origin + ray.direction * t - sphere.centre);
+	out_normal = glm::normalize(sphere.centre - ray.origin + ray.direction * t);
 	return t;
 }
 

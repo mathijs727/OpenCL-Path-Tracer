@@ -6,8 +6,6 @@
 #include <algorithm>
 #include <assert.h>
 
-#define RAYTRACER_EPSILON 0.0001f
-
 namespace raytracer
 {
 
@@ -31,11 +29,11 @@ glm::vec3 diffuse_shade(
 bool calc_refractive_ray(
 	float refractive_index_in,
 	float refractive_index_out,
-	float cosine,
 	const glm::vec3& rayDirection,
 	const glm::vec3& intersection,
 	const glm::vec3& normal,
 	Ray& out_ray) {
+	float cosine = glm::dot(rayDirection, -normal);
 	float refractive_ratio = refractive_index_in / refractive_index_out;
 	float k = 1 - refractive_ratio*refractive_ratio * (1 - cosine*cosine); 
 	if (k >= 0) {
