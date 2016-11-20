@@ -20,13 +20,13 @@ void Game::Init()
 
 	{
 		Sphere sphere(glm::vec3(0, 1, 5), 1);
-		Material material = Material::Diffuse(glm::vec3(0.5f, 0.3f, 0.1f));
+		Material material = Material::Diffuse(glm::vec3(0.5f, 0.3f, 0.2f));
 		_scene->add_primitive(sphere, material);
 	}
 
 	{
 		Sphere sphere(glm::vec3(2, 1, 4), 1);
-		Material material = Material::Mirror(glm::vec3(0.5f, 0.3f, 0.1f));
+		Material material = Material::Glossy(glm::vec3(0.8f, 0.5f, 0.1f), 0.2f);
 		_scene->add_primitive(sphere, material);
 	}
 

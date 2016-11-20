@@ -2,6 +2,7 @@
 #include <glm.hpp>
 #include "types.h"
 #include "light.h"
+#include <algorithm>
 
 namespace raytracer {
 class Scene;
@@ -10,8 +11,9 @@ struct Material
 {
 	enum class Type
 	{
-		Mirror,
+		Reflective,
 		Diffuse,
+		Glossy,
 		Fresnel
 	};
 
@@ -28,12 +30,17 @@ struct Material
 
 	Type type;
 	glm::vec3 colour;
+	
 	union
 	{
 		struct
 		{
-			int x;
-		} diffuse;
+			float specularity;
+		} glossy;
+		struct
+		{
+			float boh;
+		} fresnel;
 	};
 
 	static Material Diffuse(const glm::vec3& colour) {
@@ -43,11 +50,19 @@ struct Material
 		return result;
 	}
 
-	static Material Mirror(const glm::vec3& colour)
+	static Material Reflective(const glm::vec3& colour)
 	{
 		Material result;
-		result.type = Type::Mirror;
+		result.type = Type::Reflective;
 		result.colour = colour;
+		return result;
+	}
+
+	static Material Glossy(const glm::vec3& colour, float specularity) {
+		Material result;
+		result.type = Type::Glossy;
+		result.colour = colour;
+		result.glossy.specularity = std::min(std::max(specularity, 0.f),1.f);
 		return result;
 	}
 };
