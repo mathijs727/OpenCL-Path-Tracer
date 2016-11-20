@@ -50,7 +50,8 @@ public:
 	};
 
 	LightIterableConst lights() const { return LightIterableConst(*this); }
-
+public:
+	float refractive_index = 1.000277f;
 private:
 	std::vector<Sphere> _spheres;
 	std::vector<Material> _sphere_materials;

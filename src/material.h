@@ -39,7 +39,7 @@ struct Material
 		} glossy;
 		struct
 		{
-			float boh;
+			float refractive_index;
 		} fresnel;
 	};
 
@@ -63,6 +63,14 @@ struct Material
 		result.type = Type::Glossy;
 		result.colour = colour;
 		result.glossy.specularity = std::min(std::max(specularity, 0.f),1.f);
+		return result;
+	}
+
+	static Material Fresnel(const glm::vec3& colour, float refractive_index) {
+		Material result;
+		result.type = Type::Fresnel;
+		result.colour = colour;
+		result.fresnel.refractive_index = std::max(refractive_index, 1.f);
 		return result;
 	}
 };
