@@ -26,6 +26,7 @@ void raytracer::raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surfac
 	__m128i sse_i_255 = _mm_loadu_si128((__m128i*)i_255);
 
 	u32* buffer = target_surface.GetBuffer();
+#pragma omp parallel for
 	for (int y = 0; y < target_surface.GetHeight(); ++y) {
 		for (int x = 0; x < target_surface.GetWidth(); ++x) {
 			glm::vec3 scr_point = scr_base_origin + u_step * (float) x + v_step * (float) y;
@@ -53,9 +54,8 @@ void raytracer::raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surfac
 			u8 u8_color[16];
 			_mm_storeu_si128((__m128i*)u8_color, sse_i_colour);
 
-			memcpy(buffer, u8_color, 4);
+			memcpy(&buffer[y * target_surface.GetWidth() + x], u8_color, 4);
 #endif
-			++buffer;
 		}
 	}
 }

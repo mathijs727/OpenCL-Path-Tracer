@@ -211,6 +211,7 @@
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <PrecompiledHeaderFile>template.h</PrecompiledHeaderFile>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib</AdditionalDependencies>
@@ -255,6 +256,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <PrecompiledHeaderFile>template.h</PrecompiledHeaderFile>
       <OmitFramePointers>false</OmitFramePointers>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib</AdditionalDependencies>

@@ -30,7 +30,6 @@ void Game::Init()
 		_scene->add_primitive(plane, material);
 	}
 
-	//Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(0, -1, 0));
 	{
 		Light light = Light::Point(glm::vec3(0.8f, 0.0f, 0.0f), glm::vec3(0, 3, 3));
 		_scene->add_light(light);
@@ -44,7 +43,6 @@ void Game::Init()
 		_scene->add_light(light);
 	}
 
-	raytrace(*_camera, *_scene, *_screen);
 }
 
 // -----------------------------------------------------------
@@ -59,6 +57,7 @@ void Game::HandleInput( float dt )
 // -----------------------------------------------------------
 void Game::Tick( float dt )
 {
+	raytrace(*_camera, *_scene, *_screen);
 	//_screen->Clear( 0 );
 	//_screen->Print( "hello world", 2, 2, 0xffffff );
 	//_screen->Line( 2, 10, 50, 10, 0xff0000 );
