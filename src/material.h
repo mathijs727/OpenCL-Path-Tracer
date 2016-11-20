@@ -53,11 +53,9 @@ struct Material
 };
 
 glm::vec3 whittedShading(
-	const Light& light,
 	const glm::vec3& rayDirection,
 	const glm::vec3& intersection,
 	const glm::vec3& normal,
-	const glm::vec3& lightDir,
 	const Material& material,
 	const Scene& scene);
 }
