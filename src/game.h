@@ -3,8 +3,8 @@
 #include "camera.h"
 #include "scene.h"
 
-#define SCRWIDTH	 1920
-#define SCRHEIGHT	 1080
+#define SCRWIDTH	 1280
+#define SCRHEIGHT	 720
 
 namespace Tmpl8 {
 
