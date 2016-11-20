@@ -19,7 +19,7 @@ namespace raytracer
 		// TODO: move this to the material class
 		if (material.type == Material::Type::Diffuse)
 		{
-			if (is_light_visible(intersection + normal*0.1f, light, scene))
+			if (is_light_visible(intersection, light, scene))
 			{
 				float NdotL = std::max(0.0f, glm::dot(normal, lightDir));
 				return material.colour * NdotL * light.colour;

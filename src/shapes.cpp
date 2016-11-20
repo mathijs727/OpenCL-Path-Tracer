@@ -15,8 +15,15 @@ bool raytracer::intersect(const Ray& ray, const Sphere& sphere, float& time) {
 	if (component_normal_squared < radius_squared) {
 		// the time is the "t" parameter in the P = O + rD equation of the ray
 		// we use pythagoras's theorem to calc the missing cathetus
-		time = component_parallel - sqrt(radius_squared - component_normal_squared);
-		return true;
+		float t = component_parallel - sqrt(radius_squared - component_normal_squared);
+		if (t > 0.0f)
+		{
+			time = t;
+			return true;
+		}
+		else {
+			return false;
+		}
 	}
 	return false;
 }

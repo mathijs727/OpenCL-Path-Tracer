@@ -26,6 +26,8 @@ bool raytracer::is_light_visible(const glm::vec3& position, const Light& light, 
 	}
 	else if (light.type == Light::Type::Point)
 	{
+		if (position.y > 0.6)
+			_asm nop;
 		Line line(position, light.point.position);
 		return !scene.check_line(line);
 	}
