@@ -4,6 +4,9 @@
 #include "camera.h"
 #include "transform.h"
 #include "raytracer.h"
+#include "timer.h"
+
+#include <iostream>
 
 using namespace raytracer;
 
@@ -49,6 +52,10 @@ void Game::Init()
 		_scene->add_light(light);
 	}
 
+	Timer timer;
+	raytrace(*_camera, *_scene, *_screen);
+	auto elapsedMs = timer.elapsed() * 1000.0f;// Miliseconds
+	std::cout << "Time to compute: " << elapsedMs << " ms" << std::endl;
 }
 
 // -----------------------------------------------------------
@@ -63,7 +70,6 @@ void Game::HandleInput( float dt )
 // -----------------------------------------------------------
 void Game::Tick( float dt )
 {
-	raytrace(*_camera, *_scene, *_screen);
 	//_screen->Clear( 0 );
 	//_screen->Print( "hello world", 2, 2, 0xffffff );
 	//_screen->Line( 2, 10, 50, 10, 0xff0000 );
