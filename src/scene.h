@@ -67,6 +67,11 @@ private:
 	std::vector<Light> _lights;
 };
 
+#ifndef __SCENE_H_SHADING
+#define __SCENE_H_SHADING
+#include "shading.h"
+#endif
+
 template<typename TRay>
 glm::vec3 raytracer::Scene::trace_ray(const TRay& ray, int current_depth) const {
 	current_depth++;
@@ -141,7 +146,8 @@ glm::vec3 raytracer::Scene::trace_ray(const TRay& ray, int current_depth) const 
 			return whittedShading(direction, point, normal, material, _triangles[i_current_hit], *this, current_depth);
 		}
 	}
-	else return glm::vec3(0,0,0);
+	
+	return glm::vec3(0,0,0);
 }
 
 }

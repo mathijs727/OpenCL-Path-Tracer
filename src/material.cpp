@@ -2,7 +2,7 @@
 #include "scene.h"
 #include "ray.h"
 #include "light.h"
-#include <glm\glm.hpp>
+#include <glm.hpp>
 #include <algorithm>
 #include <assert.h>
 
@@ -37,7 +37,7 @@ bool calc_refractive_ray(
 	float refractive_ratio = n1 / n2;
 	float k = 1 - ( pow(refractive_ratio,2) * (1 - pow(cosine,2)) ); 
 	if (k >= 0) {
-		out_ray.direction = rayDirection * refractive_ratio - normal * (refractive_ratio * cosine + sqrt(k));
+		out_ray.direction = rayDirection * refractive_ratio - normal * (refractive_ratio * cosine + sqrtf(k));
 		out_ray.direction = glm::normalize(out_ray.direction);
 		out_ray.origin = intersection - normal * RAYTRACER_EPSILON;
 		return true;
