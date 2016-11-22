@@ -68,22 +68,14 @@ void Game::Init()
 // -----------------------------------------------------------
 void Game::HandleInput( float dt )
 {
-	glm::vec3 euler = glm::eulerAngles(_camera->transform.orientation);
-	euler.x += _input_axes[3] * dt * CAMERA_VIEW_SPEED;
-	euler.y += _input_axes[2] * dt * CAMERA_VIEW_SPEED;
-	_camera->transform.orientation = glm::quat(euler);
-	auto forward = glm::mat3_cast(_camera->transform.orientation) * glm::vec3(0,0,1);
-	auto right = glm::mat3_cast(_camera->transform.orientation) * glm::vec3(1,0,0);
-
-	_camera->transform.location += _input_axes[0] * dt * CAMERA_MOVE_SPEED * right;
-	_camera->transform.location += _input_axes[1] * dt * CAMERA_MOVE_SPEED * forward;
-
-	glm::vec2 movement;
-	movement.y += _keys[SDL_SCANCODE_W] ? 1 : 0;
-	movement.y -= _keys[SDL_SCANCODE_S] ? 1 : 0;
+	glm::vec3 movement;
+	movement.z += _keys[SDL_SCANCODE_W] ? 1 : 0;
+	movement.z -= _keys[SDL_SCANCODE_S] ? 1 : 0;
 	movement.x += _keys[SDL_SCANCODE_D] ? 1 : 0;
 	movement.x -= _keys[SDL_SCANCODE_A] ? 1 : 0;
-	_camera->transform.location += movement.x * dt * CAMERA_MOVE_SPEED * right;
+	movement.y += _keys[SDL_SCANCODE_SPACE] ? 1 : 0;
+	movement.y -= _keys[SDL_SCANCODE_C] ? 1 : 0;
+	_camera->transform.location += glm::mat3_cast(_camera->transform.orientation) * movement * dt * float(CAMERA_MOVE_SPEED);
 	_camera->transform.location += movement.y * dt * CAMERA_MOVE_SPEED * forward;
 }
 
@@ -100,7 +92,6 @@ void Game::Tick( float dt )
 }
 
 void Tmpl8::Game::AxisEvent(int axis, float value) {
-	_input_axes[axis] = value;
 }
 
 void Tmpl8::Game::MouseMove(int _X, int _Y) {
