@@ -25,9 +25,10 @@ glm::vec3 whittedShading(
 		return material.colour * (diffuse_component + reflective_component);
 	}
 	else if (material.type == Material::Type::Fresnel) {
+		// the two refractive indexes
 		float n1 = scene.refractive_index;
 		float n2 = material.fresnel.refractive_index;
-		float cosine = glm::dot(-normal, rayDirection);
+		float cosine = glm::dot(normal, -rayDirection);
 		Ray refractive_ray;
 		if (calc_refractive_ray(n1, n2, rayDirection, intersection, normal, refractive_ray)) {
 			float r0 = pow((n1 - n2) / (n2 + n1), 2);
@@ -39,14 +40,14 @@ glm::vec3 whittedShading(
 			glm::vec3 inside_refraction_point = refractive_ray.origin + refractive_ray.direction * intersect_inside_distance;
 
 			Ray second_refractive_ray;
-			if (calc_refractive_ray(n2, n1,
-				refractive_ray.direction, inside_refraction_point, intersect_inside_normal, second_refractive_ray))
-			{
+			bool good_ray = calc_refractive_ray(n1, n2, refractive_ray.direction, inside_refraction_point, intersect_inside_normal, second_refractive_ray);
+			assert(good_ray);
+			if (good_ray) {
 				glm::vec3 reflective_component = reflection_coeff * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal), current_depth);
 				glm::vec3 refractive_component = (1 - reflection_coeff) * scene.trace_ray(second_refractive_ray, current_depth);
 				return material.colour * (refractive_component + reflective_component);
 			}
-			else return glm::vec3(1,1,1);
+			else return glm::vec3(0,0,0); // should not happen
 		}
 		else {
 			material.colour * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal), current_depth);

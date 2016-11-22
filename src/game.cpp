@@ -18,7 +18,7 @@ void Game::Init()
 	_scene = std::make_unique<Scene>();
 	Transform camera_transform;
 	camera_transform.orientation = glm::quat(); // identity
-	camera_transform.location = glm::vec3(0, 0, -2);
+	camera_transform.location = glm::vec3(0, 0, 0);
 	_camera = std::make_unique<Camera>(camera_transform, 100, (float) SCRHEIGHT / SCRWIDTH, 1);
 
 	{
@@ -29,7 +29,7 @@ void Game::Init()
 
 	{
 		Sphere sphere(glm::vec3(1, -0.5f, 3), 1);
-		Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), _scene->refractive_index);
+		Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.2f);
 		_scene->add_primitive(sphere, material);
 	}
 

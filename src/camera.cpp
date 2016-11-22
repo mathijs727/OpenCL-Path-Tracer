@@ -23,5 +23,5 @@ void raytracer::Camera::get_frustum(glm::vec3& eye, glm::vec3& scr_base_origin, 
 
 float raytracer::Camera::fov() const {
 	// should cache, not important
-	return 2*atan(_worldspaceHalfWidth/_eyeDistance);
+	return 2 * atan(_worldspaceHalfWidth/_eyeDistance);
 }
