@@ -76,7 +76,6 @@ void Game::HandleInput( float dt )
 	movement.y += _keys[SDL_SCANCODE_SPACE] ? 1 : 0;
 	movement.y -= _keys[SDL_SCANCODE_C] ? 1 : 0;
 	_camera->transform.location += glm::mat3_cast(_camera->transform.orientation) * movement * dt * float(CAMERA_MOVE_SPEED);
-	_camera->transform.location += movement.y * dt * CAMERA_MOVE_SPEED * forward;
 }
 
 // -----------------------------------------------------------
