@@ -34,7 +34,6 @@ struct Material
 		memcpy(this, &m, sizeof(Material));
 		return *this;
 	}
-	~Material();
 
 	Type type;
 	glm::vec3 colour;

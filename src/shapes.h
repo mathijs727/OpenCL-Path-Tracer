@@ -19,9 +19,19 @@ struct Plane {
 	{
 		this->normal = glm::normalize(normal);
 		offset = glm::dot(pos, this->normal);
+		this->u_size = this->v_size = 0.0f;
+	}
+	Plane(const glm::vec3& normal, const glm::vec3 pos, float u_size, float v_size)
+	{
+		this->normal = glm::normalize(normal);
+		offset = glm::dot(pos, this->normal);
+		this->u_size = u_size;
+		this->v_size = v_size;
 	}
 	glm::vec3 normal;
 	float offset;
+
+	float u_size, v_size;// World coordinate size of texture mapped to the plane
 };
 
 struct Triangle
@@ -34,11 +44,15 @@ bool intersect(const Ray& ray, const Plane& plane, float& time);
 bool intersect(const Ray& ray, const Triangle& triangle, float& time);
 
 float intersect_inside(const Ray& ray, const Sphere& sphere, glm::vec3& out_normal);
-float intersect_inside(const Ray& ray, const Plane& sphere, glm::vec3& out_normal);
-float intersect_inside(const Ray& ray, const Triangle& sphere, glm::vec3& out_normal);
+float intersect_inside(const Ray& ray, const Plane& plane, glm::vec3& out_normal);
+float intersect_inside(const Ray& ray, const Triangle& triangle, glm::vec3& out_normal);
 
 bool intersect(const Line& line, const Sphere& sphere, float& time);
 bool intersect(const Line& line, const Plane& plane, float& time);
 bool intersect(const Line& line, const Triangle& triangle, float& time);
+
+void calc_uv_coordinates(const Sphere& sphere, const glm::vec3& intersection, float& u, float& v);
+void calc_uv_coordinates(const Plane& plane, const glm::vec3& intersection, float& u, float& v);
+void calc_uv_coordinates(const Triangle& triangle, const glm::vec3& intersection, float& u, float& v);
 }
 
