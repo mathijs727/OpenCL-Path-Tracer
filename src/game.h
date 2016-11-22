@@ -33,7 +33,6 @@ private:
 	std::unique_ptr<raytracer::Scene> _scene;
 	std::unique_ptr<raytracer::Camera> _camera;
 	std::unordered_map<int, float> _input_axes;
-	glm::vec2 _movement_vector;
 	glm::vec3 _camera_euler;
 };
 

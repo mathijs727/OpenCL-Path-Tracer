@@ -83,8 +83,8 @@ void Game::HandleInput( float dt )
 	movement.y -= _keys[SDL_SCANCODE_S] ? 1 : 0;
 	movement.x += _keys[SDL_SCANCODE_D] ? 1 : 0;
 	movement.x -= _keys[SDL_SCANCODE_A] ? 1 : 0;
-	_camera->transform.location += _movement_vector.x * dt * CAMERA_MOVE_SPEED * right;
-	_camera->transform.location += _movement_vector.y * dt * CAMERA_MOVE_SPEED * forward;
+	_camera->transform.location += movement.x * dt * CAMERA_MOVE_SPEED * right;
+	_camera->transform.location += movement.y * dt * CAMERA_MOVE_SPEED * forward;
 }
 
 // -----------------------------------------------------------
@@ -111,7 +111,6 @@ void Tmpl8::Game::MouseMove(int _X, int _Y) {
 }
 
 void Tmpl8::Game::KeyUp(int a_Key) {
-	
 }
 
 void Tmpl8::Game::KeyDown(int a_Key) {
