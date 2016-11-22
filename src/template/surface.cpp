@@ -7,8 +7,8 @@
 // and could be more readable.
 // -----------------------------------------------------------
 
-#include "surface.h"
 #include "template.h"
+#include "surface.h"
 #include <string>
 
 namespace Tmpl8 {

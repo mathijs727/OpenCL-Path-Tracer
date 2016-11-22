@@ -10,6 +10,8 @@
 #pragma warning (disable : 4273)
 #pragma warning (disable : 4311) // pointer truncation from HANDLE to long
 
+#include <vector>
+
 #include "template.h"
 #include "../game.h"
 #ifdef _WIN32
@@ -108,6 +110,7 @@ int main( int argc, char **argv )
 	auto timer = Timer();
 	game = new Game();
 	game->SetTarget( surface );
+	SDL_SetRelativeMouseMode(SDL_TRUE);
 	while (!exitapp) 
 	{
 		void* target = 0;
@@ -144,6 +147,9 @@ int main( int argc, char **argv )
 			case SDL_QUIT:
 				exitapp = 1;
 				break;
+			case SDL_CONTROLLERAXISMOTION:
+				game->AxisEvent(event.caxis.axis, (float) event.caxis.value / 32767);
+				break;
 			case SDL_KEYDOWN:
 				if (event.key.keysym.sym == SDLK_ESCAPE) 
 				{
@@ -156,7 +162,7 @@ int main( int argc, char **argv )
 				game->KeyUp( event.key.keysym.scancode );
 				break;
 			case SDL_MOUSEMOTION:
-				game->MouseMove( event.motion.x, event.motion.y );
+				game->MouseMove( event.motion.xrel, event.motion.yrel );
 				break;
 			case SDL_MOUSEBUTTONUP:
 				game->MouseUp( event.button.button );

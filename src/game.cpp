@@ -17,7 +17,7 @@ void Game::Init()
 {
 	_scene = std::make_unique<Scene>();
 	Transform camera_transform;
-	camera_transform.orientation = glm::quat(); // identity
+	camera_transform.orientation = glm::quat(_camera_euler); // identity
 	camera_transform.location = glm::vec3(0, 0, 0);
 	_camera = std::make_unique<Camera>(camera_transform, 100, (float) SCRHEIGHT / SCRWIDTH, 1);
 
@@ -63,6 +63,25 @@ void Game::Init()
 // -----------------------------------------------------------
 void Game::HandleInput( float dt )
 {
+	glm::vec3 euler = glm::eulerAngles(_camera->transform.orientation);
+	euler.x += _input_axes[3] * dt * CAMERA_VIEW_SPEED;
+	euler.y += _input_axes[2] * dt * CAMERA_VIEW_SPEED;
+	_camera->transform.orientation = glm::quat(euler);
+	auto forward = glm::vec3(0,0,1) * glm::mat3_cast(_camera->transform.orientation);
+	auto right = glm::vec3(1,0,0) * glm::mat3_cast(_camera->transform.orientation);
+
+	_camera->transform.location += _input_axes[0] * dt * CAMERA_MOVE_SPEED * right;
+	_camera->transform.location += _input_axes[1] * dt * CAMERA_MOVE_SPEED * forward;
+	
+	SDL_PumpEvents();
+	auto keys = SDL_GetKeyboardState(nullptr);
+	glm::vec2 movement;
+	movement.y += keys[SDL_SCANCODE_W] ? 1 : 0;
+	movement.y -= keys[SDL_SCANCODE_S] ? 1 : 0;
+	movement.x += keys[SDL_SCANCODE_D] ? 1 : 0;
+	movement.x -= keys[SDL_SCANCODE_A] ? 1 : 0;
+	_camera->transform.location += _movement_vector.x * dt * CAMERA_MOVE_SPEED * right;
+	_camera->transform.location += _movement_vector.y * dt * CAMERA_MOVE_SPEED * forward;
 }
 
 // -----------------------------------------------------------
@@ -70,8 +89,27 @@ void Game::HandleInput( float dt )
 // -----------------------------------------------------------
 void Game::Tick( float dt )
 {
+	HandleInput(dt);
 	raytrace(*_camera, *_scene, *_screen);
 	//_screen->Clear( 0 );
 	//_screen->Print( "hello world", 2, 2, 0xffffff );
 	//_screen->Line( 2, 10, 50, 10, 0xff0000 );
+}
+
+void Tmpl8::Game::AxisEvent(int axis, float value) {
+	_input_axes[axis] = value;
+}
+
+void Tmpl8::Game::MouseMove(int _X, int _Y) {
+	_camera_euler.x += glm::radians((float)_Y * CAMERA_VIEW_SPEED);
+	_camera_euler.y += glm::radians((float)_X * CAMERA_VIEW_SPEED);
+	_camera_euler.x = glm::clamp(_camera_euler.x, -glm::half_pi<float>(), glm::half_pi<float>());
+	_camera->transform.orientation = glm::quat(_camera_euler);
+}
+
+void Tmpl8::Game::KeyUp(int a_Key) {
+	
+}
+
+void Tmpl8::Game::KeyDown(int a_Key) {
 }
