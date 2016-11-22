@@ -19,9 +19,19 @@ struct Plane {
 	{
 		this->normal = glm::normalize(normal);
 		offset = glm::dot(pos, this->normal);
+		this->u_size = this->v_size = 0.0f;
+	}
+	Plane(const glm::vec3& normal, const glm::vec3 pos, float u_size, float v_size)
+	{
+		this->normal = glm::normalize(normal);
+		offset = glm::dot(pos, this->normal);
+		this->u_size = u_size;
+		this->v_size = v_size;
 	}
 	glm::vec3 normal;
 	float offset;
+
+	float u_size, v_size;// World coordinate size of texture mapped to the plane
 };
 
 struct Triangle

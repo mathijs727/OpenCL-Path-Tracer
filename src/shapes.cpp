@@ -132,8 +132,16 @@ void raytracer::calc_uv_coordinates(const Sphere& sphere, const glm::vec3& inter
 
 void raytracer::calc_uv_coordinates(const Plane& plane, const glm::vec3& intersection, float& u, float& v)
 {
-	u = 0.0f;
-	v = 0.0f;
+	// TODO: this doesnt work if plane normal = (1, 0, 0)
+	glm::vec3 tmp = plane.normal;
+	tmp.x += 1.0f;
+	tmp = glm::normalize(tmp);
+
+	glm::vec3 plane_x = glm::cross(tmp, plane.normal);
+	glm::vec3 plane_y = glm::cross(plane_x, tmp);
+
+	u = fmod(fabs(glm::dot(plane_x, intersection)), 1.0f);
+	v = fmod(fabs(glm::dot(plane_y, intersection)), 1.0f);
 }
 
 

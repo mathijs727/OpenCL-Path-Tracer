@@ -39,6 +39,8 @@ void Game::Init()
 	{
 		Plane plane(glm::vec3(0, 1, 0), glm::vec3(0, -2.f, 0));
 		Material material = Material::Diffuse(glm::vec3(0.8f, 0.2f, 0.4f));
+		//Material material = Material::Diffuse(
+		//	new Surface("checkerboard.png"));
 		_scene->add_primitive(plane, material);
 	}
 
