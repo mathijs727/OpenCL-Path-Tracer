@@ -66,6 +66,7 @@ private:
 
 	std::vector<Light> _lights;
 };
+}
 
 #ifndef __SCENE_H_SHADING
 #define __SCENE_H_SHADING
@@ -148,6 +149,4 @@ glm::vec3 raytracer::Scene::trace_ray(const TRay& ray, int current_depth) const 
 	}
 	
 	return glm::vec3(0,0,0);
-}
-
 }
