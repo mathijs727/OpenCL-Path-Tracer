@@ -72,8 +72,8 @@ void Game::HandleInput( float dt )
 	euler.x += _input_axes[3] * dt * CAMERA_VIEW_SPEED;
 	euler.y += _input_axes[2] * dt * CAMERA_VIEW_SPEED;
 	_camera->transform.orientation = glm::quat(euler);
-	auto forward = glm::vec3(0,0,1) * glm::mat3_cast(_camera->transform.orientation);
-	auto right = glm::vec3(1,0,0) * glm::mat3_cast(_camera->transform.orientation);
+	auto forward = glm::mat3_cast(_camera->transform.orientation) * glm::vec3(0,0,1);
+	auto right = glm::mat3_cast(_camera->transform.orientation) * glm::vec3(1,0,0);
 
 	_camera->transform.location += _input_axes[0] * dt * CAMERA_MOVE_SPEED * right;
 	_camera->transform.location += _input_axes[1] * dt * CAMERA_MOVE_SPEED * forward;
