@@ -6,6 +6,11 @@
 
 #define RAYTRACER_EPSILON 0.0001f
 
+namespace Tmpl8
+{
+	class Surface;
+}
+
 namespace raytracer {
 class Scene;
 
@@ -29,12 +34,21 @@ struct Material
 		memcpy(this, &m, sizeof(Material));
 		return *this;
 	}
+	~Material()
+	{
+		if (type == Type::Diffuse && diffuse.diffuse_texture != nullptr)
+			delete diffuse.diffuse_texture;
+	}
 
 	Type type;
 	glm::vec3 colour;
 	
 	union
 	{
+		struct
+		{
+			Tmpl8::Surface* diffuse_texture;
+		} diffuse;
 		struct
 		{
 			float specularity;
@@ -49,6 +63,15 @@ struct Material
 		Material result;
 		result.type = Type::Diffuse;
 		result.colour = colour;
+		result.diffuse.diffuse_texture = nullptr;
+		return result;
+	}
+
+	static Material Diffuse(Tmpl8::Surface* diffuse) {
+		Material result;
+		result.type = Type::Diffuse;
+		result.colour = glm::vec3(0);
+		result.diffuse.diffuse_texture = diffuse;
 		return result;
 	}
 

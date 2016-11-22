@@ -2,7 +2,7 @@
 // IGAD/NHTV/UU - Jacco Bikker - 2006-2016
 
 #pragma once
-#include "template.h"
+//#include "template.h"
 
 namespace Tmpl8 {
 

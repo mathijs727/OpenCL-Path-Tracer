@@ -1,5 +1,6 @@
 #pragma once
 #include "material.h"
+#include "template/surface.h"
 #include "scene.h"
 
 template<typename TShape>
