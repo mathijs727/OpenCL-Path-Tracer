@@ -1,5 +1,6 @@
 #include "shapes.h"
 #include <assert.h>
+#include <math.h>
 #include <gtx/norm.hpp>
 
 bool raytracer::intersect(const Ray& ray, const Sphere& sphere, float& time) {
@@ -119,3 +120,29 @@ bool raytracer::intersect(const Line& line, const Triangle& triangle, float & ti
 	}
 	return false;
 }
+
+void raytracer::calc_uv_coordinates(const Sphere& sphere, const glm::vec3& intersection, float& u, float& v)
+{
+	const float pi = 3.14159265f;
+
+	glm::vec3 d = sphere.centre - intersection;
+	u = 0.5f + atan2(d.z, d.x) / 2 / pi;
+	v = 0.5f - atan(d.y) / pi;
+}
+
+void raytracer::calc_uv_coordinates(const Plane& plane, const glm::vec3& intersection, float& u, float& v)
+{
+	u = 0.0f;
+	v = 0.0f;
+}
+
+
+void raytracer::calc_uv_coordinates(const Triangle& triangle, const glm::vec3& intersection, float& u, float& v)
+{
+	u = 0.0f;
+	v = 0.0f;
+}
+
+
+
+

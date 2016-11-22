@@ -10,12 +10,6 @@
 namespace raytracer
 {
 
-Material::~Material()
-{
-	if (type == Type::Diffuse && diffuse.diffuse_texture != nullptr)
-		delete diffuse.diffuse_texture;
-}
-
 glm::vec3 diffuse_shade(
 	const glm::vec3& rayDirection,
 	const glm::vec3& intersection,

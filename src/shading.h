@@ -3,6 +3,11 @@
 #include "template/surface.h"
 #include "scene.h"
 
+inline uint32_t GetTextureValue(Tmpl8::Surface* tex, int x, int y)
+{
+	return *(tex->GetBuffer() + (y * tex->GetPitch()) + x);
+}
+
 namespace raytracer
 {
 template<typename TShape>
@@ -17,7 +22,24 @@ glm::vec3 whittedShading(
 
 	// TODO: move this to the material class
 	if (material.type == Material::Type::Diffuse) {
-		return material.colour * diffuse_shade(rayDirection, intersection, normal, scene);
+		glm::vec3 diffuse_colour;
+		if (material.diffuse.diffuse_texture != nullptr)
+		{
+			Tmpl8::Surface* texture = material.diffuse.diffuse_texture;
+
+			float u, v;
+			calc_uv_coordinates(shape, intersection, u, v);
+			int x = static_cast<int>(u * texture->GetWidth());
+			int y = static_cast<int>(v * texture->GetHeight());
+			uint32_t pixel = GetTextureValue(texture, x, y);
+			uint32_t r = (pixel & REDMASK) >> 16;
+			uint32_t g = (pixel & GREENMASK) >> 8;
+			uint32_t b = (pixel & BLUEMASK) >> 0;
+			diffuse_colour = glm::vec3(r / 255.f, g / 255.f, b / 255.f);
+		} else {
+			diffuse_colour = material.colour;
+		}
+		return diffuse_colour * diffuse_shade(rayDirection, intersection, normal, scene);
 	}
 	else if (material.type == Material::Type::Reflective) {
 		return material.colour * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal), current_depth);
