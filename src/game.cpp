@@ -77,14 +77,12 @@ void Game::HandleInput( float dt )
 
 	_camera->transform.location += _input_axes[0] * dt * CAMERA_MOVE_SPEED * right;
 	_camera->transform.location += _input_axes[1] * dt * CAMERA_MOVE_SPEED * forward;
-	
-	SDL_PumpEvents();
-	auto keys = SDL_GetKeyboardState(nullptr);
+
 	glm::vec2 movement;
-	movement.y += keys[SDL_SCANCODE_W] ? 1 : 0;
-	movement.y -= keys[SDL_SCANCODE_S] ? 1 : 0;
-	movement.x += keys[SDL_SCANCODE_D] ? 1 : 0;
-	movement.x -= keys[SDL_SCANCODE_A] ? 1 : 0;
+	movement.y += _keys[SDL_SCANCODE_W] ? 1 : 0;
+	movement.y -= _keys[SDL_SCANCODE_S] ? 1 : 0;
+	movement.x += _keys[SDL_SCANCODE_D] ? 1 : 0;
+	movement.x -= _keys[SDL_SCANCODE_A] ? 1 : 0;
 	_camera->transform.location += _movement_vector.x * dt * CAMERA_MOVE_SPEED * right;
 	_camera->transform.location += _movement_vector.y * dt * CAMERA_MOVE_SPEED * forward;
 }

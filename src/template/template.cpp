@@ -138,6 +138,8 @@ int main( int argc, char **argv )
 			firstframe = false;
 		}
 
+		game->KeysUpdate(SDL_GetKeyboardState(NULL));
+
 		// event loop
 		SDL_Event event;
 		while (SDL_PollEvent( &event )) 
