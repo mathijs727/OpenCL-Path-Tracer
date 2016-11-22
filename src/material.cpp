@@ -5,9 +5,16 @@
 #include <glm.hpp>
 #include <algorithm>
 #include <assert.h>
+#include "template/surface.h"
 
 namespace raytracer
 {
+
+Material::~Material()
+{
+	if (type == Type::Diffuse && diffuse.diffuse_texture != nullptr)
+		delete diffuse.diffuse_texture;
+}
 
 glm::vec3 diffuse_shade(
 	const glm::vec3& rayDirection,

@@ -3,6 +3,8 @@
 #include "template/surface.h"
 #include "scene.h"
 
+namespace raytracer
+{
 template<typename TShape>
 glm::vec3 whittedShading(
 	const glm::vec3& rayDirection,
@@ -54,4 +56,5 @@ glm::vec3 whittedShading(
 		}
 	}
 	return glm::vec3(0);
+}
 }

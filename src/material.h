@@ -34,11 +34,7 @@ struct Material
 		memcpy(this, &m, sizeof(Material));
 		return *this;
 	}
-	~Material()
-	{
-		if (type == Type::Diffuse && diffuse.diffuse_texture != nullptr)
-			delete diffuse.diffuse_texture;
-	}
+	~Material();
 
 	Type type;
 	glm::vec3 colour;
