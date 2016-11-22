@@ -12,7 +12,9 @@ struct Transform
 	glm::quat orientation;
 
 	glm::mat4 matrix() const {
-		return glm::translate(glm::mat4_cast(orientation), location);
+		glm::mat4 orientation_matrix = glm::mat4_cast(orientation);
+		glm::mat4 location_matrix =  glm::translate(glm::mat4(), location);
+		return location_matrix * orientation_matrix;
 	}
 };
 

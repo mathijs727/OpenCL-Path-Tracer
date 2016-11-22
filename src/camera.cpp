@@ -17,8 +17,8 @@ void raytracer::Camera::get_frustum(glm::vec3& eye, glm::vec3& scr_base_origin, 
 	glm::mat4 transform_matrix = _transform.matrix();
 	glm::vec3 centre = glm::vec3(0,0,_eyeDistance);
 	scr_base_origin = glm::vec3(transform_matrix * glm::vec4(centre + glm::vec3(-halfWidth, halfHeight,0), 1));
-	scr_base_u = glm::vec3(transform_matrix * glm::vec4(width,0,0,1));
-	scr_base_v = glm::vec3(transform_matrix * glm::vec4(0,-height,0,1));
+	scr_base_u = glm::vec3(glm::mat4_cast(_transform.orientation) * glm::vec4(width,0,0,1));
+	scr_base_v = glm::vec3(glm::mat4_cast(_transform.orientation) * glm::vec4(0,-height,0, 1));
 }
 
 float raytracer::Camera::fov() const {

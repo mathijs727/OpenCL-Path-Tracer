@@ -18,7 +18,7 @@ void Game::Init()
 	_scene = std::make_unique<Scene>();
 	Transform camera_transform;
 	camera_transform.orientation = glm::quat(); // identity
-	camera_transform.location = glm::vec3(0, 0, 0);
+	camera_transform.location = glm::vec3(0, 0, -2);
 	_camera = std::make_unique<Camera>(camera_transform, 100, (float) SCRHEIGHT / SCRWIDTH, 1);
 
 	{
@@ -70,6 +70,7 @@ void Game::HandleInput( float dt )
 // -----------------------------------------------------------
 void Game::Tick( float dt )
 {
+	raytrace(*_camera, *_scene, *_screen);
 	//_screen->Clear( 0 );
 	//_screen->Print( "hello world", 2, 2, 0xffffff );
 	//_screen->Line( 2, 10, 50, 10, 0xff0000 );
