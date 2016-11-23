@@ -20,10 +20,12 @@ namespace raytracer
 		{
 			struct
 			{
+				float luminous_power;// In lumen
 				glm::vec3 position;
 			} point;
 			struct
 			{
+				float illuminance;// In Lux
 				glm::vec3 direction;
 			} directional;
 		};
@@ -31,16 +33,7 @@ namespace raytracer
 		// Apperently necesarry (maybe got something to do with glm::vec in union???)
 		Light() {};
 		Light(const Light& other) {
-			type = other.type;
-			colour = other.colour;
-			if (type == Type::Point)
-			{
-				point.position = other.point.position;
-			}
-			else if (type == Type::Directional)
-			{
-				directional.direction = other.directional.direction;
-			}
+			memcpy(this, &other, sizeof(Light));
 		};
 
 
@@ -50,6 +43,7 @@ namespace raytracer
 			light.type = Type::Point;
 			light.colour = colour;
 			light.point.position = pos;
+			light.point.luminous_power = 800.0f;
 			return light;
 		}
 

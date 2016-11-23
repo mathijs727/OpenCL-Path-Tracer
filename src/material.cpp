@@ -3,9 +3,12 @@
 #include "ray.h"
 #include "light.h"
 #include <glm.hpp>
+#include <gtx/norm.hpp>
 #include <algorithm>
 #include <assert.h>
 #include "template/surface.h"
+
+#define PI 3.14159265359f
 
 namespace raytracer
 {
@@ -16,15 +19,23 @@ glm::vec3 diffuse_shade(
 	const glm::vec3& normal,
 	const Scene& scene)
 {
-	glm::vec3 result_colour(0);
+	glm::vec3 result_light(0);
 	for (const Light& light : scene.lights()) {
 		glm::vec3 lightDir;
 		if (get_light_vector(light, intersection, lightDir) && is_light_visible(intersection + normal * RAYTRACER_EPSILON, light, scene)) {
+			float illuminance = 1.0f;
+			if (light.type == Light::Type::Point)
+			{
+				float luminousIntensity = light.point.luminous_power / (4.0f * PI);
+				float lightDistance2 = glm::length2(intersection - light.point.position);
+				illuminance = (luminousIntensity / lightDistance2);// * (1 - (lightDistance2 / lightRadius2));
+			}
+
 			float NdotL = std::max(0.0f, glm::dot(normal, lightDir));
-			result_colour += NdotL * light.colour;
+			result_light += NdotL * light.colour * illuminance;
 		}
 	}
-	return result_colour;
+	return result_light;
 }
 
 bool calc_refractive_ray(

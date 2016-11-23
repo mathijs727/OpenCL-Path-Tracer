@@ -39,6 +39,7 @@
     <ClInclude Include="src\ray.h" />
     <ClInclude Include="src\raytracer.h" />
     <ClInclude Include="src\scene.h" />
+    <ClInclude Include="src\shading.h" />
     <ClInclude Include="src\shapes.h" />
     <ClInclude Include="src\template\surface.h" />
     <ClInclude Include="src\template\template.h" />

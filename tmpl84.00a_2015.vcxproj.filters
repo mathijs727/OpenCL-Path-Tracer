@@ -44,5 +44,6 @@
     <ClInclude Include="src\raytracer.h" />
     <ClInclude Include="src\pixel.h" />
     <ClInclude Include="src\light.h" />
+    <ClInclude Include="src\shading.h" />
   </ItemGroup>
 </Project>

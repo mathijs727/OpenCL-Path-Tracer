@@ -33,7 +33,7 @@ void Game::Init()
 	{
 		Sphere sphere(glm::vec3(1, -0.5f, 3), 1);
 		Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.2f);
-		_scene->add_primitive(sphere, material);
+		//_scene->add_primitive(sphere, material);
 	}
 
 	{
@@ -54,7 +54,7 @@ void Game::Init()
 	}
 	{
 		Light light = Light::Directional(glm::vec3(0.0f, 0.0f, 0.8f), glm::vec3(-1, -1, 0));
-		_scene->add_light(light);
+		//_scene->add_light(light);
 	}
 
 	Timer timer;
