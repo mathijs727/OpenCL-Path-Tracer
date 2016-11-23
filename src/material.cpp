@@ -23,12 +23,16 @@ glm::vec3 diffuse_shade(
 	for (const Light& light : scene.lights()) {
 		glm::vec3 lightDir;
 		if (get_light_vector(light, intersection, lightDir) && is_light_visible(intersection + normal * RAYTRACER_EPSILON, light, scene)) {
-			float illuminance = 1.0f;
+			float illuminance = 0.0f;// Illuminance in Lux
 			if (light.type == Light::Type::Point)
 			{
 				float luminousIntensity = light.point.luminous_power / (4.0f * PI);
 				float lightDistance2 = glm::length2(intersection - light.point.position);
-				illuminance = (luminousIntensity / lightDistance2);// * (1 - (lightDistance2 / lightRadius2));
+				illuminance = (luminousIntensity / lightDistance2);
+				// Add "* (1 - (lightDistance / lightRadius));" so it scales towards 0 and we can cull distant lights
+			}
+			else if (light.type == Light::Type::Directional) {
+				illuminance = light.directional.illuminance;
 			}
 
 			float NdotL = std::max(0.0f, glm::dot(normal, lightDir));

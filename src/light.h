@@ -37,22 +37,23 @@ namespace raytracer
 		};
 
 
-		static Light Point(const glm::vec3& colour, const glm::vec3 pos)
+		static Light Point(const glm::vec3 pos, const glm::vec3& colour, float luminous_power)
 		{
 			Light light;
 			light.type = Type::Point;
 			light.colour = colour;
 			light.point.position = pos;
-			light.point.luminous_power = 800.0f;
+			light.point.luminous_power = luminous_power;
 			return light;
 		}
 
-		static Light Directional(const glm::vec3& colour, const glm::vec3 dir)
+		static Light Directional(const glm::vec3 dir, const glm::vec3& colour, float illuminance)
 		{
 			Light light;
 			light.type = Type::Directional;
 			light.colour = colour;
 			light.directional.direction = glm::normalize(dir);
+			light.directional.illuminance = illuminance;
 			return light;
 		}
 	};
