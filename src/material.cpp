@@ -24,8 +24,8 @@ glm::vec3 diffuse_shade(
 	for (const Light& light : scene.lights()) {
 		glm::vec3 lightDir;
 		if (get_light_vector(light, intersection, lightDir) && is_light_visible(intersection + normal * RAYTRACER_EPSILON, light, scene)) {
-			float illuminance = 1.0f;// Illuminance in Lux
 #ifdef PBR
+			float illuminance = 1.0f;// Illuminance in Lux
 			if (light.type == Light::Type::Point)
 			{
 				float luminousIntensity = light.point.luminous_power / (4.0f * PI);
@@ -36,9 +36,14 @@ glm::vec3 diffuse_shade(
 			else if (light.type == Light::Type::Directional) {
 				illuminance = light.directional.illuminance;
 			}
-#endif// PBR
 			float NdotL = std::max(0.0f, glm::dot(normal, lightDir));
 			result_light += NdotL * light.colour * illuminance;
+#else // PBR
+			float NdotL = std::max(0.0f, glm::dot(normal, lightDir));
+			glm::vec3 result = NdotL * light.colour;
+			if (light.type == Light::Type::Point) result /= glm::length2(light.point.position - intersection);
+			result_light += result;
+#endif // PBR
 		}
 	}
 	return result_light;

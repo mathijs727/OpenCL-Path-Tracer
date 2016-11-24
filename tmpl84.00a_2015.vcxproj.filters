@@ -45,5 +45,6 @@
     <ClInclude Include="src\pixel.h" />
     <ClInclude Include="src\light.h" />
     <ClInclude Include="src\shading.h" />
+    <ClInclude Include="src\settings.h" />
   </ItemGroup>
 </Project>
