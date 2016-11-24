@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <assert.h>
 #include "template/surface.h"
+#include "settings.h"
 
 #define PI 3.14159265359f
 
@@ -23,7 +24,8 @@ glm::vec3 diffuse_shade(
 	for (const Light& light : scene.lights()) {
 		glm::vec3 lightDir;
 		if (get_light_vector(light, intersection, lightDir) && is_light_visible(intersection + normal * RAYTRACER_EPSILON, light, scene)) {
-			float illuminance = 0.0f;// Illuminance in Lux
+			float illuminance = 1.0f;// Illuminance in Lux
+#ifdef PBR
 			if (light.type == Light::Type::Point)
 			{
 				float luminousIntensity = light.point.luminous_power / (4.0f * PI);
@@ -34,7 +36,7 @@ glm::vec3 diffuse_shade(
 			else if (light.type == Light::Type::Directional) {
 				illuminance = light.directional.illuminance;
 			}
-
+#endif// PBR
 			float NdotL = std::max(0.0f, glm::dot(normal, lightDir));
 			result_light += NdotL * light.colour * illuminance;
 		}

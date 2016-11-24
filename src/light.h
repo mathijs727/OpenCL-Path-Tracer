@@ -1,5 +1,6 @@
 #pragma once
 #include <glm.hpp>
+#include <string.h>
 #include "ray.h"
 
 namespace raytracer

@@ -1,6 +1,6 @@
 #include "light.h"
 #include "scene.h"
-#include <glm\gtx\norm.hpp>
+#include <gtx/norm.hpp>
 
 bool raytracer::get_light_vector(const Light& light, const glm::vec3 position, glm::vec3& lightDirection)
 {
