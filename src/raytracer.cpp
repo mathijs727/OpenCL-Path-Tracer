@@ -64,12 +64,12 @@ void raytracer::raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surfac
 	// Usage with manual settings
 	float aperture = 1.0f / 5.8f;
 	float shutterTime = 1.0f / 100.0f;
-	float ISO = 800.0f;
-	float EV100 = computeEV100(aperture, shutterTime, ISO);
+	//float ISO = 800.0f;
+	//float EV100 = computeEV100(aperture, shutterTime, ISO);
 
 	// Usage with auto settings
-	//float Lavg = computeAvgLuminance(colour_buffer, width * height);
-	//float EV100 = computeEV100FromAvgLuminance(Lavg);
+	float Lavg = computeAvgLuminance(colour_buffer, width * height);
+	float EV100 = computeEV100FromAvgLuminance(Lavg);
 
 	float exposure = convertEV100ToExposure(EV100);
 
@@ -142,7 +142,8 @@ float computeEV100(float aperture, float shutterTime, float ISO)
 	// EV_100 + log2 (S /100) = log2 (N^2 / t)
 	// EV_100 = log2 (N^2 / t) - log2 (S /100)
 	// EV_100 = log2 (N^2 / t . 100 / S)
-	return log2(sqrtf(aperture) / shutterTime * 100 / ISO);}
+	return log2(sqrtf(aperture) / shutterTime * 100 / ISO);
+}
 
 // http://www.frostbite.com/wp-content/uploads/2014/11/course_notes_moving_frostbite_to_pbr_v2.pdf
 float computeEV100FromAvgLuminance(float avgLuminance)
@@ -165,7 +166,8 @@ float convertEV100ToExposure(float EV100)
 	// = 78 / (100 * 0.65) * 2^ EV_100
 	// = 1.2 * 2^ EV
 	// Reference : http :// en. wikipedia . org / wiki / Film_speed
-	float maxLuminance = 1.2f * pow(2.0f, EV100);	return 1.0f / maxLuminance;
+	float maxLuminance = 1.2f * pow(2.0f, EV100);
+	return 1.0f / maxLuminance;
 }
 
 // http://www.frostbite.com/wp-content/uploads/2014/11/course_notes_moving_frostbite_to_pbr_v2.pdf
@@ -178,7 +180,8 @@ glm::vec3 accurateLinearToSRGB(const glm::vec3& linearColor)
 	sRGB.x = (linearColor.x <= 0.0031308f) ? sRGBLo.x : sRGBHi.x;
 	sRGB.y = (linearColor.y <= 0.0031308f) ? sRGBLo.y : sRGBHi.y;
 	sRGB.z = (linearColor.z <= 0.0031308f) ? sRGBLo.z : sRGBHi.z;
-	return sRGB;}
+	return sRGB;
+}
 
 // http://www.frostbite.com/wp-content/uploads/2014/11/course_notes_moving_frostbite_to_pbr_v2.pdf
 glm::vec3 approxLinearToSRGB(const glm::vec3& linearColor)
