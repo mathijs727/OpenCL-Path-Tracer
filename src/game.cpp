@@ -24,7 +24,7 @@ void Game::Init()
 
 	{
 		Sphere sphere(glm::vec3(0, 1, 5), 1);
-		Material material = Material::Diffuse(glm::vec3(0.5f, 0.3f, 0.2f));
+		Material material = Material::Diffuse(glm::vec3(0.9f, 0.9f, 0.9f));
 		//Material material = Material::Diffuse(
 		//	new Surface("assets/checkerboard.png"));
 		_scene->add_primitive(sphere, material);
@@ -33,19 +33,42 @@ void Game::Init()
 	{
 		Sphere sphere(glm::vec3(1, -0.5f, 3), 1);
 		Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.2f);
-		//_scene->add_primitive(sphere, material);
+		_scene->add_primitive(sphere, material);
 	}
 
 	{
 		Plane plane(glm::vec3(0, 1, 0), glm::vec3(0, -2.f, 0));
-		Material material = Material::Diffuse(glm::vec3(0.8f, 0.2f, 0.4f));
+		Material material = Material::Diffuse(glm::vec3(0.9f, 0.9f, 0.9f));
 		//Material material = Material::Diffuse(
 		//	new Surface("assets/checkerboard.png"));
 		_scene->add_primitive(plane, material);
 	}
 
 	{
-		Light light = Light::Point(glm::vec3(0, 3, 3), glm::vec3(0.8f, 0.0f, 0.0f), 50.0f);
+		Plane plane(glm::vec3(0, 0, -1), glm::vec3(0, 0, 16));
+		Material material = Material::Diffuse(glm::vec3(0.9f, 0.9f, 0.9f));
+		//Material material = Material::Diffuse(
+		//	new Surface("assets/checkerboard.png"));
+		_scene->add_primitive(plane, material);
+	}
+
+	{
+		Plane plane(glm::vec3(1, 0, 0), glm::vec3(-16, 0, 0));
+		Material material = Material::Diffuse(glm::vec3(0.9f, 0.9f, 0.9f));
+		//Material material = Material::Diffuse(
+		//	new Surface("assets/checkerboard.png"));
+		_scene->add_primitive(plane, material);
+	}
+	{
+		Plane plane(glm::vec3(-1, 0, 0), glm::vec3(16, 0, 0));
+		Material material = Material::Diffuse(glm::vec3(0.9f, 0.9f, 0.9f));
+		//Material material = Material::Diffuse(
+		//	new Surface("assets/checkerboard.png"));
+		_scene->add_primitive(plane, material);
+	}
+
+	{
+		Light light = Light::Point(glm::vec3(0, 3, 3), glm::vec3(0.8f, 0.8f, 0.8f), 50.0f);
 		_scene->add_light(light);
 	}
 	{
