@@ -1,5 +1,4 @@
 #pragma once
-
 #include "camera.h"
 #include "scene.h"
 #include <unordered_map>

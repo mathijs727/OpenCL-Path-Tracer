@@ -57,10 +57,15 @@ void Game::Init()
 		_scene->add_light(light);
 	}
 
-	Timer timer;
+	/*Timer timer;
 	raytrace(*_camera, *_scene, *_screen);
 	auto elapsedMs = timer.elapsed() * 1000.0f;// Miliseconds
-	std::cout << "Time to compute: " << elapsedMs << " ms" << std::endl;
+	std::cout << "Time to compute: " << elapsedMs << " ms" << std::endl;*/
+
+	RayTracer tracer;
+	tracer.DoSomething();
+	system("PAUSE");
+	exit(1);
 }
 
 // -----------------------------------------------------------
@@ -84,7 +89,7 @@ void Game::HandleInput( float dt )
 void Game::Tick( float dt )
 {
 	HandleInput(dt);
-	raytrace(*_camera, *_scene, *_screen);
+	//raytrace(*_camera, *_scene, *_screen);
 	//_screen->Clear( 0 );
 	//_screen->Print( "hello world", 2, 2, 0xffffff );
 	//_screen->Line( 2, 10, 50, 10, 0xff0000 );

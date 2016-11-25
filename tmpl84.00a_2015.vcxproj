@@ -40,6 +40,7 @@
     <ClInclude Include="src\raytracer.h" />
     <ClInclude Include="src\scene.h" />
     <ClInclude Include="src\shapes.h" />
+    <ClInclude Include="src\template\cl.hpp" />
     <ClInclude Include="src\template\surface.h" />
     <ClInclude Include="src\template\template.h" />
     <ClInclude Include="src\template\threads.h" />
@@ -119,7 +120,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -134,9 +135,9 @@
       <PrecompiledHeaderFile>template.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib</AdditionalDependencies>
+      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -157,7 +158,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -172,9 +173,9 @@
       <PrecompiledHeaderFile>template.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib</AdditionalDependencies>
+      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -197,7 +198,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -214,9 +215,9 @@
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib</AdditionalDependencies>
+      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -241,7 +242,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -259,9 +260,9 @@
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib</AdditionalDependencies>
+      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
