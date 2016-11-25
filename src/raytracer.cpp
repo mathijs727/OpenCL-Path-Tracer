@@ -14,7 +14,8 @@
 
 using namespace raytracer;
 
-const std::string hw("Hello World\n");
+cl_float3 glmToCl(const glm::vec3& vec);
+void floatToPixel(float* floats, uint32_t* pixels, int count);
 
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/
 inline void checkClErr(cl_int err, const char* name)
@@ -26,8 +27,11 @@ inline void checkClErr(cl_int err, const char* name)
 	}
 }
 
-raytracer::RayTracer::RayTracer()
+raytracer::RayTracer::RayTracer(int width, int height)
 {
+	_scr_width = width;
+	_scr_height = height;
+
 	InitOpenCL();
 	InitBuffers();
 	_helloWorldKernel = LoadKernel("assets/cl/kernel.cl", "hello");
@@ -41,39 +45,86 @@ void raytracer::RayTracer::InitBuffers()
 {
 	cl_int err;
 
-	_outH = std::make_unique<char[]>(hw.length() + 1);
-	_outCL = cl::Buffer(_context,
-		CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR,
-		hw.length() + 1,
-		_outH.get(),
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
+	{
+		// Create output (float) color buffer
+		_buffer_size = _scr_width * _scr_height * 3 * sizeof(float);
+		_outHost = std::make_unique<float[]>(_scr_width * _scr_height * 3);
+		_outDevice = cl::Buffer(_context,
+			CL_MEM_WRITE_ONLY,
+			_buffer_size,
+			NULL,
+			&err);
+		checkClErr(err, "Buffer::Buffer()");
+	}
+
+	{
+		// TODO: support scene class
+		// Create temporary scene
+		std::vector<Sphere> spheres;
+		spheres.emplace_back(glm::vec3(0, 1, 5), 1);
+		size_t bufSize = spheres.size() * sizeof(Sphere);
+		_spheres = cl::Buffer(_context,
+			CL_MEM_WRITE_ONLY,
+			bufSize,
+			NULL,
+			&err);
+		err = _queue.enqueueWriteBuffer(
+			_spheres,
+			CL_TRUE,
+			0,
+			bufSize,
+			spheres.data());
+		checkClErr(err, "Buffer::Buffer()");
+	}
 }
 
-void raytracer::RayTracer::DoSomething()
+void raytracer::RayTracer::RayTrace(
+	const Camera& camera,
+	const Scene& scene,
+	Tmpl8::Surface& target_surface)
 {
+	glm::vec3 eye;
+	glm::vec3 scr_base_origin;
+	glm::vec3 scr_base_u;
+	glm::vec3 scr_base_v;
+	camera.get_frustum(eye, scr_base_origin, scr_base_u, scr_base_v);
+
+	glm::vec3 u_step = scr_base_u / (float)_scr_width;
+	glm::vec3 v_step = scr_base_v / (float)_scr_height;
+
 	cl_int err;
 	cl::Event event;
-	_helloWorldKernel.setArg(0, _outCL);
+	_helloWorldKernel.setArg(0, _outDevice);
+	_helloWorldKernel.setArg(1, (cl_uint)_scr_width);
+	_helloWorldKernel.setArg(2, glmToCl(eye));
+	_helloWorldKernel.setArg(3, glmToCl(scr_base_origin));
+	_helloWorldKernel.setArg(4, glmToCl(u_step));
+	_helloWorldKernel.setArg(5, glmToCl(v_step));
+	_helloWorldKernel.setArg(6, 1);// Num spheres
+	_helloWorldKernel.setArg(7, _spheres);
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,
 		cl::NullRange,
-		cl::NDRange(hw.length() + 1),
-		cl::NDRange(1, 1),
+		cl::NDRange(_scr_width, _scr_height),
+		cl::NullRange,
 		NULL,
 		&event);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
 	event.wait();
 	err = _queue.enqueueReadBuffer(
-		_outCL,
+		_outDevice,
 		CL_TRUE,
 		0,
-		hw.length() + 1,
-		_outH.get());
+		_buffer_size,
+		_outHost.get());
 	checkClErr(err, "CommandQueue::enqueueReadBuffer");
-	std::cout << "OpenCL result: " << _outH.get() << std::endl;
+
+	floatToPixel(_outHost.get(), target_surface.GetBuffer(), _scr_width * _scr_height);
 }
+
+
+
 
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/
 void raytracer::RayTracer::InitOpenCL()
@@ -118,11 +169,21 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 		(std::istreambuf_iterator<char>()));
 	cl::Program::Sources source(1, std::make_pair(prog.c_str(), prog.length()+1));
 	cl::Program program(_context, source);
-	err = program.build(_devices, "");
+	err = program.build(_devices, "-I assets/cl/");
 	{
-		std::string errorMessage = "Cannot build program: ";
-		errorMessage += fileName;
-		checkClErr(err, errorMessage.c_str());
+		if (err != CL_SUCCESS)
+		{
+			std::string errorMessage = "Cannot build program: ";
+			errorMessage += fileName;
+			std::cout << "Cannot build program: " << fileName << std::endl;
+
+			std::string error;
+			program.getBuildInfo(_devices[0], CL_PROGRAM_BUILD_LOG, &error);
+			std::cout << error << std::endl;
+
+			system("PAUSE");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	cl::Kernel kernel(program, funcName, &err);
@@ -134,6 +195,31 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 
 	return kernel;
 }
+
+cl_float3 glmToCl(const glm::vec3 & vec)
+{
+	return { vec.x, vec.y, vec.z };
+}
+
+void floatToPixel(float* floats, uint32_t* pixels, int count)
+{
+	for (int i = 0; i < count; i++)
+	{
+		float r = floats[i * 3 + 0];
+		float g = floats[i * 3 + 1];
+		float b = floats[i * 3 + 2];
+
+		PixelRGBA pixel;
+		pixel.r = (u8)std::min((u32)(r * 255), 255U);
+		pixel.g = (u8)std::min((u32)(g * 255), 255U);
+		pixel.b = (u8)std::min((u32)(b * 255), 255U);
+		pixel.a = 255;
+		pixels[i] = pixel.value;
+	}
+}
+
+
+
 
 
 
@@ -163,7 +249,8 @@ void raytracer::raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surfac
 		for (int x = 0; x < target_surface.GetWidth(); ++x) {
 			glm::vec3 scr_point = scr_base_origin + u_step * (float)x + v_step * (float)y;
 			Ray ray(eye, glm::normalize(scr_point - eye));
-			glm::vec3 colour = scene.trace_ray(ray);
+			glm::vec3 colour = glm::vec3(0);// = scene.trace_ray(ray);
+			colour = ray.direction;
 
 #if FALSE
 			PixelRGBA pixel;

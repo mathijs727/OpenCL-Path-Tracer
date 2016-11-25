@@ -62,10 +62,14 @@ void Game::Init()
 	auto elapsedMs = timer.elapsed() * 1000.0f;// Miliseconds
 	std::cout << "Time to compute: " << elapsedMs << " ms" << std::endl;*/
 
-	RayTracer tracer;
-	tracer.DoSomething();
-	system("PAUSE");
-	exit(1);
+	if (true)
+	{
+		RayTracer tracer(SCRWIDTH, SCRHEIGHT);
+		tracer.RayTrace(*_camera, *_scene, *_screen);
+	}
+	else {
+		raytrace(*_camera, *_scene, *_screen);
+	}
 }
 
 // -----------------------------------------------------------
