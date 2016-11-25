@@ -65,7 +65,8 @@ void Game::Init()
 	if (true)
 	{
 		RayTracer tracer(SCRWIDTH, SCRHEIGHT);
-		tracer.RayTrace(*_camera, *_scene, *_screen);
+		tracer.SetScene(*_scene);
+		tracer.RayTrace(*_camera, *_screen);
 	}
 	else {
 		raytrace(*_camera, *_scene, *_screen);

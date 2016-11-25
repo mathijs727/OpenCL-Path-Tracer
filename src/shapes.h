@@ -7,6 +7,7 @@ namespace raytracer {
 
 struct Sphere
 {
+	Sphere() { }
 	Sphere(const glm::vec3& centre, float radius) {
 		this->centre = centre; this->radius = radius;
 	}
@@ -15,6 +16,7 @@ struct Sphere
 };
 
 struct Plane {
+	Plane() { }
 	Plane(const glm::vec3& normal, const glm::vec3 pos)
 	{
 		this->normal = glm::normalize(normal);

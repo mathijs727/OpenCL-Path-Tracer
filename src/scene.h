@@ -39,6 +39,11 @@ public:
 		_lights.push_back(light);
 	}
 
+	const std::vector<Sphere>& GetSpheres() const { return _spheres; };
+	const std::vector<Material>& GetSphereMaterials() const { return _sphere_materials; };
+
+	const std::vector<Plane>& GetPlanes() const { return _planes; };
+	const std::vector<Material>& GetPlaneMaterials() const { return _planes_materials; };
 public:
 	struct LightIterableConst {
 		const Scene& scene;

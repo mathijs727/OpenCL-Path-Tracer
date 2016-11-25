@@ -58,29 +58,77 @@ void raytracer::RayTracer::InitBuffers()
 	}
 
 	{
-		// TODO: support scene class
-		// Create temporary scene
-		std::vector<Sphere> spheres;
-		spheres.emplace_back(glm::vec3(0, 1, 5), 1);
-		size_t bufSize = spheres.size() * sizeof(Sphere);
 		_spheres = cl::Buffer(_context,
-			CL_MEM_WRITE_ONLY,
-			bufSize,
+			CL_MEM_READ_ONLY,
+			128 * sizeof(Sphere),
 			NULL,
 			&err);
-		err = _queue.enqueueWriteBuffer(
-			_spheres,
-			CL_TRUE,
-			0,
-			bufSize,
-			spheres.data());
+		checkClErr(err, "Buffer::Buffer()");
+	}
+
+	{
+		_planes = cl::Buffer(_context,
+			CL_MEM_READ_ONLY,
+			128 * sizeof(Plane),
+			NULL,
+			&err);
+		checkClErr(err, "Buffer::Buffer()");
+	}
+
+	{
+		_materials = cl::Buffer(_context,
+			CL_MEM_READ_ONLY,
+			256 * sizeof(Material),
+			NULL,
+			&err);
 		checkClErr(err, "Buffer::Buffer()");
 	}
 }
 
+void raytracer::RayTracer::SetScene(const Scene& scene)
+{
+	auto spheres = std::make_unique<Sphere[]>(128);
+	auto planes = std::make_unique<Plane[]>(128);
+	auto materials = std::make_unique<Material[]>(256);
+
+	_num_spheres = scene.GetSpheres().size();
+	_num_planes = scene.GetPlanes().size();
+	memcpy(spheres.get(), scene.GetSpheres().data(), _num_spheres * sizeof(Sphere));
+	memcpy(planes.get(), scene.GetPlanes().data(), _num_planes * sizeof(Plane));
+
+	memcpy(materials.get(), scene.GetSphereMaterials().data(), _num_spheres * sizeof(Material));
+	memcpy(materials.get() + _num_spheres,
+		scene.GetPlaneMaterials().data(),
+		_num_planes * sizeof(Material));
+
+	cl_int err;
+	err = _queue.enqueueWriteBuffer(
+		_spheres,
+		CL_TRUE,
+		0,
+		128 * sizeof(Sphere),
+		spheres.get());
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+
+	err = _queue.enqueueWriteBuffer(
+		_planes,
+		CL_TRUE,
+		0,
+		128 * sizeof(Plane),
+		planes.get());
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+
+	err = _queue.enqueueWriteBuffer(
+		_materials,
+		CL_TRUE,
+		0,
+		128 * sizeof(Sphere),
+		materials.get());
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+}
+
 void raytracer::RayTracer::RayTrace(
 	const Camera& camera,
-	const Scene& scene,
 	Tmpl8::Surface& target_surface)
 {
 	glm::vec3 eye;
@@ -100,8 +148,11 @@ void raytracer::RayTracer::RayTrace(
 	_helloWorldKernel.setArg(3, glmToCl(scr_base_origin));
 	_helloWorldKernel.setArg(4, glmToCl(u_step));
 	_helloWorldKernel.setArg(5, glmToCl(v_step));
-	_helloWorldKernel.setArg(6, 1);// Num spheres
+	_helloWorldKernel.setArg(6, _num_spheres);// Num spheres
 	_helloWorldKernel.setArg(7, _spheres);
+	_helloWorldKernel.setArg(8, _num_planes);// Num spheres
+	_helloWorldKernel.setArg(9, _planes);
+	_helloWorldKernel.setArg(10, _materials);
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,
 		cl::NullRange,

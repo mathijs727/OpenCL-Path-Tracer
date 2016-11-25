@@ -1,13 +1,18 @@
 #include "ray.cl"
 
-struct Sphere
+typedef struct
 {
 	float3 centre;
 	float radius;
-};
-typedef struct Sphere Sphere;
+} Sphere;
 
-bool intersect(const Ray* ray, const Sphere* sphere, float* time)
+typedef struct
+{
+	float3 normal;
+	float offset;
+} Plane;
+
+bool intersectSphere(const Ray* ray, const Sphere* sphere, float* time)
 {
 	float3 distance = sphere->centre - ray->origin;
 
@@ -35,3 +40,22 @@ bool intersect(const Ray* ray, const Sphere* sphere, float* time)
 	}
 	return false;
 }
+
+bool intersectPlane(const Ray* ray, const Plane* plane, float* time)
+{
+	// http://stackoverflow.com/questions/23975555/how-to-do-ray-plane-intersection
+	float denom = dot(plane->normal, ray->direction);
+    if (fabs(denom) > 1e-6)// Check that ray not parallel to plane
+	{
+		// A known point on the plane
+		float3 center = plane->offset * plane->normal;
+		float t = dot(center - ray->origin, plane->normal) / denom;
+		if (t > 0.0f)
+		{
+			*time = t;
+			return true;
+		}
+	}
+	return false;
+}
+

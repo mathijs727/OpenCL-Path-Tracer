@@ -18,7 +18,8 @@ public:
 	RayTracer(int width, int height);
 	~RayTracer();
 
-	void RayTrace(const Camera& camera, const Scene& scene, Tmpl8::Surface& target_surface);
+	void SetScene(const Scene& scene);
+	void RayTrace(const Camera& camera, Tmpl8::Surface& target_surface);
 private:
 	void InitOpenCL();
 	void InitBuffers();
@@ -35,7 +36,12 @@ private:
 
 	std::unique_ptr<float[]> _outHost;
 	cl::Buffer _outDevice;
+
+	int _num_spheres;
 	cl::Buffer _spheres;
+	int _num_planes;
+	cl::Buffer _planes;
+	cl::Buffer _materials;
 };
 
 void raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surface& target_surface);

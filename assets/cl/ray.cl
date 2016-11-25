@@ -1,6 +1,11 @@
-struct Ray
+typedef struct
 {
 	float3 origin;
 	float3 direction;
-};
-typedef struct Ray Ray;
+} Ray;
+
+typedef struct
+{
+	float3 origin;
+	float3 dest;
+} Line;
