@@ -1,3 +1,5 @@
+#ifndef __RAWSHAPES_CL
+#define __RAWSHAPES_CL
 // OpenCL float3 type is typedef'd to float4 so it is 16 bytes long unlike glm::vec3,
 // which is 12 bytes. RawShapes are the structs as defined in the C++ program with glm.
 // They should be converted to device native Shapes using convertRawShape(raw, device).
@@ -28,3 +30,4 @@ void convertRawPlane(const RawPlane* input, Plane* output)
 	output->normal.z = input->normal[2];
 	output->offset = input->offset;
 }
+#endif// __RAWSHAPES_CL

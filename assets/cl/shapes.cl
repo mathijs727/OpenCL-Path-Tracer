@@ -1,3 +1,5 @@
+#ifndef __SHAPES_CL
+#define __SHAPES_CL
 #include "ray.cl"
 
 typedef struct
@@ -58,4 +60,4 @@ bool intersectPlane(const Ray* ray, const Plane* plane, float* time)
 	}
 	return false;
 }
-
+#endif// __SHAPES_CL

@@ -1,3 +1,5 @@
+#ifndef __LIGHT_CL
+#define __LIGHT_CL
 struct Light
 {
 	enum class Type
@@ -64,3 +66,4 @@ bool is_light_visible(const glm::vec3& position, const Light& light, const Scene
 	}
 	return light.colour;
 }*/
+#endif// __LIGHT_CL

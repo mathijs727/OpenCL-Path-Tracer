@@ -1,12 +1,7 @@
 #include "shapes.cl"
 #include "rawshapes.cl"
 #include "material.cl"
-
-typedef enum
-{
-	SphereType,
-	PlaneType
-} IntersectionType;
+#include "scene.cl"
 
 __kernel void hello(
 	__global float* out,
@@ -23,53 +18,20 @@ __kernel void hello(
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 
+
+	__local Scene l_scene;
+	if (get_local_id(0) == 0 && get_local_id(1) == 0)
+	{
+		loadScene(numSpheres, spheres, numPlanes, planes, materials, &l_scene);
+	}
+
+
 	float3 screenPoint = screen + u_step * (float)x + v_step * (float)y;
 	Ray ray;
 	ray.origin = eye;
 	ray.direction = normalize(screenPoint - eye);
 
-	float minT = 100000.0f;
-	int i_current_hit = -1;
-	IntersectionType type;
-	for (int i = 0; i < numSpheres; i++)
-	{
-		RawSphere rawSphere = spheres[i];
-		Sphere sphere;
-		convertRawSphere(&rawSphere, &sphere);
-		float t;
-		if (intersectSphere(&ray, &sphere, &t) && t < minT)
-		{
-			minT = t;
-			i_current_hit = i;
-			type = SphereType;
-		}
-	}
-
-	for (int i = 0; i < numPlanes; i++)
-	{
-		RawPlane rawPlane = planes[i];
-		Plane plane;
-		convertRawPlane(&rawPlane, &plane);
-		float t;
-		if (intersectPlane(&ray, &plane, &t) && t < minT)
-		{
-			minT = t;
-			i_current_hit = i;
-			type = PlaneType;
-		}
-	}
-
-	Material material;
-	if (type == SphereType)
-	{
-		RawMaterial rawMaterial = materials[i_current_hit];
-		convertRawMaterial(&rawMaterial, &material);
-	} else if (type = PlaneType)
-	{
-		RawMaterial rawMaterial = materials[numSpheres + i_current_hit];
-		convertRawMaterial(&rawMaterial, &material);
-	}
-	float3 outColor = material.colour;
+	float3 outColor = traceRay(&l_scene, &ray);
 
 	// Use get_global_id instead of x/y to prevent casting from int to size_t
 	size_t outIndex = y * width + x;
