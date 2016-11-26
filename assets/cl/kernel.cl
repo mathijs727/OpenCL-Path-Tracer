@@ -27,6 +27,7 @@ __kernel void hello(
 	{
 		loadScene(numSpheres, spheres, numPlanes, planes, materials, numLights, lights, &l_scene);
 	}
+	barrier(CLK_LOCAL_MEM_FENCE);
 
 	float3 screenPoint = screen + u_step * (float)x + v_step * (float)y;
 	Ray ray;

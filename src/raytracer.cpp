@@ -5,6 +5,7 @@
 #include "template/surface.h"
 #include "ray.h"
 #include "pixel.h"
+#include "template\cl.hpp"
 #include <algorithm>
 #include <iostream>
 #include <emmintrin.h>
@@ -216,27 +217,63 @@ void raytracer::RayTracer::RayTrace(
 void raytracer::RayTracer::InitOpenCL()
 {
 	cl_int err;
+
+
+	// List and select a platform
 	std::vector<cl::Platform> platformList;
 	cl::Platform::get(&platformList);
-	checkClErr(platformList.size() != 0 ? CL_SUCCESS : -1, "cl::Platform::get");
-	std::cout << "Platform number is: " << platformList.size() << std::endl;
+	int platformCount = static_cast<int>(platformList.size());
+	checkClErr(platformCount != 0 ? CL_SUCCESS : -1, "cl::Platform::get");
+
+	std::cout << "Available platforms:" << std::endl;
+	for (int i = 0; i < platformCount; i++)
+	{
+		std::string platformVendor;
+		platformList[i].getInfo((cl_platform_info)CL_PLATFORM_VENDOR, &platformVendor);
+		std::cout << i << ": " << platformVendor << std::endl;
+	}
+
+	std::cout << "\nPlease select a platform by entering its index:" << std::endl;
+	int platformIndex = -1;
+	while (platformIndex < 0 || platformIndex >= platformCount)
+	{
+		std::cin >> platformIndex;
+	}
 	
-	std::string platformVendor;
-	platformList[0].getInfo((cl_platform_info)CL_PLATFORM_VENDOR, &platformVendor);
-	std::cout << "Platform is by: " << platformVendor << std::endl;
-	
-	cl_context_properties cprops[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platformList[0])(), 0 };
-	_context = cl::Context(CL_DEVICE_TYPE_CPU,
+
+	// Get context for that platform
+	cl_context_properties cprops[3] = {
+		CL_CONTEXT_PLATFORM,
+		(cl_context_properties)(platformList[platformIndex])(),
+		0
+	};
+	_context = cl::Context(CL_DEVICE_TYPE_CPU | CL_DEVICE_TYPE_GPU,
 		cprops,
 		NULL,
 		NULL,
 		&err);
 	checkClErr(err, "Context::Context");
 
-	_devices = _context.getInfo<CL_CONTEXT_DEVICES>();
-	checkClErr(_devices.size() > 0 ? CL_SUCCESS : -1, "devices.size() > 0");
 
-	_queue = cl::CommandQueue(_context, _devices[0], 0, &err);
+	// List and select a device
+	_devices = _context.getInfo<CL_CONTEXT_DEVICES>();
+	int deviceCount = static_cast<int>(_devices.size());
+	checkClErr(deviceCount > 0 ? CL_SUCCESS : -1, "devices.size() > 0");
+	std::cout << "\n\nAvailable devices (for this platform):" << std::endl;
+	for (int i = 0; i < deviceCount; i++)
+	{
+		std::string deviceName;
+		_devices[i].getInfo((cl_device_info)CL_DEVICE_NAME, &deviceName);
+		std::cout << i << ": " << deviceName << std::endl;
+	}
+	std::cout << "\nPlease select a device by entering its index:" << std::endl;
+	int deviceIndex = -1;
+	while (deviceIndex < 0 || deviceIndex >= deviceCount)
+	{
+		std::cin >> deviceIndex;
+	}
+
+	_queue = cl::CommandQueue(_context, _devices[deviceIndex], 0, &err);
 	checkClErr(err, "CommandQueue::CommandQueue()");
 }
 
