@@ -1,6 +1,7 @@
 #pragma once
 #include "template\cl.hpp"
 #include <memory>
+#include <OpenGL\glew.h>
 
 namespace Tmpl8 {
 class Surface;
@@ -19,7 +20,8 @@ public:
 	~RayTracer();
 
 	void SetScene(const Scene& scene);
-	void RayTrace(const Camera& camera, Tmpl8::Surface& target_surface);
+	void SetTarget(GLuint glTexture);
+	void RayTrace(const Camera& camera);
 private:
 	void InitOpenCL();
 	void InitBuffers();
@@ -44,6 +46,8 @@ private:
 	cl::Buffer _materials;
 	int _num_lights;
 	cl::Buffer _lights;
+
+	cl::ImageGL _outputBuffer;
 };
 
 void raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surface& target_surface);

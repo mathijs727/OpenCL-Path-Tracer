@@ -2,6 +2,7 @@
 #include "camera.h"
 #include "scene.h"
 #include "raytracer.h"
+#include "gloutput.h"
 #include <unordered_map>
 
 #define SCRWIDTH	 1280
@@ -36,6 +37,7 @@ private:
 	glm::vec3 _camera_euler;
 
 	std::unique_ptr<raytracer::RayTracer> _ray_tracer;
+	GLOutput _out;
 };
 
 }; // namespace Tmpl8

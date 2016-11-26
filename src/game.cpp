@@ -5,7 +5,7 @@
 #include "transform.h"
 #include "raytracer.h"
 #include "timer.h"
-
+#include "gloutput.h"
 #include <iostream>
 
 using namespace raytracer;
@@ -66,9 +66,10 @@ void Game::Init()
 	std::cout << "Time to compute: " << elapsedMs << " ms" << std::endl;*/
 
 #ifdef OPENCL
-		_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
-		_ray_tracer->SetScene(*_scene);
+		//_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
+		//_ray_tracer->SetScene(*_scene);
 #endif
+	_out.Init(SCRWIDTH, SCRHEIGHT);
 }
 
 // -----------------------------------------------------------
@@ -96,12 +97,12 @@ void Game::Tick( float dt )
 	//_screen->Clear( 0 );
 	//_screen->Print( "hello world", 2, 2, 0xffffff );
 	//_screen->Line( 2, 10, 50, 10, 0xff0000 );
-
 #ifdef OPENCL
-	_ray_tracer->RayTrace(*_camera, *_screen);
+	_ray_tracer->RayTrace(*_camera, _out.GetGLTexture());
 #else
 	raytrace(*_camera, *_scene, *_screen);
 #endif
+	_out.Render();
 }
 
 void Tmpl8::Game::AxisEvent(int axis, float value) {

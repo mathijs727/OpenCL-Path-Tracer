@@ -161,9 +161,12 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 }
 
-void raytracer::RayTracer::RayTrace(
-	const Camera& camera,
-	Tmpl8::Surface& target_surface)
+void raytracer::RayTracer::SetTarget(GLuint glTexture)
+{
+
+}
+
+void raytracer::RayTracer::RayTrace(const Camera& camera)
 {
 	glm::vec3 eye;
 	glm::vec3 scr_base_origin;

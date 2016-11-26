@@ -18,6 +18,9 @@
 #include <io.h>
 #endif
 
+#define GLEW_STATIC
+#include "OpenGL\glew.h"
+
 using namespace Tmpl8;
 
 namespace Tmpl8 { 
@@ -98,6 +101,85 @@ void redirectIO()
 int main( int argc, char **argv ) 
 {
 	redirectIO();
+	printf("application started.\n");
+	SDL_Init(SDL_INIT_VIDEO);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_Window* window = SDL_CreateWindow("Template", 100, 100, SCRWIDTH, SCRHEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
+
+	SDL_GLContext context = SDL_GL_CreateContext(window);
+	if (context == NULL)
+	{
+		std::cout << "Could not create OpenGL context!" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	glewInit();
+
+	int exitapp = 0;
+	auto timer = Timer();
+	game = new Game();
+	SDL_SetRelativeMouseMode(SDL_TRUE);
+	while (!exitapp)
+	{
+		if (firstframe)
+		{
+			game->Init();
+			firstframe = false;
+		}
+
+		game->KeysUpdate(SDL_GetKeyboardState(NULL));
+
+		// event loop
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			switch (event.type)
+			{
+			case SDL_QUIT:
+				exitapp = 1;
+				break;
+			case SDL_CONTROLLERAXISMOTION:
+				game->AxisEvent(event.caxis.axis, (float)event.caxis.value / 32767);
+				break;
+			case SDL_KEYDOWN:
+				if (event.key.keysym.sym == SDLK_ESCAPE)
+				{
+					exitapp = 1;
+					// find other keys here: http://sdl.beuc.net/sdl.wiki/SDLKey
+				}
+				game->KeyDown(event.key.keysym.scancode);
+				break;
+			case SDL_KEYUP:
+				game->KeyUp(event.key.keysym.scancode);
+				break;
+			case SDL_MOUSEMOTION:
+				game->MouseMove(event.motion.xrel, event.motion.yrel);
+				break;
+			case SDL_MOUSEBUTTONUP:
+				game->MouseUp(event.button.button);
+				break;
+			case SDL_MOUSEBUTTONDOWN:
+				game->MouseDown(event.button.button);
+				break;
+			default:
+				break;
+			}
+		}
+
+		// calculate frame time and pass it to game->Tick
+		game->Tick(lastftime);
+		lastftime = timer.elapsed();
+		timer.reset();
+
+		//std::cout << "Frame time: " << lastftime * 1000 << "ms" << std::endl;
+		SDL_GL_SwapWindow(window);
+	}
+	game->Shutdown();
+	SDL_Quit();
+	return 1;
+
+	/*redirectIO();
 	printf( "application started.\n" );
 	SDL_Init( SDL_INIT_VIDEO );
 	surface = new Surface( SCRWIDTH, SCRHEIGHT );
@@ -185,5 +267,5 @@ int main( int argc, char **argv )
 	}
 	game->Shutdown();
 	SDL_Quit();
-	return 1;
+	return 1;*/
 }

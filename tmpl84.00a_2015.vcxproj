@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\game.cpp" />
+    <ClCompile Include="src\gloutput.cpp" />
     <ClCompile Include="src\light.cpp" />
     <ClCompile Include="src\material.cpp" />
     <ClCompile Include="src\raytracer.cpp" />
@@ -33,6 +34,7 @@
   <ItemGroup>
     <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\game.h" />
+    <ClInclude Include="src\gloutput.h" />
     <ClInclude Include="src\light.h" />
     <ClInclude Include="src\material.h" />
     <ClInclude Include="src\pixel.h" />
@@ -136,9 +138,9 @@
       <PrecompiledHeaderFile>template.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib</AdditionalDependencies>
+      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -174,9 +176,9 @@
       <PrecompiledHeaderFile>template.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib</AdditionalDependencies>
+      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -216,9 +218,9 @@
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib</AdditionalDependencies>
+      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -261,9 +263,9 @@
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib</AdditionalDependencies>
+      <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
