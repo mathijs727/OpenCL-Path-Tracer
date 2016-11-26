@@ -22,11 +22,11 @@ void GLOutput::Init(int width, int height)
 	glTexImage2D(
 		GL_TEXTURE_2D,
 		0,
-		GL_RGB,
+		GL_RGBA,
 		width,
 		height,
 		0,
-		GL_RGB,
+		GL_RGBA,
 		GL_FLOAT,
 		nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -36,13 +36,13 @@ void GLOutput::Init(int width, int height)
 	// Create full screen quad
 	// For whatever reason, OpenGL doesnt like GL_QUADS (gives me no output), so I'll just use two triangles
 	float vertices[] = {
-		-1.0f, -1.0f, 0.0f,    0.0f, 0.0f,
-		 1.0f, -1.0f, 0.0f,    1.0f, 0.0f,
-		 1.0f,  1.0f, 0.0f,    1.0f, 1.0f,
+		-1.0f, -1.0f, 0.0f,    0.0f, 1.0f,
+		 1.0f, -1.0f, 0.0f,    1.0f, 1.0f,
+		 1.0f,  1.0f, 0.0f,    1.0f, 0.0f,
 
-		 -1.0f, -1.0f, 0.0f,   0.0f, 0.0f,
-		 1.0f,  1.0f, 0.0f,    1.0f, 1.0f, 
-		-1.0f,  1.0f, 0.0f,    0.0f, 1.0f
+		 -1.0f, -1.0f, 0.0f,   0.0f, 1.0f,
+		 1.0f,  1.0f, 0.0f,    1.0f, 0.0f, 
+		-1.0f,  1.0f, 0.0f,    0.0f, 0.0f
 	};
 	glGenVertexArrays(1, &m_vao);
 	glBindVertexArray(m_vao);

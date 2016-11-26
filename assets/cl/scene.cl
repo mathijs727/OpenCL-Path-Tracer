@@ -128,7 +128,7 @@ float3 traceRay(const __local Scene* scene, const Ray* ray)
 			&intersection,
 			&normal,
 			scene->numLights,
-			&scene->lights,
+			scene->lights,
 			&material);
 	}
 	return (float3)(0.0f, 0.0f, 0.0f);

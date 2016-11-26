@@ -13,11 +13,13 @@
 #include <fstream>
 #include <utility>
 #include <thread>
+#include <OpenGL\wglew.h>
+#include <CL\cl.h>
 
 using namespace raytracer;
 
 cl_float3 glmToCl(const glm::vec3& vec);
-void floatToPixel(float* floats, uint32_t* pixels, int count);
+//void floatToPixel(float* floats, uint32_t* pixels, int count);
 
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/
 inline void checkClErr(cl_int err, const char* name)
@@ -163,7 +165,9 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 
 void raytracer::RayTracer::SetTarget(GLuint glTexture)
 {
-
+	cl_int err;
+	_outputImage = cl::ImageGL(_context, CL_MEM_WRITE_ONLY | CL_MEM_HOST_NO_ACCESS, GL_TEXTURE_2D, 0, glTexture, &err);
+	checkClErr(err, "ImageGL");
 }
 
 void raytracer::RayTracer::RayTrace(const Camera& camera)
@@ -177,9 +181,12 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	glm::vec3 u_step = scr_base_u / (float)_scr_width;
 	glm::vec3 v_step = scr_base_v / (float)_scr_height;
 
+	// We must make sure that OpenGL is done with the textures, so we ask to sync.
+	glFinish();
+
 	cl_int err;
 	cl::Event event;
-	_helloWorldKernel.setArg(0, _outDevice);
+	_helloWorldKernel.setArg(0, _outputImage);
 	_helloWorldKernel.setArg(1, (cl_uint)_scr_width);
 	_helloWorldKernel.setArg(2, glmToCl(eye));
 	_helloWorldKernel.setArg(3, glmToCl(scr_base_origin));
@@ -210,17 +217,132 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		_outHost.get());
 	checkClErr(err, "CommandQueue::enqueueReadBuffer");
 
-	floatToPixel(_outHost.get(), target_surface.GetBuffer(), _scr_width * _scr_height);
+	// Before returning the objects to OpenGL, we sync to make sure OpenCL is done.
+	err = _queue.finish();
+	checkClErr(err, "CommandQueue::finish");
+	//floatToPixel(_outHost.get(), target_surface.GetBuffer(), _scr_width * _scr_height);
 }
 
-
-
-
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/
+// https://www.codeproject.com/articles/685281/opengl-opencl-interoperability-a-case-study-using
 void raytracer::RayTracer::InitOpenCL()
 {
-	cl_int err;
+	cl_int lError = CL_SUCCESS;
+	std::string lBuffer;
 
+	//
+	// Generic OpenCL creation.
+	//
+
+	// Get platforms.
+	cl_uint lNbPlatformId = 0;
+	clGetPlatformIDs(0, 0, &lNbPlatformId);
+
+	if (lNbPlatformId == 0)
+	{
+		std::cout << "Unable to find an OpenCL platform." << std::endl;
+		system("PAUSE");
+		exit(EXIT_FAILURE);
+	}
+
+
+	// Loop on all platforms.
+	std::vector< cl_platform_id > lPlatformIds(lNbPlatformId);
+	clGetPlatformIDs(lNbPlatformId, lPlatformIds.data(), 0);
+
+	// Try to find the device with the compatible context.
+	cl_platform_id lPlatformId = 0;
+	cl_device_id lDeviceId = 0;
+	cl_context lContext = 0;
+
+	for (size_t i = 0; i < lPlatformIds.size() && lContext == 0; ++i)
+	{
+		const cl_platform_id lPlatformIdToTry = lPlatformIds[i];
+
+		// Get devices.
+		cl_uint lNbDeviceId = 0;
+		clGetDeviceIDs(lPlatformIdToTry, CL_DEVICE_TYPE_GPU, 0, 0, &lNbDeviceId);
+
+		if (lNbDeviceId == 0)
+		{
+			continue;
+		}
+
+		std::vector< cl_device_id > lDeviceIds(lNbDeviceId);
+		clGetDeviceIDs(lPlatformIdToTry, CL_DEVICE_TYPE_GPU, lNbDeviceId, lDeviceIds.data(), 0);
+
+
+		// Create the properties for this context.
+		cl_context_properties lContextProperties[] = {
+			// We need to add information about the OpenGL context with
+			// which we want to exchange information with the OpenCL context.
+#if defined (WIN32)
+			// We should first check for cl_khr_gl_sharing extension.
+			CL_GL_CONTEXT_KHR , (cl_context_properties)wglGetCurrentContext() ,
+			CL_WGL_HDC_KHR , (cl_context_properties)wglGetCurrentDC() ,
+#elif defined (__linux__)
+			// We should first check for cl_khr_gl_sharing extension.
+			CL_GL_CONTEXT_KHR , (cl_context_properties)glXGetCurrentContext() ,
+			CL_GLX_DISPLAY_KHR , (cl_context_properties)glXGetCurrentDisplay() ,
+#elif defined (__APPLE__)
+			// We should first check for cl_APPLE_gl_sharing extension.
+#if 0
+			// This doesn't work.
+			CL_GL_CONTEXT_KHR , (cl_context_properties)CGLGetCurrentContext() ,
+			CL_CGL_SHAREGROUP_KHR , (cl_context_properties)CGLGetShareGroup(CGLGetCurrentContext()) ,
+#else
+			CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE , (cl_context_properties)CGLGetShareGroup(CGLGetCurrentContext()) ,
+#endif
+#endif
+			CL_CONTEXT_PLATFORM , (cl_context_properties)lPlatformIdToTry ,
+			0 , 0 ,
+		};
+
+
+		// Look for the compatible context.
+		for (size_t j = 0; j < lDeviceIds.size(); ++j)
+		{
+			cl_device_id lDeviceIdToTry = lDeviceIds[j];
+			cl_context lContextToTry = 0;
+
+			lContextToTry = clCreateContext(
+				lContextProperties,
+				1, &lDeviceIdToTry,
+				0, 0,
+				&lError
+			);
+			if (lError == CL_SUCCESS)
+			{
+				// We found the context.
+				lPlatformId = lPlatformIdToTry;
+				lDeviceId = lDeviceIdToTry;
+				lContext = lContextToTry;
+				break;
+			}
+		}
+	}
+
+	if (lDeviceId == 0)
+	{
+		std::cout << "Unable to find a compatible OpenCL device." << std::endl;
+		system("PAUSE");
+		exit(EXIT_FAILURE);
+	}
+
+
+	// Create a command queue.
+	_context = lContext;
+	_devices.push_back(cl::Device(lDeviceId));
+	_queue = clCreateCommandQueue(lContext, lDeviceId, 0, &lError);
+	/*if (!CheckForError(lError))
+	{
+		std::cout << "Unable to create an OpenCL command queue." << std::endl;
+		system("PAUSE");
+		exit(EXIT_FAILURE);
+	}*/
+	checkClErr(lError, "Unable to create an OpenCL command queue.");
+
+	/*cl_int err;
 
 	// List and select a platform
 	std::vector<cl::Platform> platformList;
@@ -245,9 +367,15 @@ void raytracer::RayTracer::InitOpenCL()
 	
 
 	// Get context for that platform
-	cl_context_properties cprops[3] = {
-		CL_CONTEXT_PLATFORM,
-		(cl_context_properties)(platformList[platformIndex])(),
+
+	//get the GL rendering context
+	HGLRC hGLRC = wglGetCurrentContext();
+	//get the device context
+	HDC hDC = wglGetCurrentDC();
+	cl_context_properties cprops[7] = {
+		CL_CONTEXT_PLATFORM, (cl_context_properties)(platformList[platformIndex])(),
+		CL_GL_CONTEXT_KHR, (cl_context_properties)hGLRC,
+		CL_WGL_HDC_KHR, (cl_context_properties)hDC,
 		0
 	};
 	_context = cl::Context(CL_DEVICE_TYPE_CPU | CL_DEVICE_TYPE_GPU,
@@ -277,7 +405,7 @@ void raytracer::RayTracer::InitOpenCL()
 	}
 
 	_queue = cl::CommandQueue(_context, _devices[deviceIndex], 0, &err);
-	checkClErr(err, "CommandQueue::CommandQueue()");
+	checkClErr(err, "CommandQueue::CommandQueue()");*/
 }
 
 cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* funcName)
@@ -327,7 +455,7 @@ cl_float3 glmToCl(const glm::vec3 & vec)
 	return { vec.x, vec.y, vec.z };
 }
 
-void floatToPixel(float* floats, uint32_t* pixels, int count)
+/*void floatToPixel(float* floats, uint32_t* pixels, int count)
 {
 	for (int i = 0; i < count; i++)
 	{
@@ -342,7 +470,7 @@ void floatToPixel(float* floats, uint32_t* pixels, int count)
 		pixel.a = 255;
 		pixels[i] = pixel.value;
 	}
-}
+}*/
 
 
 

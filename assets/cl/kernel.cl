@@ -5,7 +5,7 @@
 #include "light.cl"
 
 __kernel void hello(
-	__global float* out,
+	__write_only image2d_t output,
 	uint width,// Render target width
 	float3 eye,// Position of the camera "eye"
 	float3 screen,// Left top of screen in world space
@@ -35,10 +35,15 @@ __kernel void hello(
 	ray.direction = normalize(screenPoint - eye);
 
 	float3 outColor = traceRay(&l_scene, &ray);
-
+	float4 xxx;
+	xxx.x = outColor.x;
+	xxx.y = outColor.y;
+	xxx.z = outColor.z;
+	xxx.w = 1.0f;
 	// Use get_global_id instead of x/y to prevent casting from int to size_t
-	size_t outIndex = y * width + x;
+	/*size_t outIndex = y * width + x;
 	out[outIndex * 3 + 0] = outColor.x;
 	out[outIndex * 3 + 1] = outColor.y;
-	out[outIndex * 3 + 2] = outColor.z;
+	out[outIndex * 3 + 2] = outColor.z;*/
+	write_imagef(output, (int2)(x, y), xxx);
 }

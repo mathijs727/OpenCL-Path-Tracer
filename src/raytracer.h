@@ -47,7 +47,7 @@ private:
 	int _num_lights;
 	cl::Buffer _lights;
 
-	cl::ImageGL _outputBuffer;
+	cl::ImageGL _outputImage;
 };
 
 void raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surface& target_surface);

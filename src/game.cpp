@@ -65,11 +65,13 @@ void Game::Init()
 	auto elapsedMs = timer.elapsed() * 1000.0f;// Miliseconds
 	std::cout << "Time to compute: " << elapsedMs << " ms" << std::endl;*/
 
-#ifdef OPENCL
-		//_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
-		//_ray_tracer->SetScene(*_scene);
-#endif
 	_out.Init(SCRWIDTH, SCRHEIGHT);
+#ifdef OPENCL
+	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
+	_ray_tracer->SetScene(*_scene);
+	_ray_tracer->SetTarget(_out.GetGLTexture());
+#endif
+
 }
 
 // -----------------------------------------------------------
@@ -98,7 +100,7 @@ void Game::Tick( float dt )
 	//_screen->Print( "hello world", 2, 2, 0xffffff );
 	//_screen->Line( 2, 10, 50, 10, 0xff0000 );
 #ifdef OPENCL
-	_ray_tracer->RayTrace(*_camera, _out.GetGLTexture());
+	_ray_tracer->RayTrace(*_camera);
 #else
 	raytrace(*_camera, *_scene, *_screen);
 #endif
