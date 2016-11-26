@@ -95,6 +95,19 @@ struct Material
 	}
 };
 
+struct SerializedMaterial
+{
+	Material::Type type;
+	glm::vec3 colour;
+
+	SerializedMaterial() { }
+	SerializedMaterial(const Material& other)
+	{
+		type = other.type;
+		colour = other.colour;
+	}
+};
+
 glm::vec3 diffuse_shade(
 	const glm::vec3& rayDirection,
 	const glm::vec3& intersection,

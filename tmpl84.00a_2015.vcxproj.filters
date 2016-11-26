@@ -47,5 +47,6 @@
     <ClInclude Include="src\template\cl.hpp">
       <Filter>template code</Filter>
     </ClInclude>
+    <ClInclude Include="src\shading.h" />
   </ItemGroup>
 </Project>

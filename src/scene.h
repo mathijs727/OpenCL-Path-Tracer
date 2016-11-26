@@ -44,6 +44,8 @@ public:
 
 	const std::vector<Plane>& GetPlanes() const { return _planes; };
 	const std::vector<Material>& GetPlaneMaterials() const { return _planes_materials; };
+
+	const std::vector<Light>& GetLights() const { return _lights; };
 public:
 	struct LightIterableConst {
 		const Scene& scene;

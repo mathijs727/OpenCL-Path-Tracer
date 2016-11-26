@@ -1,3 +1,5 @@
+#ifndef __MATERIAL_CL
+#define __MATERIAL_CL
 typedef enum {
 		Reflective,
 		Diffuse,
@@ -14,7 +16,7 @@ typedef struct
 typedef struct
 {
 	MaterialType type;
-	float colour[3]; 
+	float colour[3];
 } RawMaterial;
 
 void convertRawMaterial(const RawMaterial* input, Material* output)
@@ -24,3 +26,4 @@ void convertRawMaterial(const RawMaterial* input, Material* output)
 	output->colour.y = input->colour[1];
 	output->colour.z = input->colour[2];
 }
+#endif// __MATERIAL_CL

@@ -11,6 +11,8 @@
 using namespace raytracer;
 using namespace Tmpl8;
 
+#define OPENCL
+
 // -----------------------------------------------------------
 // Initialize the game
 // -----------------------------------------------------------
@@ -32,7 +34,8 @@ void Game::Init()
 
 	{
 		Sphere sphere(glm::vec3(1, -0.5f, 3), 1);
-		Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.2f);
+		//Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.2f);
+		Material material = Material::Diffuse(glm::vec3(0.8f, 0.2f, 0.4f));
 		_scene->add_primitive(sphere, material);
 	}
 
@@ -62,15 +65,10 @@ void Game::Init()
 	auto elapsedMs = timer.elapsed() * 1000.0f;// Miliseconds
 	std::cout << "Time to compute: " << elapsedMs << " ms" << std::endl;*/
 
-	if (true)
-	{
-		RayTracer tracer(SCRWIDTH, SCRHEIGHT);
-		tracer.SetScene(*_scene);
-		tracer.RayTrace(*_camera, *_screen);
-	}
-	else {
-		raytrace(*_camera, *_scene, *_screen);
-	}
+#ifdef OPENCL
+		_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
+		_ray_tracer->SetScene(*_scene);
+#endif
 }
 
 // -----------------------------------------------------------
@@ -98,6 +96,12 @@ void Game::Tick( float dt )
 	//_screen->Clear( 0 );
 	//_screen->Print( "hello world", 2, 2, 0xffffff );
 	//_screen->Line( 2, 10, 50, 10, 0xff0000 );
+
+#ifdef OPENCL
+	_ray_tracer->RayTrace(*_camera, *_screen);
+#else
+	raytrace(*_camera, *_scene, *_screen);
+#endif
 }
 
 void Tmpl8::Game::AxisEvent(int axis, float value) {

@@ -42,13 +42,13 @@ float raytracer::intersect_inside(const Ray& ray, const Sphere& sphere, glm::vec
 	
 	// the time is the "t" parameter in the P = O + rD equation of the ray
 	// we use pythagoras's theorem to calc the missing cathetus
-	float t = component_parallel + sqrt(radius_squared - component_normal_squared);
+	float t = component_parallel + sqrtf(radius_squared - component_normal_squared);
 	assert(t > 0.0f);
 	out_normal = glm::normalize(sphere.centre - (ray.origin + ray.direction * t));
 	return t;
 }
 
-float raytracer::intersect_inside(const Ray& ray, const Triangle& sphere, glm::vec3& out_normal) {
+float raytracer::intersect_inside(const Ray& ray, const Triangle& triangle, glm::vec3& out_normal) {
 	return 0;
 }
 

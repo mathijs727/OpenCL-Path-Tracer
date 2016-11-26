@@ -1,6 +1,7 @@
 #pragma once
 #include "camera.h"
 #include "scene.h"
+#include "raytracer.h"
 #include <unordered_map>
 
 #define SCRWIDTH	 1280
@@ -33,6 +34,8 @@ private:
 	std::unique_ptr<raytracer::Camera> _camera;
 	std::unordered_map<int, float> _input_axes;
 	glm::vec3 _camera_euler;
+
+	std::unique_ptr<raytracer::RayTracer> _ray_tracer;
 };
 
 }; // namespace Tmpl8

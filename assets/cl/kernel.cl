@@ -2,6 +2,7 @@
 #include "rawshapes.cl"
 #include "material.cl"
 #include "scene.cl"
+#include "light.cl"
 
 __kernel void hello(
 	__global float* out,
@@ -14,7 +15,9 @@ __kernel void hello(
 	__global RawSphere* spheres,
 	int numPlanes,
 	__global RawPlane* planes,
-	__global RawMaterial* materials) {
+	__global RawMaterial* materials,
+	int numLights,
+	__global RawLight* lights) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 
@@ -22,9 +25,8 @@ __kernel void hello(
 	__local Scene l_scene;
 	if (get_local_id(0) == 0 && get_local_id(1) == 0)
 	{
-		loadScene(numSpheres, spheres, numPlanes, planes, materials, &l_scene);
+		loadScene(numSpheres, spheres, numPlanes, planes, materials, numLights, lights, &l_scene);
 	}
-
 
 	float3 screenPoint = screen + u_step * (float)x + v_step * (float)y;
 	Ray ray;

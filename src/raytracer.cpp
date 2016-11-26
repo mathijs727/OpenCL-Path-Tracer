@@ -11,6 +11,7 @@
 #include <vector>
 #include <fstream>
 #include <utility>
+#include <thread>
 
 using namespace raytracer;
 
@@ -78,7 +79,16 @@ void raytracer::RayTracer::InitBuffers()
 	{
 		_materials = cl::Buffer(_context,
 			CL_MEM_READ_ONLY,
-			256 * sizeof(Material),
+			256 * sizeof(SerializedMaterial),
+			NULL,
+			&err);
+		checkClErr(err, "Buffer::Buffer()");
+	}
+
+	{
+		_lights = cl::Buffer(_context,
+			CL_MEM_READ_ONLY,
+			16 * sizeof(Light),
 			NULL,
 			&err);
 		checkClErr(err, "Buffer::Buffer()");
@@ -89,17 +99,32 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 {
 	auto spheres = std::make_unique<Sphere[]>(128);
 	auto planes = std::make_unique<Plane[]>(128);
-	auto materials = std::make_unique<Material[]>(256);
+	auto materials = std::make_unique<SerializedMaterial[]>(256);
+	auto lights = std::make_unique<Light[]>(16);
 
 	_num_spheres = scene.GetSpheres().size();
 	_num_planes = scene.GetPlanes().size();
 	memcpy(spheres.get(), scene.GetSpheres().data(), _num_spheres * sizeof(Sphere));
 	memcpy(planes.get(), scene.GetPlanes().data(), _num_planes * sizeof(Plane));
 
-	memcpy(materials.get(), scene.GetSphereMaterials().data(), _num_spheres * sizeof(Material));
+	/*memcpy(materials.get(), scene.GetSphereMaterials().data(), _num_spheres * sizeof(SerializedMaterial));
 	memcpy(materials.get() + _num_spheres,
 		scene.GetPlaneMaterials().data(),
-		_num_planes * sizeof(Material));
+		_num_planes * sizeof(Material));*/
+	auto sphereMaterials = scene.GetSphereMaterials();
+	auto planeMaterials = scene.GetPlaneMaterials();
+	int i = 0;
+	for (const Material& mat : sphereMaterials)
+	{
+		materials[i++] = SerializedMaterial(mat);
+	}
+	for (const Material& mat : planeMaterials)
+	{
+		materials[i++] = SerializedMaterial(mat);
+	}
+
+	_num_lights = scene.GetLights().size();
+	memcpy(lights.get(), scene.GetLights().data(), _num_lights * sizeof(Light));
 
 	cl_int err;
 	err = _queue.enqueueWriteBuffer(
@@ -122,8 +147,16 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 		_materials,
 		CL_TRUE,
 		0,
-		128 * sizeof(Sphere),
+		256 * sizeof(SerializedMaterial),
 		materials.get());
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+
+	err = _queue.enqueueWriteBuffer(
+		_lights,
+		CL_TRUE,
+		0,
+		16 * sizeof(Light),
+		lights.get());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 }
 
@@ -153,11 +186,13 @@ void raytracer::RayTracer::RayTrace(
 	_helloWorldKernel.setArg(8, _num_planes);// Num spheres
 	_helloWorldKernel.setArg(9, _planes);
 	_helloWorldKernel.setArg(10, _materials);
+	_helloWorldKernel.setArg(11, _num_lights);
+	_helloWorldKernel.setArg(12, _lights);
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,
 		cl::NullRange,
 		cl::NDRange(_scr_width, _scr_height),
-		cl::NullRange,
+		cl::NDRange(8,8),
 		NULL,
 		&event);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
@@ -300,8 +335,7 @@ void raytracer::raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surfac
 		for (int x = 0; x < target_surface.GetWidth(); ++x) {
 			glm::vec3 scr_point = scr_base_origin + u_step * (float)x + v_step * (float)y;
 			Ray ray(eye, glm::normalize(scr_point - eye));
-			glm::vec3 colour = glm::vec3(0);// = scene.trace_ray(ray);
-			colour = ray.direction;
+			glm::vec3 colour = scene.trace_ray(ray);
 
 #if FALSE
 			PixelRGBA pixel;

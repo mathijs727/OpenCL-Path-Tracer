@@ -42,6 +42,8 @@ private:
 	int _num_planes;
 	cl::Buffer _planes;
 	cl::Buffer _materials;
+	int _num_lights;
+	cl::Buffer _lights;
 };
 
 void raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surface& target_surface);

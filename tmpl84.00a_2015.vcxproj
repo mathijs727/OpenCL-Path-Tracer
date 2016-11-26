@@ -39,6 +39,7 @@
     <ClInclude Include="src\ray.h" />
     <ClInclude Include="src\raytracer.h" />
     <ClInclude Include="src\scene.h" />
+    <ClInclude Include="src\shading.h" />
     <ClInclude Include="src\shapes.h" />
     <ClInclude Include="src\template\cl.hpp" />
     <ClInclude Include="src\template\surface.h" />
@@ -126,7 +127,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -164,7 +165,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
