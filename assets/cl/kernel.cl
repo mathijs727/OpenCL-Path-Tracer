@@ -5,6 +5,8 @@
 #include "light.cl"
 #include "stack.cl"
 
+#define MAX_ITERATIONS 4
+
 __kernel void hello(
 	__write_only image2d_t output,
 	uint width,// Render target width
@@ -22,7 +24,6 @@ __kernel void hello(
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 
-
 	__local Scene l_scene;
 	if (get_local_id(0) == 0 && get_local_id(1) == 0)
 	{
@@ -36,6 +37,7 @@ __kernel void hello(
 	item.ray.direction = normalize(screenPoint - eye);
 	item.multiplier = (float3)(1.0f, 1.0f, 1.0f);
 
+	int iterCount = 0;
 	float3 outColor = (float3)(0.0f, 0.0f, 0.0f);
 	Stack stack;
 	StackInit(&stack);
@@ -45,17 +47,12 @@ __kernel void hello(
 		StackItem item;
 		StackPop(&stack, &item);
 		outColor += traceRay(&l_scene, &item.ray, item.multiplier, &stack);
+
+		if (++iterCount >= MAX_ITERATIONS)
+		{
+			break;
+		}
 	}
 
-	float4 xxx;
-	xxx.x = outColor.x;
-	xxx.y = outColor.y;
-	xxx.z = outColor.z;
-	xxx.w = 1.0f;
-	// Use get_global_id instead of x/y to prevent casting from int to size_t
-	/*size_t outIndex = y * width + x;
-	out[outIndex * 3 + 0] = outColor.x;
-	out[outIndex * 3 + 1] = outColor.y;
-	out[outIndex * 3 + 2] = outColor.z;*/
-	write_imagef(output, (int2)(x, y), xxx);
+	write_imagef(output, (int2)(x, y), (float4)(outColor, 1.0f));
 }
