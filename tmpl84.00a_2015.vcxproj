@@ -44,6 +44,7 @@
     <ClInclude Include="src\shading.h" />
     <ClInclude Include="src\shapes.h" />
     <ClInclude Include="src\template\cl.hpp" />
+    <ClInclude Include="src\template\includes.h" />
     <ClInclude Include="src\template\surface.h" />
     <ClInclude Include="src\template\template.h" />
     <ClInclude Include="src\template\threads.h" />

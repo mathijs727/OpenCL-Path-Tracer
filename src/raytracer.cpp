@@ -13,11 +13,7 @@
 #include <utility>
 #include <thread>
 //#include <OpenGL/wglew.h>
-#ifdef __APPLE__
-#include <OpenCL/cl.h>
-#else
-#include <CL/cl.h>
-#endif
+#include "template\includes.h"
 
 using namespace raytracer;
 

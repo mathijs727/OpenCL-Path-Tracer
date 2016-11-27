@@ -1,10 +1,17 @@
 #define GLEW_STATIC
-#ifdef __WIN32
+#ifdef _WIN32
 #include <OpenGL/glew.h>// Header files included in project
+#include <GL/wglew.h>
 #else
 #include <GL/glew.h>// Provided by system
 #endif
 #include "cl.hpp"
+
+#ifdef __APPLE__
+#include <OpenCL/cl.h>
+#else
+#include <CL/cl.h>
+#endif
 
 #ifdef __APPLE__
 // Find CGLGetCurrentContext on macOS
