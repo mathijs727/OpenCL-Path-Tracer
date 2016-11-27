@@ -82,7 +82,7 @@ struct Material
 		Material result;
 		result.type = Type::Glossy;
 		result.colour = colour;
-		result.glossy.specularity = std::min(std::max(specularity, 0.f),1.f);
+		result.glossy.specularity = std::min(std::max(specularity, 0.0f),1.0f);
 		return result;
 	}
 
@@ -104,6 +104,10 @@ struct SerializedMaterial
 	{
 		struct
 		{
+			float specularity;
+		} glossy;
+		struct
+		{
 			float refrective_index;
 		} fresnel;
 	};
@@ -117,6 +121,10 @@ struct SerializedMaterial
 		if (other.type == Material::Type::Fresnel)
 		{
 			fresnel.refrective_index = other.fresnel.refractive_index;
+		}
+		else if (other.type == Material::Type::Glossy)
+		{
+			glossy.specularity = other.glossy.specularity;
 		}
 	}
 };

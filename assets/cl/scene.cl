@@ -17,7 +17,7 @@ typedef struct
 	//DirectionalLight directionalLights[8];
 	Light lights[16];
 
-	float refractive_index;
+	float refractiveIndex;
 } Scene;
 
 
@@ -70,7 +70,7 @@ void loadScene(
 		scene->lights[i] = light;
 	}
 
-	scene->refractive_index =  1.000277f;
+	scene->refractiveIndex =  1.000277f;
 }
 
 bool checkRay(const __local Scene* scene, const Ray* ray)

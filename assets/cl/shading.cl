@@ -88,8 +88,7 @@ float3 whittedShading(
 	float3 multiplier,
 	Stack* stack)
 {
-	if (material->type == Diffuse)
-	{
+	if (material->type == Diffuse) {
 		float3 matColour = material->colour;
 		
 		return multiplier * diffuseShade(rayDirection, intersection, normal, scene, matColour);
@@ -101,10 +100,18 @@ float3 whittedShading(
 		item.multiplier = multiplier * matColour;
 		StackPush(stack, &item);
 		return (float3)(0.0f, 0.0f, 0.0f);
-	} else if (material->type == Fresnel)
-	{
-		float n1 = scene->refractive_index;
-		float n2 = material->fresnel.refractive_index;
+	} else if (material->type == Glossy) {
+		StackItem item;
+		calcReflectiveRay(rayDirection, intersection, normal, &item.ray);
+		item.multiplier = multiplier * material->colour * material->glossy.specularity;
+		StackPush(stack, &item);
+
+		float3 diffuseComponent = (1 - material->glossy.specularity) * \
+			diffuseShade(rayDirection, intersection, normal, scene, material->colour);
+		return multiplier * diffuseComponent;
+	} else if (material->type == Fresnel) {
+		float n1 = scene->refractiveIndex;
+		float n2 = material->fresnel.refractiveIndex;
 		float cosine = dot(normal, -rayDirection);
 		Ray refractive_ray;
 		if (calcRefractiveRay(n1, n2, rayDirection, intersection, normal, &refractive_ray)) {

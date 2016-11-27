@@ -334,78 +334,7 @@ void raytracer::RayTracer::InitOpenCL()
 	_context = lContext;
 	_devices.push_back(cl::Device(lDeviceId));
 	_queue = clCreateCommandQueue(lContext, lDeviceId, 0, &lError);
-	/*if (!CheckForError(lError))
-	{
-		std::cout << "Unable to create an OpenCL command queue." << std::endl;
-		system("PAUSE");
-		exit(EXIT_FAILURE);
-	}*/
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
-
-	/*cl_int err;
-
-	// List and select a platform
-	std::vector<cl::Platform> platformList;
-	cl::Platform::get(&platformList);
-	int platformCount = static_cast<int>(platformList.size());
-	checkClErr(platformCount != 0 ? CL_SUCCESS : -1, "cl::Platform::get");
-
-	std::cout << "Available platforms:" << std::endl;
-	for (int i = 0; i < platformCount; i++)
-	{
-		std::string platformVendor;
-		platformList[i].getInfo((cl_platform_info)CL_PLATFORM_VENDOR, &platformVendor);
-		std::cout << i << ": " << platformVendor << std::endl;
-	}
-
-	std::cout << "\nPlease select a platform by entering its index:" << std::endl;
-	int platformIndex = -1;
-	while (platformIndex < 0 || platformIndex >= platformCount)
-	{
-		std::cin >> platformIndex;
-	}
-	
-
-	// Get context for that platform
-
-	//get the GL rendering context
-	HGLRC hGLRC = wglGetCurrentContext();
-	//get the device context
-	HDC hDC = wglGetCurrentDC();
-	cl_context_properties cprops[7] = {
-		CL_CONTEXT_PLATFORM, (cl_context_properties)(platformList[platformIndex])(),
-		CL_GL_CONTEXT_KHR, (cl_context_properties)hGLRC,
-		CL_WGL_HDC_KHR, (cl_context_properties)hDC,
-		0
-	};
-	_context = cl::Context(CL_DEVICE_TYPE_CPU | CL_DEVICE_TYPE_GPU,
-		cprops,
-		NULL,
-		NULL,
-		&err);
-	checkClErr(err, "Context::Context");
-
-
-	// List and select a device
-	_devices = _context.getInfo<CL_CONTEXT_DEVICES>();
-	int deviceCount = static_cast<int>(_devices.size());
-	checkClErr(deviceCount > 0 ? CL_SUCCESS : -1, "devices.size() > 0");
-	std::cout << "\n\nAvailable devices (for this platform):" << std::endl;
-	for (int i = 0; i < deviceCount; i++)
-	{
-		std::string deviceName;
-		_devices[i].getInfo((cl_device_info)CL_DEVICE_NAME, &deviceName);
-		std::cout << i << ": " << deviceName << std::endl;
-	}
-	std::cout << "\nPlease select a device by entering its index:" << std::endl;
-	int deviceIndex = -1;
-	while (deviceIndex < 0 || deviceIndex >= deviceCount)
-	{
-		std::cin >> deviceIndex;
-	}
-
-	_queue = cl::CommandQueue(_context, _devices[deviceIndex], 0, &err);
-	checkClErr(err, "CommandQueue::CommandQueue()");*/
 }
 
 cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* funcName)

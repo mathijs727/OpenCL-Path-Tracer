@@ -15,7 +15,11 @@ typedef struct
 	{
 		struct
 		{
-			float refractive_index;
+			float specularity;
+		} glossy;
+		struct
+		{
+			float refractiveIndex;
 		} fresnel;
 	};
 } Material;
@@ -28,7 +32,11 @@ typedef struct
 	{
 		struct
 		{
-			float refractive_index;
+			float specularity;
+		} glossy;
+		struct
+		{
+			float refractiveIndex;
 		} fresnel;
 	};
 } RawMaterial;
@@ -41,7 +49,10 @@ void convertRawMaterial(const RawMaterial* input, Material* output)
 	output->colour.z = input->colour[2];
 	if (input->type == Fresnel)
 	{
-		output->fresnel.refractive_index = input->fresnel.refractive_index;
+		output->fresnel.refractiveIndex = input->fresnel.refractiveIndex;
+	} else if (input->type == Glossy)
+	{
+		output->glossy.specularity = input->glossy.specularity;
 	}
 }
 #endif// __MATERIAL_CL
