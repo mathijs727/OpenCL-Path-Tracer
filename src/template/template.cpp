@@ -172,6 +172,9 @@ int main( int argc, char **argv )
 
 		//std::cout << "Frame time: " << lastftime * 1000 << "ms" << std::endl;
 		SDL_GL_SwapWindow(window);
+#ifdef __APPLE__// For some reason SDL_SetRelativeMouseMode doesnt capture mouse correctly on macOS (Sierra)
+		SDL_WarpMouseInWindow(window, SCRWIDTH/2, SCRHEIGHT/2);
+#endif
 	}
 	game->Shutdown();
 	SDL_Quit();
@@ -262,6 +265,10 @@ int main( int argc, char **argv )
 		lastftime = timer.elapsed();
 		timer.reset();
 		//std::cout << "Frame time: " << lastftime * 1000 << "ms" << std::endl;
+
+#ifdef __APPLE__// For some reason SDL_SetRelativeMouseMode doesnt capture mouse correctly on macOS (Sierra)
+		SDL_WarpMouseInWindow(window, SCRWIDTH/2, SCRHEIGHT/2);
+#endif
 	}
 	game->Shutdown();
 	SDL_Quit();
