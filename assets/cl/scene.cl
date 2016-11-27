@@ -4,6 +4,7 @@
 #include "rawshapes.cl"
 #include "ray.cl"
 #include "light.cl"
+#include "stack.cl"
 
 typedef struct
 {
@@ -129,7 +130,11 @@ bool checkLine(const __local Scene* scene, const Line* line)
 }
 
 #include "shading.cl"
-float3 traceRay(const __local Scene* scene, const Ray* ray)
+float3 traceRay(
+	const __local Scene* scene,
+	const Ray* ray,
+	float3 multiplier,
+	Stack* stack)
 {
 	float minT = 100000.0f;
 	int i_current_hit = -1;
@@ -183,7 +188,9 @@ float3 traceRay(const __local Scene* scene, const Ray* ray)
 			&intersection,
 			&normal,
 			scene,
-			&material);
+			&material,
+			multiplier,
+			stack);
 	}
 	return (float3)(0.0f, 0.0f, 0.0f);
 }

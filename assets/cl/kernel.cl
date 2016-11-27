@@ -3,6 +3,7 @@
 #include "material.cl"
 #include "scene.cl"
 #include "light.cl"
+#include "stack.cl"
 
 __kernel void hello(
 	__write_only image2d_t output,
@@ -29,12 +30,23 @@ __kernel void hello(
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	float3 screenPoint = screen + u_step * (float)x + v_step * (float)y;
-	Ray ray;
-	ray.origin = eye;
-	ray.direction = normalize(screenPoint - eye);
+	float3 screenPoint = screen + u_step * (float)x + v_step * (float)y;	
+	StackItem item;
+	item.ray.origin = eye;
+	item.ray.direction = normalize(screenPoint - eye);
+	item.multiplier = (float3)(1.0f, 1.0f, 1.0f);
 
-	float3 outColor = traceRay(&l_scene, &ray);
+	float3 outColor = (float3)(0.0f, 0.0f, 0.0f);
+	Stack stack;
+	StackInit(&stack);
+	StackPush(&stack, &item);
+	while (!StackEmpty(&stack))
+	{
+		StackItem item;
+		StackPop(&stack, &item);
+		outColor += traceRay(&l_scene, &item.ray, item.multiplier, &stack);
+	}
+
 	float4 xxx;
 	xxx.x = outColor.x;
 	xxx.y = outColor.y;
