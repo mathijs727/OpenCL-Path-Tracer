@@ -203,7 +203,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		_helloWorldKernel,
 		cl::NullRange,
 		cl::NDRange(_scr_width, _scr_height),
-		cl::NDRange(8,8),
+		cl::NullRange,
 		NULL,
 		&event);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");

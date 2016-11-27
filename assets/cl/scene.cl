@@ -4,7 +4,6 @@
 #include "rawshapes.cl"
 #include "ray.cl"
 #include "light.cl"
-#include "shading.cl"
 
 typedef struct
 {
@@ -65,7 +64,6 @@ void loadScene(
 		scene->planeMaterials[i] = material;
 	}
 
-	//TODO: morgen verder gaan...
 	scene->numLights = numLights;
 	for (int i = 0; i < numLights; i++)
 	{
@@ -76,11 +74,67 @@ void loadScene(
 	}
 }
 
+bool checkRay(const __local Scene* scene, const Ray* ray)
+{
+	// Check sphere intersections
+	for (int i = 0; i < scene->numSpheres; i++)
+	{
+		float t;
+		Sphere sphere = scene->spheres[i];
+		if (intersectRaySphere(ray, &sphere, &t))
+		{
+			return true;
+		}
+	}
+
+	// Check plane intersection
+	for (int i = 0; i < scene->numPlanes; i++)
+	{
+		float t;
+		Plane plane = scene->planes[i];
+		if (intersectRayPlane(ray, &plane, &t))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool checkLine(const __local Scene* scene, const Line* line)
+{
+	// Check sphere intersections
+	for (int i = 0; i < scene->numSpheres; i++)
+	{
+		float t;
+		Sphere sphere = scene->spheres[i];
+		if (intersectLineSphere(line, &sphere, &t))
+		{
+			return true;
+		}
+	}
+
+	// Check plane intersection
+	for (int i = 0; i < scene->numPlanes; i++)
+	{
+		float t;
+		Plane plane = scene->planes[i];
+		if (intersectLinePlane(line, &plane, &t))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+#include "shading.cl"
 float3 traceRay(const __local Scene* scene, const Ray* ray)
 {
 	float minT = 100000.0f;
 	int i_current_hit = -1;
 	IntersectionType type;
+
 	// Check sphere intersections
 	for (int i = 0; i < scene->numSpheres; i++)
 	{
@@ -94,6 +148,7 @@ float3 traceRay(const __local Scene* scene, const Ray* ray)
 		}
 	}
 
+	// Check plane intersection
 	for (int i = 0; i < scene->numPlanes; i++)
 	{
 		float t;
@@ -127,8 +182,7 @@ float3 traceRay(const __local Scene* scene, const Ray* ray)
 			&ray->direction,
 			&intersection,
 			&normal,
-			scene->numLights,
-			scene->lights,
+			scene,
 			&material);
 	}
 	return (float3)(0.0f, 0.0f, 0.0f);
