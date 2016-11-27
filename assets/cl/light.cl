@@ -107,26 +107,26 @@ float3 getLightVectorDirectional(const DirectionalLight* light, const float3* po
 	return -light->direction;
 }*/
 
-float3 getLightVector(const Light* light, const float3* intersection)
+float3 getLightVector(const Light* light, float3 intersection)
 {
 	if (light->type == PointLightType)
 	{
-		return normalize(light->point.position - *intersection);
+		return normalize(light->point.position - intersection);
 	} else {
 		return -light->directional.direction;
 	}
 }
 
 // Return 1 for line, 2 for ray, 0 for error
-int getShadowLineRay(const Light* light, const float3* intersection, Line* line, Ray* ray)
+int getShadowLineRay(const Light* light, float3 intersection, Line* line, Ray* ray)
 {
 	if (light->type == PointLightType)
 	{
-		line->origin = *intersection;
+		line->origin = intersection;
 		line->dest = light->point.position;
 		return 1;
 	} else {
-		ray->origin = *intersection;
+		ray->origin = intersection;
 		ray->direction = -light->directional.direction;
 		return 2;
 	}

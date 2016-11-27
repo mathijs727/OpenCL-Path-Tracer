@@ -184,9 +184,9 @@ float3 traceRay(
 		}
 
 		return whittedShading(
-			&ray->direction,
-			&intersection,
-			&normal,
+			ray->direction,
+			intersection,
+			normal,
 			scene,
 			&material,
 			multiplier,
