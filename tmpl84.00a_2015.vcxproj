@@ -124,7 +124,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -141,7 +141,7 @@
     <Link>
       <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(CUDA_PATH)\lib\$(PLATFORM);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -162,7 +162,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -179,7 +179,7 @@
     <Link>
       <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(CUDA_PATH)\lib\$(PLATFORM);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -202,7 +202,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -221,7 +221,7 @@
     <Link>
       <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(CUDA_PATH)\lib\$(PLATFORM);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -246,7 +246,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -266,7 +266,7 @@
     <Link>
       <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;OpenCL.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(CUDA_PATH)\lib\$(PLATFORM);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>

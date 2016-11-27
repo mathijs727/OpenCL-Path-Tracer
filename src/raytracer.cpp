@@ -167,7 +167,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 void raytracer::RayTracer::SetTarget(GLuint glTexture)
 {
 	cl_int err;
-	_outputImage = cl::ImageGL(_context, CL_MEM_WRITE_ONLY | CL_MEM_HOST_NO_ACCESS, GL_TEXTURE_2D, 0, glTexture, &err);
+	_outputImage = cl::ImageGL(_context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, glTexture, &err);
 	checkClErr(err, "ImageGL");
 }
 
@@ -184,6 +184,8 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 
 	// We must make sure that OpenGL is done with the textures, so we ask to sync.
 	glFinish();
+
+	_queue.enqueueAcquireGLObjects(&std::vector<cl::Memory>{ _outputImage });
 
 	cl_int err;
 	cl::Event event;
@@ -222,6 +224,8 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	err = _queue.finish();
 	checkClErr(err, "CommandQueue::finish");
 	//floatToPixel(_outHost.get(), target_surface.GetBuffer(), _scr_width * _scr_height);
+
+	_queue.enqueueReleaseGLObjects(&std::vector<cl::Memory>{ _outputImage });
 }
 
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/
