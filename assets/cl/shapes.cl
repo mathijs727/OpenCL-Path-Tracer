@@ -14,6 +14,12 @@ typedef struct
 	float offset;
 } Plane;
 
+typedef enum
+{
+	SphereType,
+	PlaneType
+} ShapeType;
+
 bool intersectRaySphere(const Ray* ray, const Sphere* sphere, float* time)
 {
 	float3 distance = sphere->centre - ray->origin;

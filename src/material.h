@@ -100,11 +100,24 @@ struct SerializedMaterial
 	Material::Type type;
 	glm::vec3 colour;
 
+	union
+	{
+		struct
+		{
+			float refrective_index;
+		} fresnel;
+	};
+
 	SerializedMaterial() { }
 	SerializedMaterial(const Material& other)
 	{
 		type = other.type;
 		colour = other.colour;
+
+		if (other.type == Material::Type::Fresnel)
+		{
+			fresnel.refrective_index = other.fresnel.refractive_index;
+		}
 	}
 };
 

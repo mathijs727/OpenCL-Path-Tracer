@@ -16,13 +16,9 @@ typedef struct
 	//PointLight pointLights[8];
 	//DirectionalLight directionalLights[8];
 	Light lights[16];
-} Scene;
 
-typedef enum
-{
-	SphereType,
-	PlaneType
-} IntersectionType;
+	float refractive_index;
+} Scene;
 
 
 // TODO: instead of using a for loop in the "main" thread. Let every thread copy
@@ -73,6 +69,8 @@ void loadScene(
 		convertRawLight(&rawLight, &light);
 		scene->lights[i] = light;
 	}
+
+	scene->refractive_index =  1.000277f;
 }
 
 bool checkRay(const __local Scene* scene, const Ray* ray)
@@ -138,18 +136,23 @@ float3 traceRay(
 {
 	float minT = 100000.0f;
 	int i_current_hit = -1;
-	IntersectionType type;
+	ShapeType type;
+	void* shape;
+	// Storage for the shape pointer that only expires at the end of this function
+	Plane plane;
+	Sphere sphere;
 
 	// Check sphere intersections
 	for (int i = 0; i < scene->numSpheres; i++)
 	{
 		float t;
-		Sphere sphere = scene->spheres[i];
+		sphere = scene->spheres[i];
 		if (intersectRaySphere(ray, &sphere, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
 			type = SphereType;
+			shape = (void*)&sphere;
 		}
 	}
 
@@ -157,12 +160,13 @@ float3 traceRay(
 	for (int i = 0; i < scene->numPlanes; i++)
 	{
 		float t;
-		Plane plane = scene->planes[i];
+		plane = scene->planes[i];
 		if (intersectRayPlane(ray, &plane, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
 			type = PlaneType;
+			shape = (void*)&plane;
 		}
 	}
 
@@ -184,10 +188,12 @@ float3 traceRay(
 		}
 
 		return whittedShading(
+			scene,
 			ray->direction,
 			intersection,
 			normal,
-			scene,
+			type,
+			shape,
 			&material,
 			multiplier,
 			stack);

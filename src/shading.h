@@ -75,7 +75,7 @@ glm::vec3 whittedShading(
 			else return glm::vec3(0,0,0); // should not happen
 		}
 		else {
-			material.colour * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal), current_depth);
+			return material.colour * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal), current_depth);
 		}
 	}
 	return glm::vec3(0);
