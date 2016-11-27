@@ -1,6 +1,6 @@
 #pragma once
-#define GLEW_STATIC
-#include <OpenGL/glew.h>
+//#include "template/template.h"// Includes GLEW
+#include "template/includes.h"
 
 class GLOutput
 {

@@ -9,6 +9,8 @@ typedef unsigned char byte;
 
 #define NOMINMAX
 
+#include "includes.h"// Include GLEW, OpenGL and OpenCL in the correct order
+
 #ifdef _WIN32
 #include "SDL.h"
 #include "SDL_syswm.h"
@@ -33,7 +35,6 @@ typedef unsigned char byte;
 #else
 #include <freeimage.h>
 #endif
-
 /*
 #ifdef _WIN32
 extern "C" 

@@ -5,7 +5,6 @@
 #include "template/surface.h"
 #include "ray.h"
 #include "pixel.h"
-#include "template\cl.hpp"
 #include <algorithm>
 #include <iostream>
 #include <emmintrin.h>
@@ -13,8 +12,12 @@
 #include <fstream>
 #include <utility>
 #include <thread>
-#include <OpenGL\wglew.h>
-#include <CL\cl.h>
+//#include <OpenGL/wglew.h>
+#ifdef __APPLE__
+#include <OpenCL/cl.h>
+#else
+#include <CL/cl.h>
+#endif
 
 using namespace raytracer;
 
@@ -26,7 +29,9 @@ inline void checkClErr(cl_int err, const char* name)
 {
 	if (err != CL_SUCCESS) {
 		std::cout << "OpenCL ERROR: " << name << " (" << err << ")" << std::endl;
+#ifdef _WIN32
 		system("PAUSE");
+#endif
 		exit(EXIT_FAILURE);
 	}
 }
@@ -241,7 +246,9 @@ void raytracer::RayTracer::InitOpenCL()
 	if (lNbPlatformId == 0)
 	{
 		std::cout << "Unable to find an OpenCL platform." << std::endl;
+#ifdef _WIN32
 		system("PAUSE");
+#endif	
 		exit(EXIT_FAILURE);
 	}
 
@@ -325,7 +332,9 @@ void raytracer::RayTracer::InitOpenCL()
 	if (lDeviceId == 0)
 	{
 		std::cout << "Unable to find a compatible OpenCL device." << std::endl;
+#ifdef _WIN32
 		system("PAUSE");
+#endif
 		exit(EXIT_FAILURE);
 	}
 
@@ -364,7 +373,9 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 			program.getBuildInfo(_devices[0], CL_PROGRAM_BUILD_LOG, &error);
 			std::cout << error << std::endl;
 
+#ifdef _WIN32
 			system("PAUSE");
+#endif
 			exit(EXIT_FAILURE);
 		}
 	}

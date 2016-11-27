@@ -18,9 +18,6 @@
 #include <io.h>
 #endif
 
-#define GLEW_STATIC
-#include "OpenGL\glew.h"
-
 using namespace Tmpl8;
 
 namespace Tmpl8 { 

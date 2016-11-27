@@ -1,7 +1,7 @@
 #pragma once
-#include "template\cl.hpp"
+//#include "template/template.h"// Includes template/cl.hpp
+#include "template/includes.h"
 #include <memory>
-#include <OpenGL\glew.h>
 
 namespace Tmpl8 {
 class Surface;

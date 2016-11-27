@@ -1,5 +1,5 @@
 #include "gloutput.h"
-#include "template\surface.h"
+#include "template/surface.h"
 #include <fstream>
 #include <iostream>
 
