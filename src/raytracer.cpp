@@ -13,7 +13,7 @@
 #include <utility>
 #include <thread>
 //#include <OpenGL/wglew.h>
-#include "template\includes.h"
+#include "template/includes.h"
 
 using namespace raytracer;
 

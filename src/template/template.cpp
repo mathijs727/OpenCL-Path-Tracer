@@ -97,6 +97,7 @@ void redirectIO()
 
 int main( int argc, char **argv ) 
 {
+#ifdef OPENCL
 	redirectIO();
 	printf("application started.\n");
 	SDL_Init(SDL_INIT_VIDEO);
@@ -175,8 +176,8 @@ int main( int argc, char **argv )
 	game->Shutdown();
 	SDL_Quit();
 	return 1;
-
-	/*redirectIO();
+#else
+	redirectIO();
 	printf( "application started.\n" );
 	SDL_Init( SDL_INIT_VIDEO );
 	surface = new Surface( SCRWIDTH, SCRHEIGHT );
@@ -264,5 +265,6 @@ int main( int argc, char **argv )
 	}
 	game->Shutdown();
 	SDL_Quit();
-	return 1;*/
+	return 1;
+#endif
 }

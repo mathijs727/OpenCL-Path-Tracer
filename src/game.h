@@ -10,6 +10,8 @@
 #define CAMERA_VIEW_SPEED 0.1f
 #define CAMERA_MOVE_SPEED 1
 
+#define OPENCL
+
 namespace Tmpl8 {
 
 class Surface;
@@ -36,8 +38,10 @@ private:
 	std::unordered_map<int, float> _input_axes;
 	glm::vec3 _camera_euler;
 
+#ifdef OPENCL
 	std::unique_ptr<raytracer::RayTracer> _ray_tracer;
 	GLOutput _out;
+#endif
 };
 
 }; // namespace Tmpl8
