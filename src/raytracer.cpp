@@ -185,7 +185,8 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	// We must make sure that OpenGL is done with the textures, so we ask to sync.
 	glFinish();
 
-	_queue.enqueueAcquireGLObjects(&std::vector<cl::Memory>{ _outputImage });
+	std::vector<cl::Memory> images = { _outputImage };
+	_queue.enqueueAcquireGLObjects(&images);
 
 	cl_int err;
 	cl::Event event;
@@ -223,9 +224,9 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	// Before returning the objects to OpenGL, we sync to make sure OpenCL is done.
 	err = _queue.finish();
 	checkClErr(err, "CommandQueue::finish");
-	//floatToPixel(_outHost.get(), target_surface.GetBuffer(), _scr_width * _scr_height);
 
-	_queue.enqueueReleaseGLObjects(&std::vector<cl::Memory>{ _outputImage });
+	_queue.enqueueReleaseGLObjects(&images);
+	//floatToPixel(_outHost.get(), target_surface.GetBuffer(), _scr_width * _scr_height);
 }
 
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/
