@@ -11,7 +11,9 @@ raytracer::Scene::Scene() {
 
 void raytracer::Scene::add_primitive(const Mesh& primitive, const Material& material) {
 	u32 starting_vertex_index = _vertices.size();
-	for (auto& vertex : primitive._vertices) _vertices.push_back(vertex);
+	for (auto& vertex : primitive._vertices) {
+		_vertices.push_back(vertex);
+	}
 	u32 material_index = _meshes_materials.size();
 	_meshes_materials.push_back(material);
 	for (auto& triangleVertexIndices : primitive._triangleIndices) {

@@ -18,7 +18,7 @@ void raytracer::Mesh::addData(aiMesh* in_mesh, const glm::mat4& transform_matrix
 		_vertices.push_back(vertex);
 	}
 	for (uint f = 0; f < in_mesh->mNumFaces; ++f) {
-		aiFace* in_face = in_mesh->mFaces;
+		aiFace* in_face = &in_mesh->mFaces[f];
 		if (in_face->mNumIndices != 3) {
 			std::cout << "found a face which is not a triangle! discarding." << std::endl;
 			continue;
@@ -43,14 +43,13 @@ Mesh raytracer::Mesh::LoadFromFile(const char* file, const Transform& offset) {
 		StackElement(aiNode* node, const glm::mat4& transform = glm::mat4()) : node(node), transform(transform) {}
 	};
 
-	glm::mat4 transform_matrix = offset.matrix();
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_GenNormals);
+	const aiScene* scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices);
 	Mesh result;
 	
 	if (scene != nullptr && scene->mFlags != AI_SCENE_FLAGS_INCOMPLETE && scene->mRootNode != nullptr) {
 		std::stack<StackElement> stack;
-		stack.push(StackElement(scene->mRootNode, transform_matrix));
+		stack.push(StackElement(scene->mRootNode, offset.matrix()));
 		while (!stack.empty()) {
 			std::cout << "loading .obj node..." << std::endl;
 			auto current = stack.top();
