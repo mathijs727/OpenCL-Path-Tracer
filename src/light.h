@@ -64,6 +64,4 @@ namespace raytracer
 	};
 
 	bool get_light_vector(const Light& light, const glm::vec3 position, glm::vec3& lightDirection);
-	bool is_light_visible(const glm::vec3& position, const Light& light, const Scene& scene);
-	glm::vec3 trace_light(const glm::vec3& position, const Light& light, const Scene& scene);
 }

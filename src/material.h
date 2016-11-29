@@ -128,26 +128,4 @@ struct SerializedMaterial
 		}
 	}
 };
-
-glm::vec3 diffuse_shade(
-	const glm::vec3& rayDirection,
-	const glm::vec3& intersection,
-	const glm::vec3& normal,
-	const Scene& scene);
-
-bool calc_refractive_ray(
-	float n1,
-	float n2,
-	const glm::vec3& rayDirection,
-	const glm::vec3& intersection,
-	const glm::vec3& normal,
-	Ray& out_ray);
-
-inline Ray calc_reflective_ray(
-	const glm::vec3& rayDirection,
-	const glm::vec3& intersection,
-	const glm::vec3& normal) {
-	return Ray(intersection + normal * RAYTRACER_EPSILON, glm::reflect(rayDirection, normal));
-}
-
 }

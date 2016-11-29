@@ -5,24 +5,23 @@
 #include <cassert>
 #include <stack>
 #include <iostream>
-
+#include <cl/cl.h>
 using namespace raytracer;
 
 void raytracer::Mesh::addData(aiMesh* in_mesh) {
 	for (int v = 0; v < in_mesh->mNumVertices; ++v) {
 		auto position = in_mesh->mVertices[v];
-		Vertex vertex;
-		vertex.point = glm::vec3(position.x, position.y, position.z);
+		glm::vec3 vertex(position.x, position.y, position.z);
 		_vertices.push_back(vertex);
 	}
 	for (int f = 0; f < in_mesh->mNumFaces; ++f) {
 		aiFace* in_face = in_mesh->mFaces;
 		assert(in_face->mNumIndices == 3);
-		TriangleIndexes face;
-		face.first = in_face->mIndices[0];
-		face.second = in_face->mIndices[1];
-		face.third = in_face->mIndices[2];
+		glm::u32vec3 face;
+		memcpy(&face, &in_face->mIndices, 3*sizeof(u32));
 		_triangleIndices.push_back(face);
+
+		cl_float3 vector;
 	}
 }
 
