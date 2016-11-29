@@ -3,6 +3,11 @@
 #include "template/includes.h"
 #include <memory>
 
+#define SPHERES_MAX 128
+#define PLANES_MAX 128
+#define LIGHTS_MAX 16
+#define MATERIALS_MAX 256
+
 namespace Tmpl8 {
 class Surface;
 }

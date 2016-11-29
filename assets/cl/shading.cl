@@ -13,6 +13,7 @@ float3 diffuseShade(
 	__local const Scene* scene,
 	float3 diffuseColour)
 {
+	return (float3)(1.0f, 1.0f, 1.0f);
 	float3 result = (float3)(0.0f, 0.0f, 0.0f);
 	for (int i = 0; i < scene->numLights; i++)
 	{

@@ -18,7 +18,7 @@ __kernel void hello(
 	__global Sphere* spheres,
 	int numPlanes,
 	__global Plane* planes,
-	__global RawMaterial* materials,
+	__global Material* materials,
 	int numLights,
 	__global Light* lights) {
 	int x = get_global_id(0);

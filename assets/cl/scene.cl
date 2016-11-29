@@ -28,7 +28,7 @@ void loadScene(
 	__global Sphere* spheres,
 	int numPlanes,
 	__global Plane* planes,
-	__global RawMaterial* materials,
+	__global Material* materials,
 	int numLights,
 	__global Light* lights,
 	__local Scene* scene) {
@@ -38,19 +38,13 @@ void loadScene(
 	for (int i = 0; i < numSpheres; i++)
 	{
 		scene->spheres[i] = spheres[i];
-		
-		Material material;
-		convertRawMaterial(materials[i], material);
-		scene->sphereMaterials[i] = material;
+		scene->sphereMaterials[i] = materials[i];
 	}
 
 	for (int i = 0; i < numPlanes; i++)
 	{
 		scene->planes[i] = planes[i];
-
-		Material material;
-		convertRawMaterial(materials[numSpheres + i], material);
-		scene->planeMaterials[i] = material;
+		scene->planeMaterials[i] = materials[numSpheres + i];
 	}
 
 	scene->numLights = numLights;

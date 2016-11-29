@@ -60,25 +60,25 @@ void raytracer::RayTracer::InitBuffers()
 	checkClErr(err, "Buffer::Buffer()");
 	_spheres = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		128 * sizeof(Sphere),
+		SPHERES_MAX * sizeof(Sphere),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 	_planes = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		128 * sizeof(Plane),
+		PLANES_MAX * sizeof(Plane),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 	_materials = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		256 * sizeof(Material),
+		MATERIALS_MAX * sizeof(Material),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 	_lights = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		16 * sizeof(Light),
+		LIGHTS_MAX * sizeof(Light),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
@@ -86,7 +86,8 @@ void raytracer::RayTracer::InitBuffers()
 
 void raytracer::RayTracer::SetScene(const Scene& scene)
 {
-	Material materials[256];
+	Material materials[MATERIALS_MAX];
+
 	auto& sphereMaterials = scene.GetSphereMaterials();
 	auto& planeMaterials = scene.GetPlaneMaterials();
 	auto& meshMaterials = scene.GetMeshMaterials();
@@ -94,13 +95,15 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	for (const Material& mat : sphereMaterials) { materials[materials_n++] = mat; }
 	for (const Material& mat : planeMaterials) { materials[materials_n++] = mat; }
 	for (const Material& mat : meshMaterials) { materials[materials_n++] = mat; }
-
+	_num_spheres = scene.GetSpheres().size();
+	_num_planes = scene.GetPlanes().size();
+	_num_lights = scene.GetLights().size();
 	cl_int err;
 	err = _queue.enqueueWriteBuffer(
 		_spheres,
 		CL_TRUE,
 		0,
-		scene.GetSpheres().size() * sizeof(Sphere),
+		SPHERES_MAX * sizeof(Sphere),
 		scene.GetSpheres().data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 
@@ -108,7 +111,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 		_planes,
 		CL_TRUE,
 		0,
-		scene.GetPlanes().size() * sizeof(Plane),
+		PLANES_MAX * sizeof(Plane),
 		scene.GetPlanes().data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 
@@ -116,7 +119,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 		_materials,
 		CL_TRUE,
 		0,
-		materials_n * sizeof(Material),
+		MATERIALS_MAX * sizeof(Material),
 		materials);
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 
@@ -124,7 +127,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 		_lights,
 		CL_TRUE,
 		0,
-		scene.GetLights().size() * sizeof(Light),
+		LIGHTS_MAX * sizeof(Light),
 		scene.GetLights().data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 }
@@ -176,15 +179,6 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		NULL,
 		&event);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
-
-	event.wait();
-	err = _queue.enqueueReadBuffer(
-		_outDevice,
-		CL_TRUE,
-		0,
-		_buffer_size,
-		_outHost.get());
-	checkClErr(err, "CommandQueue::enqueueReadBuffer");
 
 	// Before returning the objects to OpenGL, we sync to make sure OpenCL is done.
 	err = _queue.finish();
