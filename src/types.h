@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+typedef unsigned int uint;
 typedef uint32_t u32;
 typedef int32_t i32;
 typedef uint16_t u16;

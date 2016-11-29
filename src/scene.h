@@ -4,6 +4,7 @@
 #include "ray.h"
 #include "material.h"
 #include "light.h"
+#include "mesh.h"
 
 #define MAX_TRACE_DEPTH 6
 
@@ -13,11 +14,6 @@ class Scene
 {
 public:
 	Scene();
-	// traces a ray through the objects in the scene, returns a colour
-	template<typename TRay>
-	glm::vec3 trace_ray(const TRay& ray, int current_depth = 0) const;
-	bool check_ray(const Ray& ray) const;
-	bool check_line(const Line& line) const;
 
 	void add_primitive(const Sphere& primitive, const Material& material) {
 		_spheres.push_back(primitive);
@@ -29,9 +25,17 @@ public:
 		_planes_materials.push_back(material);
 	}
 
-	void add_primitive(const Triangle& primitive, const Material& material) {
-		_triangles.push_back(primitive);
-		_triangles_materials.push_back(material);
+	void add_primitive(const Mesh& primitive, const Material& material) {
+		u32 starting_vertex_index = _vertices.size();
+		u32 material_index = _meshes_materials.size();
+		_meshes_materials.push_back(material);
+		for (auto& triangleVertexIndices : primitive._triangleIndices) {
+			TriangleSceneData triangleData;
+			triangleData.indices = triangleVertexIndices + glm::u32vec3(starting_vertex_index);
+			triangleData.material_index = material_index;
+			_triangle_indices.push_back(triangleData);
+		}
+		for (auto& vertex : primitive._vertices) _vertices.push_back(vertex);
 	}
 	
 	void add_light(Light& light)
@@ -68,92 +72,16 @@ private:
 	std::vector<Plane> _planes;
 	std::vector<Material> _planes_materials;
 
-	std::vector<Triangle> _triangles;
-	std::vector<Material> _triangles_materials;
+	struct TriangleSceneData
+	{
+		glm::u32vec3 indices;
+		u32 material_index;
+	};
+
+	std::vector<glm::vec3> _vertices;
+	std::vector<TriangleSceneData> _triangle_indices;
+	std::vector<Material> _meshes_materials;
 
 	std::vector<Light> _lights;
 };
-}
-
-#ifndef __SCENE_H_SHADING
-#define __SCENE_H_SHADING
-#include "shading.h"
-#endif
-
-template<typename TRay>
-glm::vec3 raytracer::Scene::trace_ray(const TRay& ray, int current_depth) const {
-	current_depth++;
-	if (current_depth >= MAX_TRACE_DEPTH) return glm::vec3(0,0,0);
-
-	enum class Type
-	{
-		Sphere,
-		Plane,
-		Triangle
-	};
-
-	// Find the closest intersection
-	float min_intersect_time = std::numeric_limits<float>::max();
-	int i_current_hit = -1;
-	glm::vec3 normal_current_hit;
-	Type type_current_hit;
-	// Check sphere intersections
-	for (unsigned int i = 0; i < _spheres.size(); ++i) {
-		float intersect_time;
-		if (intersect(ray, _spheres[i], intersect_time) && intersect_time < min_intersect_time) {
-			min_intersect_time = intersect_time;
-			type_current_hit = Type::Sphere;
-			i_current_hit = i;
-		}
-	}
-	// Check plane intersections
-	for (unsigned int i = 0; i < _planes.size(); ++i) {
-		float intersect_time;
-		if (intersect(ray, _planes[i], intersect_time) && intersect_time < min_intersect_time) {
-			min_intersect_time = intersect_time;
-			type_current_hit = Type::Plane;
-			i_current_hit = i;
-		}
-	}
-	// Check triangle intersections
-	for (unsigned int i = 0; i < _triangles.size(); ++i) {
-		float intersect_time;
-		if (intersect(ray, _triangles[i], intersect_time) && intersect_time < min_intersect_time) {
-			min_intersect_time = intersect_time;
-			type_current_hit = Type::Triangle;
-			i_current_hit = i;
-		}
-	}
-
-	if (i_current_hit >= 0) {
-		// Calculate the normal of the hit surface and retrieve the material
-		glm::vec3 direction = glm::normalize(ray.get_direction());
-		glm::vec3 point = min_intersect_time * direction + ray.origin;
-		glm::vec3 normal;
-		Material material;
-		if (type_current_hit == Type::Sphere)
-		{
-			normal = glm::normalize(point - _spheres[i_current_hit].centre);
-			material = _sphere_materials[i_current_hit];
-			return whittedShading(direction, point, normal, material, _spheres[i_current_hit], *this, current_depth);
-		}
-		else if (type_current_hit == Type::Plane)
-		{
-			normal = _planes[i_current_hit].normal;
-			material = _planes_materials[i_current_hit];
-			return whittedShading(direction, point, normal, material, _planes[i_current_hit], *this, current_depth);
-		}
-		else if (type_current_hit == Type::Triangle)
-		{
-			// TODO: check if the normal is always pointing to the correct side of the triangle
-			const glm::vec3* points = _triangles[i_current_hit].points;
-			normal = glm::cross(
-				points[1] - points[0],
-				points[2] - points[0]);
-			material = _triangles_materials[i_current_hit];
-			return whittedShading(direction, point, normal, material, _triangles[i_current_hit], *this, current_depth);
-		}
-	}
-	
-	return glm::vec3(0,0,0);
 }

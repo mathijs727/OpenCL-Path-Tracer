@@ -23,6 +23,7 @@
     <ClCompile Include="src\light.cpp" />
     <ClCompile Include="src\material.cpp" />
     <ClCompile Include="src\gloutput.cpp" />
+    <ClCompile Include="src\mesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
@@ -53,5 +54,6 @@
     <ClInclude Include="src\template\includes.h">
       <Filter>template code</Filter>
     </ClInclude>
+    <ClInclude Include="src\mesh.h" />
   </ItemGroup>
 </Project>

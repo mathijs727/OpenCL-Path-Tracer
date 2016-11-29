@@ -49,7 +49,5 @@ private:
 
 	cl::ImageGL _outputImage;
 };
-
-void raytrace(const Camera& camera, const Scene& scene, Tmpl8::Surface& target_surface);
 }
 

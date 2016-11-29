@@ -20,8 +20,7 @@ void Game::Init()
 	Transform camera_transform;
 	camera_transform.orientation = glm::quat(_camera_euler); // identity
 	camera_transform.location = glm::vec3(0, 0, 0);
-	_camera = std::make_unique<Camera>(camera_transform, 100, (float) SCRHEIGHT / SCRWIDTH, 1);
-
+	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1);
 	{
 		Sphere sphere(glm::vec3(0, 1, 5), 1);
 		Material material = Material::Diffuse(glm::vec3(0.5f, 0.3f, 0.2f));
@@ -64,6 +63,8 @@ void Game::Init()
 	std::cout << "Sizeof plane: " << sizeof(Plane) << std::endl;
 	std::cout << "Sizeof light: " << sizeof(Light) << std::endl;
 	std::cout << "Sizeof material: " << sizeof(Material) << std::endl;
+
+	_scene->add_primitive(Mesh::LoadFromFile("assets/obj/monkey.obj"), Material::Diffuse(glm::vec3(0.8f, 0.2f, 0.4f)));
 
 	/*Timer timer;
 	raytrace(*_camera, *_scene, *_screen);
