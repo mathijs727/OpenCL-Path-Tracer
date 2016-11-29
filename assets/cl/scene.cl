@@ -10,6 +10,7 @@ typedef struct
 {
 	uint indices[3];
 	uint mat_index;
+	float3 normal;
 } TriangleData;
 
 typedef struct
@@ -66,27 +67,6 @@ void loadScene(
 	scene->triangles = triangles;
 	scene->vertices = vertices;
 	scene->lights = lights;
-	/*scene->numSpheres = numSpheres;
-	scene->numPlanes = numPlanes;
-	for (int i = 0; i < numSpheres; i++)
-	{
-		scene->spheres[i] = spheres[i];
-		scene->sphereMaterials[i] = materials[i];
-	}
-
-	for (int i = 0; i < numPlanes; i++)
-	{
-		scene->planes[i] = planes[i];
-		scene->planeMaterials[i] = materials[numSpheres + i];
-	}
-
-	scene->numLights = numLights;
-	for (int i = 0; i < numLights; i++)
-	{
-		scene->lights[i] = lights[i];
-	}
-
-	scene->refractiveIndex =  1.000277f;*/
 }
 
 bool checkRay(const Scene* scene, const Ray* ray)
@@ -241,8 +221,8 @@ float3 traceRay(
 			normal = normalize(scene->planes[i_current_hit].normal);
 			material = scene->planeMaterials[i_current_hit];
 		} else if (type == MeshType) {
-			normal = cross(vertices[1]-vertices[0], vertices[2]-vertices[0]);
-			material = scene->meshMaterials[scene->triangles[i_current_hit].mat_index];
+			normal = triang.normal;
+			material = scene->meshMaterials[triang.mat_index];
 		}
 		//return (float3)(1.0f, 1.0f, 1.0f);
 		return whittedShading(

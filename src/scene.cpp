@@ -5,8 +5,8 @@
 using namespace raytracer;
 
 raytracer::Scene::Scene() {
-	_spheres.reserve(255);
-	_sphere_materials.reserve(255);
+	_spheres.reserve(256);
+	_sphere_materials.reserve(256);
 }
 
 void raytracer::Scene::add_primitive(const Mesh& primitive, const Material& material) {
@@ -16,10 +16,11 @@ void raytracer::Scene::add_primitive(const Mesh& primitive, const Material& mate
 	}
 	u32 material_index = _meshes_materials.size();
 	_meshes_materials.push_back(material);
-	for (auto& triangleVertexIndices : primitive._triangleIndices) {
+	for (auto& face : primitive._faces) {
 		TriangleSceneData triangleData;
-		triangleData.indices = triangleVertexIndices + glm::u32vec3(starting_vertex_index);
+		triangleData.indices = face.indices + glm::u32vec3(starting_vertex_index);
 		triangleData.material_index = material_index;
+		triangleData.normal = glm::vec4(face.normal, 1);
 		for (int i = 0; i < 3; ++i) {
 			if (triangleData.indices[i] >= _vertices.size()) std::cout << "Error! invalid vertex in mesh!" << std::endl;
 		}

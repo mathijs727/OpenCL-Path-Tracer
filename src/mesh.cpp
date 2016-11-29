@@ -9,6 +9,14 @@
 
 using namespace raytracer;
 
+glm::mat4 remove_translation(const glm::mat4& mat) {
+	glm::mat4 result = mat;
+	result[3][0] = 0;
+	result[3][1] = 0;
+	result[3][2] = 0;
+	return result;
+}
+
 void raytracer::Mesh::addData(aiMesh* in_mesh, const glm::mat4& transform_matrix) {
 	uint vertex_starting_index = _vertices.size();
 	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
@@ -24,10 +32,12 @@ void raytracer::Mesh::addData(aiMesh* in_mesh, const glm::mat4& transform_matrix
 			continue;
 		}
 		auto indices = in_face->mIndices;
-
-		glm::u32vec3 face = glm::u32vec3(indices[0], indices[1], indices[2]) + vertex_starting_index;
-		_triangleIndices.push_back(face);
-		std::cout << "importing face: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", starting index: " << vertex_starting_index << std::endl;
+		auto& n = in_mesh->mNormals[f];
+		MeshFace face;
+		face.normal = glm::mat3(transform_matrix) * glm::vec3(n.x, n.y, n.z);
+		face.indices = glm::u32vec3(indices[0], indices[1], indices[2]) + vertex_starting_index;
+		_faces.push_back(face);
+		//std::cout << "importing face: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", starting index: " << vertex_starting_index << std::endl;
 	}
 }
 
@@ -44,7 +54,7 @@ Mesh raytracer::Mesh::LoadFromFile(const char* file, const Transform& offset) {
 	};
 
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices);
+	const aiScene* scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices | aiProcess_ImproveCacheLocality);
 	Mesh result;
 	
 	if (scene != nullptr && scene->mFlags != AI_SCENE_FLAGS_INCOMPLETE && scene->mRootNode != nullptr) {
@@ -61,6 +71,6 @@ Mesh raytracer::Mesh::LoadFromFile(const char* file, const Transform& offset) {
 	}
 
 	if (!result.isValid()) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
-	else std::cout << "Mesh imported! vertices: " << result._vertices.size() << ", indices: " << result._triangleIndices.size() << std::endl;
+	else std::cout << "Mesh imported! vertices: " << result._vertices.size() << ", indices: " << result._faces.size() << std::endl;
 	return result;
 }

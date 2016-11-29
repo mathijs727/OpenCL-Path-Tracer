@@ -19,6 +19,7 @@ public:
 	{
 		glm::u32vec3 indices;
 		u32 material_index;
+		glm::vec4 normal;
 	};
 
 	void add_primitive(const Sphere& primitive, const Material& material) {
