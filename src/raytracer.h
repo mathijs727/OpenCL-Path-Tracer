@@ -3,11 +3,6 @@
 #include "template/includes.h"
 #include <memory>
 
-#define SPHERES_MAX 128
-#define PLANES_MAX 128
-#define LIGHTS_MAX 16
-#define MATERIALS_MAX 256
-
 namespace Tmpl8 {
 class Surface;
 }
@@ -29,11 +24,11 @@ public:
 	void RayTrace(const Camera& camera);
 private:
 	void InitOpenCL();
-	void InitBuffers();
+	void InitBuffers(int numSpheres, int numPlanes, int numVertices, int numTriangles, int numMeshMaterials, int numLights);
 	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
 private:
 	size_t _buffer_size;
-	int _scr_width, _scr_height;
+	cl_uint _scr_width, _scr_height;
 
 	cl::Context _context;
 	std::vector<cl::Device> _devices;
@@ -44,12 +39,18 @@ private:
 	std::unique_ptr<float[]> _outHost;
 	cl::Buffer _outDevice;
 
-	int _num_spheres;
+	cl_int _num_spheres;
 	cl::Buffer _spheres;
-	int _num_planes;
+	cl_int _num_planes;
 	cl::Buffer _planes;
 	cl::Buffer _materials;
-	int _num_lights;
+
+	cl_int _num_mesh_materials;
+	cl_int _num_vertices;
+	cl::Buffer _vertices;
+	cl_int _num_triangles;
+	cl::Buffer _triangles;
+	cl_int _num_lights;
 	cl::Buffer _lights;
 
 	cl::ImageGL _outputImage;

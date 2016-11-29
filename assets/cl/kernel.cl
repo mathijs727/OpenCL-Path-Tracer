@@ -18,18 +18,23 @@ __kernel void hello(
 	__global Sphere* spheres,
 	int numPlanes,
 	__global Plane* planes,
+	int numVertices,
+	__global float3* vertices,
+	int numTriangles,
+	__global TriangleData* triangles,
 	__global Material* materials,
 	int numLights,
 	__global Light* lights) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
-
+	numVertices = 0;
+	numTriangles = 0;
 	Scene l_scene;
 	//if (get_local_id(0) == 0 && get_local_id(1) == 0)
 	{
-		loadScene(numSpheres, spheres, numPlanes, planes, materials, numLights, lights, &l_scene);
+		loadScene(numSpheres, spheres, numPlanes, planes, numVertices, vertices, numTriangles, triangles, materials, numLights, lights, &l_scene);
 	}
-	barrier(CLK_LOCAL_MEM_FENCE);
+	//barrier(CLK_LOCAL_MEM_FENCE);
 
 	float3 screenPoint = screen + u_step * (float)x + v_step * (float)y;	
 	StackItem item;
@@ -37,7 +42,7 @@ __kernel void hello(
 	item.ray.direction = normalize(screenPoint - eye);
 	item.multiplier = (float3)(1.0f, 1.0f, 1.0f);
 
-	int iterCount = 0;
+	uint iterCount = 0;
 	float3 outColor = (float3)(0.0f, 0.0f, 0.0f);
 	Stack stack;
 	StackInit(&stack);

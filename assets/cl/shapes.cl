@@ -19,7 +19,8 @@ typedef struct
 typedef enum
 {
 	SphereType,
-	PlaneType
+	PlaneType,
+	MeshType
 } ShapeType;
 
 bool intersectRaySphere(const Ray* ray, const Sphere* sphere, float* time)
@@ -47,6 +48,29 @@ bool intersectRaySphere(const Ray* ray, const Sphere* sphere, float* time)
 		else {
 			return false;
 		}
+	}
+	return false;
+}
+
+#define EPSILON 0.0000001
+
+bool intersectRayTriangle(const Ray* ray, const float3* vertices, float* time) {
+	float3 edge1 = vertices[1] - vertices[0];
+	float3 edge2 = vertices[2] - vertices[0];
+	float3 P = cross(ray->direction, edge2);
+	float det = dot(edge1, P);
+	if (det > -EPSILON && det < EPSILON) return false;
+	float inv_det = 1.f/ det;
+	float3 T = ray->origin - vertices[0];
+	float u = dot(T,P) * inv_det;
+	if (u < 0.f || u > 1.f) return false;
+	float3 Q = cross(T,edge1);
+	float v = dot(ray->direction,Q) * inv_det;
+	if (v < 0.f || v > 1.f) return false;
+	float t = dot(edge2, Q) * inv_det;
+	if (t > EPSILON) {
+		*time = t;
+		return true;
 	}
 	return false;
 }

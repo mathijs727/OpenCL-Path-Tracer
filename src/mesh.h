@@ -11,7 +11,7 @@ namespace raytracer {
 class Mesh
 {
 public:
-	std::vector<glm::vec3> _vertices;
+	std::vector<glm::vec4> _vertices; // extra value for cl alignment
 	std::vector<glm::u32vec3> _triangleIndices;
 
 	bool isValid() const { return !_triangleIndices.empty() && !_vertices.empty(); }

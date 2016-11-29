@@ -38,7 +38,6 @@ raytracer::RayTracer::RayTracer(int width, int height)
 	_scr_height = height;
 
 	InitOpenCL();
-	InitBuffers();
 	_helloWorldKernel = LoadKernel("assets/cl/kernel.cl", "hello");
 }
 
@@ -46,7 +45,7 @@ raytracer::RayTracer::~RayTracer()
 {
 }
 
-void raytracer::RayTracer::InitBuffers()
+void raytracer::RayTracer::InitBuffers(int numSpheres, int numPlanes, int numVertices, int numTriangles, int numMeshMaterials, int numLights)
 {
 	cl_int err;
 	// Create output (float) color buffer
@@ -60,25 +59,37 @@ void raytracer::RayTracer::InitBuffers()
 	checkClErr(err, "Buffer::Buffer()");
 	_spheres = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		SPHERES_MAX * sizeof(Sphere),
+		numSpheres * sizeof(Sphere),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 	_planes = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		PLANES_MAX * sizeof(Plane),
+		numPlanes * sizeof(Plane),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 	_materials = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		MATERIALS_MAX * sizeof(Material),
+		(numMeshMaterials + numSpheres + numPlanes) * sizeof(Material),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 	_lights = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		LIGHTS_MAX * sizeof(Light),
+		numLights * sizeof(Light),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+	_vertices = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		numVertices * sizeof(glm::vec4),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+	_triangles = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		numTriangles * sizeof(Scene::TriangleSceneData),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
@@ -86,49 +97,72 @@ void raytracer::RayTracer::InitBuffers()
 
 void raytracer::RayTracer::SetScene(const Scene& scene)
 {
-	Material materials[MATERIALS_MAX];
-
-	auto& sphereMaterials = scene.GetSphereMaterials();
-	auto& planeMaterials = scene.GetPlaneMaterials();
-	auto& meshMaterials = scene.GetMeshMaterials();
-	u32 materials_n = 0;
-	for (const Material& mat : sphereMaterials) { materials[materials_n++] = mat; }
-	for (const Material& mat : planeMaterials) { materials[materials_n++] = mat; }
-	for (const Material& mat : meshMaterials) { materials[materials_n++] = mat; }
 	_num_spheres = scene.GetSpheres().size();
 	_num_planes = scene.GetPlanes().size();
 	_num_lights = scene.GetLights().size();
+	_num_vertices = scene.GetVertices().size();
+	_num_triangles = scene.GetTriangleIndices().size();
+	InitBuffers(_num_spheres, _num_planes, _num_vertices, _num_triangles, _num_mesh_materials, _num_lights);
+	auto& sphereMaterials = scene.GetSphereMaterials();
+	auto& planeMaterials = scene.GetPlaneMaterials();
+	auto& meshMaterials = scene.GetMeshMaterials();
+	std::vector<Material> materials;
+	materials.resize(sphereMaterials.size() + planeMaterials.size() + meshMaterials.size());
+	
+	Material* buffer = materials.data();
+	memcpy(buffer, sphereMaterials.data(), sphereMaterials.size() * sizeof(Material));
+	buffer += sphereMaterials.size();
+	memcpy(buffer, planeMaterials.data(), planeMaterials.size() * sizeof(Material));
+	buffer += planeMaterials.size();
+	memcpy(buffer, meshMaterials.data(), meshMaterials.size() * sizeof(Material));
+	
+	std::cout << "sphere materials: " << sphereMaterials.size() << std::endl;
+	std::cout << "plane materials: " << planeMaterials.size() << std::endl;
+	std::cout << "mesh materials: " << meshMaterials.size() << std::endl;
+	std::cout << "total number of materials: " << materials.size() << std::endl;
+
 	cl_int err;
 	err = _queue.enqueueWriteBuffer(
 		_spheres,
 		CL_TRUE,
 		0,
-		SPHERES_MAX * sizeof(Sphere),
+		_num_spheres * sizeof(Sphere),
 		scene.GetSpheres().data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-
 	err = _queue.enqueueWriteBuffer(
 		_planes,
 		CL_TRUE,
 		0,
-		PLANES_MAX * sizeof(Plane),
+		_num_planes * sizeof(Plane),
 		scene.GetPlanes().data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-
 	err = _queue.enqueueWriteBuffer(
 		_materials,
 		CL_TRUE,
 		0,
-		MATERIALS_MAX * sizeof(Material),
-		materials);
+		materials.size() * sizeof(Material),
+		materials.data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-
 	err = _queue.enqueueWriteBuffer(
 		_lights,
 		CL_TRUE,
 		0,
-		LIGHTS_MAX * sizeof(Light),
+		_num_lights * sizeof(Light),
 		scene.GetLights().data());
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	err = _queue.enqueueWriteBuffer(
+		_vertices,
+		CL_TRUE,
+		0,
+		_num_vertices * sizeof(glm::vec4),
+		scene.GetVertices().data());
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	err = _queue.enqueueWriteBuffer(
+		_triangles,
+		CL_TRUE,
+		0,
+		_num_triangles * sizeof(Scene::TriangleSceneData),
+		scene.GetTriangleIndices().data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 }
 
@@ -159,7 +193,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	cl_int err;
 	cl::Event event;
 	_helloWorldKernel.setArg(0, _outputImage);
-	_helloWorldKernel.setArg(1, (cl_uint)_scr_width);
+	_helloWorldKernel.setArg(1, _scr_width);
 	_helloWorldKernel.setArg(2, glmToCl(eye));
 	_helloWorldKernel.setArg(3, glmToCl(scr_base_origin));
 	_helloWorldKernel.setArg(4, glmToCl(u_step));
@@ -168,9 +202,13 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	_helloWorldKernel.setArg(7, _spheres);
 	_helloWorldKernel.setArg(8, _num_planes);// Num spheres
 	_helloWorldKernel.setArg(9, _planes);
-	_helloWorldKernel.setArg(10, _materials);
-	_helloWorldKernel.setArg(11, _num_lights);
-	_helloWorldKernel.setArg(12, _lights);
+	_helloWorldKernel.setArg(10, _num_vertices);
+	_helloWorldKernel.setArg(11, _vertices);
+	_helloWorldKernel.setArg(12, _num_triangles);
+	_helloWorldKernel.setArg(13, _triangles);
+	_helloWorldKernel.setArg(14, _materials);
+	_helloWorldKernel.setArg(15, _num_lights);
+	_helloWorldKernel.setArg(16, _lights);
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,
 		cl::NullRange,

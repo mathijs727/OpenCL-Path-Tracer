@@ -12,7 +12,7 @@ using namespace raytracer;
 void raytracer::Mesh::addData(aiMesh* in_mesh) {
 	for (int v = 0; v < in_mesh->mNumVertices; ++v) {
 		auto position = in_mesh->mVertices[v];
-		glm::vec3 vertex(position.x, position.y, position.z);
+		glm::vec4 vertex(position.x, position.y, position.z, 1);
 		_vertices.push_back(vertex);
 	}
 	for (int f = 0; f < in_mesh->mNumFaces; ++f) {

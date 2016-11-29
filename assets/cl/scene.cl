@@ -8,11 +8,17 @@
 
 typedef struct
 {
-	int numSpheres, numPlanes, numLights;
+	uint indices[3];
+	uint mat_index;
+} TriangleData;
+
+typedef struct
+{
+	int numSpheres, numPlanes, numLights, numVertices, numTriangles;
 	__global Sphere* spheres;
 	__global Plane* planes;
 	__global float3* vertices;
-	__global int indices;
+	__global TriangleData* triangles;
 	__global Material* sphereMaterials;
 	__global Material* planeMaterials;
 	__global Material* meshMaterials;
@@ -31,6 +37,10 @@ void loadScene(
 	__global Sphere* spheres,
 	int numPlanes,
 	__global Plane* planes,
+	int numVertices,
+	__global float3* vertices,
+	int numTriangles,
+	__global TriangleData* triangles,
 	__global Material* materials,
 	int numLights,
 	__global Light* lights,
@@ -40,11 +50,16 @@ void loadScene(
 	scene->numSpheres = numSpheres;
 	scene->numPlanes = numPlanes;
 	scene->numLights = numLights;
+	scene->numVertices = numVertices;
+	scene->numTriangles = numTriangles;
 
 	scene->spheres = spheres;
 	scene->planes = planes;
 	scene->sphereMaterials = materials;
 	scene->planeMaterials = &materials[numSpheres];
+	scene->meshMaterials = &materials[numSpheres + numPlanes];
+	scene->triangles = triangles;
+	scene->vertices = vertices;
 	scene->lights = lights;
 	/*scene->numSpheres = numSpheres;
 	scene->numPlanes = numPlanes;
@@ -137,7 +152,7 @@ float3 traceRay(
 	// Storage for the shape pointer that only expires at the end of this function
 	Plane plane;
 	Sphere sphere;
-
+	float3 vertices[3];
 	// Check sphere intersections
 	for (int i = 0; i < scene->numSpheres; i++)
 	{
@@ -166,6 +181,21 @@ float3 traceRay(
 		}
 	}
 
+	
+	for (int i = 0; i < scene->numTriangles; ++i) {
+		float t;
+		vertices[0] = scene->vertices[scene->triangles[i].indices[0]];
+		vertices[1] = scene->vertices[scene->triangles[i].indices[1]];
+		vertices[2] = scene->vertices[scene->triangles[i].indices[2]];
+		if (intersectRayTriangle(ray, vertices, &t) && t < minT)
+		{
+			minT = t;
+			i_current_hit = i;
+			type = MeshType;
+			shape = (void*)vertices;
+		}
+	}
+
 	if (i_current_hit >= 0)
 	{
 		// Calculate the normal of the hit surface and retrieve the material
@@ -173,14 +203,15 @@ float3 traceRay(
 		float3 intersection = minT * direction + ray->origin;
 		float3 normal;
 		Material material;
-		if (type == SphereType)
-		{
+		if (type == SphereType) {
 			normal = normalize(intersection - scene->spheres[i_current_hit].centre);
 			material = scene->sphereMaterials[i_current_hit];
-		} else if (type == PlaneType)
-		{
+		} else if (type == PlaneType) {
 			normal = normalize(scene->planes[i_current_hit].normal);
 			material = scene->planeMaterials[i_current_hit];
+		} else if (type == MeshType) {
+			normal = cross(vertices[1]-vertices[0], vertices[2]-vertices[0]);
+			material = scene->meshMaterials[scene->triangles[i_current_hit].mat_index];
 		}
 
 		return whittedShading(

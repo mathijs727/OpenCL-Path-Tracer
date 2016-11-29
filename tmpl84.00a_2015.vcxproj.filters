@@ -48,7 +48,6 @@
     <ClInclude Include="src\template\cl.hpp">
       <Filter>template code</Filter>
     </ClInclude>
-    <ClInclude Include="src\shading.h" />
     <ClInclude Include="src\gloutput.h" />
     <ClInclude Include="src\pixel.h" />
     <ClInclude Include="src\template\includes.h">
