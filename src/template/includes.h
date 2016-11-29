@@ -1,4 +1,5 @@
 #define GLEW_STATIC
+#define NOMINMAX
 #ifdef _WIN32
 #include <OpenGL/glew.h>// Header files included in project
 #include <GL/wglew.h>

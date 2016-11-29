@@ -1,9 +1,10 @@
 #pragma once
+
 #include <glm.hpp>
+#include "template/includes.h"
 #include "types.h"
 #include "light.h"
 #include <algorithm>
-#include "template/includes.h"
 
 #define RAYTRACER_EPSILON 0.0001f
 
@@ -26,20 +27,15 @@ struct Material
 	};
 
 	Material() { }
-	Material(const Material& m)
-	{
-		memcpy(this, &m, sizeof(Material));
-	}
-	Material& operator=(const Material& m)
-	{
-		memcpy(this, &m, sizeof(Material));
-		return *this;
-	}
-	union {
+	Material(const Material& m) { memcpy(this, &m, sizeof(Material)); }
+	Material& operator=(const Material& m) { memcpy(this, &m, sizeof(Material)); return *this; }
+	
+	union { //16 bytes
 		glm::vec3 colour;
 		cl_float3 __cl_colour;
 	};
-	union// 4 bytes
+	Type type; // 4 bytes
+	union // 4 bytes
 	{
 		struct
 		{
@@ -54,7 +50,7 @@ struct Material
 			cl_float refractive_index;
 		} fresnel;
 	};
-	Type type;// 4 bytes
+	byte __padding[8];
 
 	static Material Diffuse(const glm::vec3& colour) {
 		Material result;
@@ -72,8 +68,7 @@ struct Material
 		return result;
 	}*/
 
-	static Material Reflective(const glm::vec3& colour)
-	{
+	static Material Reflective(const glm::vec3& colour)	{
 		Material result;
 		result.type = Type::Reflective;
 		result.colour = colour;

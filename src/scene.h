@@ -15,6 +15,12 @@ class Scene
 public:
 	Scene();
 
+	struct TriangleSceneData
+	{
+		glm::u32vec3 indices;
+		u32 material_index;
+	};
+
 	void add_primitive(const Sphere& primitive, const Material& material) {
 		_spheres.push_back(primitive);
 		_sphere_materials.push_back(material);
@@ -50,6 +56,9 @@ public:
 	const std::vector<Material>& GetPlaneMaterials() const { return _planes_materials; };
 
 	const std::vector<Light>& GetLights() const { return _lights; };
+	const std::vector<glm::vec3> GetVertices() const { return _vertices; }
+	const std::vector<Material> GetMeshMaterials() const { return _meshes_materials; }
+	const std::vector<TriangleSceneData> GetTriangleIndices() const { return _triangle_indices; }
 public:
 	struct LightIterableConst {
 		const Scene& scene;
@@ -71,12 +80,6 @@ private:
 
 	std::vector<Plane> _planes;
 	std::vector<Material> _planes_materials;
-
-	struct TriangleSceneData
-	{
-		glm::u32vec3 indices;
-		u32 material_index;
-	};
 
 	std::vector<glm::vec3> _vertices;
 	std::vector<TriangleSceneData> _triangle_indices;

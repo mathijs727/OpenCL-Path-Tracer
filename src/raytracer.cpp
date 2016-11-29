@@ -49,118 +49,83 @@ raytracer::RayTracer::~RayTracer()
 void raytracer::RayTracer::InitBuffers()
 {
 	cl_int err;
-
-	{
-		// Create output (float) color buffer
-		_buffer_size = _scr_width * _scr_height * 3 * sizeof(float);
-		_outHost = std::make_unique<float[]>(_scr_width * _scr_height * 3);
-		_outDevice = cl::Buffer(_context,
-			CL_MEM_WRITE_ONLY,
-			_buffer_size,
-			NULL,
-			&err);
-		checkClErr(err, "Buffer::Buffer()");
-	}
-
-	{
-		_spheres = cl::Buffer(_context,
-			CL_MEM_READ_ONLY,
-			128 * sizeof(Sphere),
-			NULL,
-			&err);
-		checkClErr(err, "Buffer::Buffer()");
-	}
-
-	{
-		_planes = cl::Buffer(_context,
-			CL_MEM_READ_ONLY,
-			128 * sizeof(Plane),
-			NULL,
-			&err);
-		checkClErr(err, "Buffer::Buffer()");
-	}
-
-	{
-		_materials = cl::Buffer(_context,
-			CL_MEM_READ_ONLY,
-			256 * sizeof(SerializedMaterial),
-			NULL,
-			&err);
-		checkClErr(err, "Buffer::Buffer()");
-	}
-
-	{
-		_lights = cl::Buffer(_context,
-			CL_MEM_READ_ONLY,
-			16 * sizeof(Light),
-			NULL,
-			&err);
-		checkClErr(err, "Buffer::Buffer()");
-	}
+	// Create output (float) color buffer
+	_buffer_size = _scr_width * _scr_height * 3 * sizeof(float);
+	_outHost = std::make_unique<float[]>(_scr_width * _scr_height * 3);
+	_outDevice = cl::Buffer(_context,
+		CL_MEM_WRITE_ONLY,
+		_buffer_size,
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+	_spheres = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		128 * sizeof(Sphere),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+	_planes = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		128 * sizeof(Plane),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+	_materials = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		256 * sizeof(Material),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+	_lights = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		16 * sizeof(Light),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
 }
 
 void raytracer::RayTracer::SetScene(const Scene& scene)
 {
-	auto spheres = std::make_unique<Sphere[]>(128);
-	auto planes = std::make_unique<Plane[]>(128);
-	auto materials = std::make_unique<SerializedMaterial[]>(256);
-	auto lights = std::make_unique<Light[]>(16);
-
-	_num_spheres = scene.GetSpheres().size();
-	_num_planes = scene.GetPlanes().size();
-	memcpy(spheres.get(), scene.GetSpheres().data(), _num_spheres * sizeof(Sphere));
-	memcpy(planes.get(), scene.GetPlanes().data(), _num_planes * sizeof(Plane));
-
-	/*memcpy(materials.get(), scene.GetSphereMaterials().data(), _num_spheres * sizeof(SerializedMaterial));
-	memcpy(materials.get() + _num_spheres,
-		scene.GetPlaneMaterials().data(),
-		_num_planes * sizeof(Material));*/
-	auto sphereMaterials = scene.GetSphereMaterials();
-	auto planeMaterials = scene.GetPlaneMaterials();
-	int i = 0;
-	for (const Material& mat : sphereMaterials)
-	{
-		materials[i++] = mat;//SerializedMaterial(mat);
-	}
-	for (const Material& mat : planeMaterials)
-	{
-		materials[i++] = mat;//SerializedMaterial(mat);
-	}
-
-	_num_lights = scene.GetLights().size();
-	memcpy(lights.get(), scene.GetLights().data(), _num_lights * sizeof(Light));
+	Material materials[256];
+	auto& sphereMaterials = scene.GetSphereMaterials();
+	auto& planeMaterials = scene.GetPlaneMaterials();
+	auto& meshMaterials = scene.GetMeshMaterials();
+	u32 materials_n = 0;
+	for (const Material& mat : sphereMaterials) { materials[materials_n++] = mat; }
+	for (const Material& mat : planeMaterials) { materials[materials_n++] = mat; }
+	for (const Material& mat : meshMaterials) { materials[materials_n++] = mat; }
 
 	cl_int err;
 	err = _queue.enqueueWriteBuffer(
 		_spheres,
 		CL_TRUE,
 		0,
-		128 * sizeof(Sphere),
-		spheres.get());
+		scene.GetSpheres().size() * sizeof(Sphere),
+		scene.GetSpheres().data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 
 	err = _queue.enqueueWriteBuffer(
 		_planes,
 		CL_TRUE,
 		0,
-		128 * sizeof(Plane),
-		planes.get());
+		scene.GetPlanes().size() * sizeof(Plane),
+		scene.GetPlanes().data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 
 	err = _queue.enqueueWriteBuffer(
 		_materials,
 		CL_TRUE,
 		0,
-		256 * sizeof(SerializedMaterial),
-		materials.get());
+		materials_n * sizeof(Material),
+		materials);
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 
 	err = _queue.enqueueWriteBuffer(
 		_lights,
 		CL_TRUE,
 		0,
-		16 * sizeof(Light),
-		lights.get());
+		scene.GetLights().size() * sizeof(Light),
+		scene.GetLights().data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 }
 
