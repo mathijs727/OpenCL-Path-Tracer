@@ -9,13 +9,16 @@
 typedef struct
 {
 	int numSpheres, numPlanes, numLights;
-	Sphere spheres[128];
-	Plane planes[128];
-	Material sphereMaterials[128];
-	Material planeMaterials[128];
+	__global Sphere* spheres;
+	__global Plane* planes;
+	__global float3* vertices;
+	__global int indices;
+	__global Material* sphereMaterials;
+	__global Material* planeMaterials;
+	__global Material* meshMaterials;
 	//PointLight pointLights[8];
 	//DirectionalLight directionalLights[8];
-	Light lights[16];
+	__global Light* lights;
 
 	float refractiveIndex;
 } Scene;
@@ -31,9 +34,19 @@ void loadScene(
 	__global Material* materials,
 	int numLights,
 	__global Light* lights,
-	__local Scene* scene) {
+	Scene* scene) {
+	scene->refractiveIndex =  1.000277f;
 	
 	scene->numSpheres = numSpheres;
+	scene->numPlanes = numPlanes;
+	scene->numLights = numLights;
+
+	scene->spheres = spheres;
+	scene->planes = planes;
+	scene->sphereMaterials = materials;
+	scene->planeMaterials = &materials[numSpheres];
+	scene->lights = lights;
+	/*scene->numSpheres = numSpheres;
 	scene->numPlanes = numPlanes;
 	for (int i = 0; i < numSpheres; i++)
 	{
@@ -50,16 +63,13 @@ void loadScene(
 	scene->numLights = numLights;
 	for (int i = 0; i < numLights; i++)
 	{
-		/*RawLight rawLight = lights[i];
-		Light light;
-		convertRawLight(&rawLight, &light);*/
 		scene->lights[i] = lights[i];
 	}
 
-	scene->refractiveIndex =  1.000277f;
+	scene->refractiveIndex =  1.000277f;*/
 }
 
-bool checkRay(const __local Scene* scene, const Ray* ray)
+bool checkRay(const Scene* scene, const Ray* ray)
 {
 	// Check sphere intersections
 	for (int i = 0; i < scene->numSpheres; i++)
@@ -86,7 +96,7 @@ bool checkRay(const __local Scene* scene, const Ray* ray)
 	return false;
 }
 
-bool checkLine(const __local Scene* scene, const Line* line)
+bool checkLine(const Scene* scene, const Line* line)
 {
 	// Check sphere intersections
 	for (int i = 0; i < scene->numSpheres; i++)
@@ -115,7 +125,7 @@ bool checkLine(const __local Scene* scene, const Line* line)
 
 #include "shading.cl"
 float3 traceRay(
-	const __local Scene* scene,
+	const Scene* scene,
 	const Ray* ray,
 	float3 multiplier,
 	Stack* stack)

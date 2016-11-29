@@ -24,8 +24,8 @@ __kernel void hello(
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 
-	__local Scene l_scene;
-	if (get_local_id(0) == 0 && get_local_id(1) == 0)
+	Scene l_scene;
+	//if (get_local_id(0) == 0 && get_local_id(1) == 0)
 	{
 		loadScene(numSpheres, spheres, numPlanes, planes, materials, numLights, lights, &l_scene);
 	}

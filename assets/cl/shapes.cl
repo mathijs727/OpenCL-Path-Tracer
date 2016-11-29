@@ -55,7 +55,7 @@ bool intersectRayPlane(const Ray* ray, const Plane* plane, float* time)
 {
 	// http://stackoverflow.com/questions/23975555/how-to-do-ray-plane-intersection
 	float denom = dot(plane->normal, ray->direction);
-    if (fabs(denom) > 1e-6)// Check that ray not parallel to plane
+    if (fabs(denom) > 1e-6f)// Check that ray not parallel to plane
 	{
 		// A known point on the plane
 		float3 center = plane->offset * plane->normal;

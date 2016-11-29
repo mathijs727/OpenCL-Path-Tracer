@@ -10,10 +10,9 @@ float3 diffuseShade(
 	float3 rayDirection,
 	float3 intersection,
 	float3 normal,
-	__local const Scene* scene,
+	const Scene* scene,
 	float3 diffuseColour)
 {
-	return (float3)(1.0f, 1.0f, 1.0f);
 	float3 result = (float3)(0.0f, 0.0f, 0.0f);
 	for (int i = 0; i < scene->numLights; i++)
 	{
@@ -79,7 +78,7 @@ bool calcRefractiveRay(
 }
 
 float3 whittedShading(
-	__local const Scene* scene,
+	const Scene* scene,
 	float3 rayDirection,
 	float3 intersection,
 	float3 normal,
@@ -143,7 +142,6 @@ float3 whittedShading(
 				//glm::vec3 reflective_component = reflection_coeff * scene.trace_ray(calc_reflective_ray(rayDirection, intersection, normal), current_depth);
 				//glm::vec3 refractive_component = (1 - reflection_coeff) * scene.trace_ray(second_refractive_ray, current_depth);
 				//return material.colour * (refractive_component + reflective_component);
-				Ray ray;
 				StackItem item1;
 				calcReflectiveRay(rayDirection, intersection, normal, &item1.ray);
 				item1.multiplier = multiplier * material->colour * reflection_coeff;
