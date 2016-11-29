@@ -198,7 +198,10 @@ float3 traceRay(
 		float t;
 		triang = scene->triangles[i];
 		getVertices(vertices, triang.indices, scene);
-		if (intersectRayTriangle(ray, vertices, &t) && t < minT)
+		float3 edge1 = vertices[1] - vertices[0];
+		float3 edge2 = vertices[2] - vertices[0];
+		bool backface = dot(ray->direction, cross(edge2, edge1)) < 0;
+		if (!backface && intersectRayTriangle(ray, vertices, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
