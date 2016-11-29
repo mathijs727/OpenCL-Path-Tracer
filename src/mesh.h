@@ -6,7 +6,7 @@
 #include "shapes.h"
 #include "transform.h"
 
-class aiMesh;
+struct aiMesh;
 
 namespace raytracer {
 class Mesh

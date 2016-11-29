@@ -11,13 +11,13 @@ using namespace raytracer;
 
 void raytracer::Mesh::addData(aiMesh* in_mesh, const glm::mat4& transform_matrix) {
 	uint vertex_starting_index = _vertices.size();
-	for (int v = 0; v < in_mesh->mNumVertices; ++v) {
+	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
 		auto position = in_mesh->mVertices[v];
 		glm::vec4 vertex = transform_matrix * glm::vec4(position.x, position.y, position.z, 1);
 		//std::cout << "importing vertex: " << position.x << ", " << position.y << ", " << position.z << std::endl;
 		_vertices.push_back(vertex);
 	}
-	for (int f = 0; f < in_mesh->mNumFaces; ++f) {
+	for (uint f = 0; f < in_mesh->mNumFaces; ++f) {
 		aiFace* in_face = in_mesh->mFaces;
 		if (in_face->mNumIndices != 3) {
 			std::cout << "found a face which is not a triangle! discarding." << std::endl;
@@ -27,8 +27,7 @@ void raytracer::Mesh::addData(aiMesh* in_mesh, const glm::mat4& transform_matrix
 
 		glm::u32vec3 face = glm::u32vec3(indices[0], indices[1], indices[2]) + vertex_starting_index;
 		_triangleIndices.push_back(face);
-		std::cout << "importing face: " << indices[0] << ", " << indices[1] << ", " << indices[2] << std::endl;
-		cl_float3 vector;
+		std::cout << "importing face: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", starting index: " << vertex_starting_index << std::endl;
 	}
 }
 
@@ -57,8 +56,8 @@ Mesh raytracer::Mesh::LoadFromFile(const char* file, const Transform& offset) {
 			auto current = stack.top();
 			stack.pop();
 			glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
-			for (int i = 0; i < current.node->mNumMeshes; ++i) result.addData(scene->mMeshes[i], cur_transform);
-			for (int i = 0; i < current.node->mNumChildren; ++i) stack.push(StackElement(current.node->mChildren[i], cur_transform));
+			for (uint i = 0; i < current.node->mNumMeshes; ++i) result.addData(scene->mMeshes[i], cur_transform);
+			for (uint i = 0; i < current.node->mNumChildren; ++i) stack.push(StackElement(current.node->mChildren[i], cur_transform));
 		}
 	}
 

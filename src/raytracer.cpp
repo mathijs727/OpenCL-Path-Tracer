@@ -119,6 +119,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	_num_lights = scene.GetLights().size();
 	_num_vertices = scene.GetVertices().size();
 	_num_triangles = scene.GetTriangleIndices().size();
+	_num_mesh_materials = scene.GetMeshMaterials().size();
 	InitBuffers(_num_spheres, _num_planes, _num_vertices, _num_triangles, _num_mesh_materials, _num_lights);
 	auto& sphereMaterials = scene.GetSphereMaterials();
 	auto& planeMaterials = scene.GetPlaneMaterials();
