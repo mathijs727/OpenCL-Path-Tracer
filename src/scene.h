@@ -4,6 +4,7 @@
 #include "ray.h"
 #include "material.h"
 #include "light.h"
+#include "mesh.h"
 
 #define MAX_TRACE_DEPTH 6
 
@@ -29,9 +30,9 @@ public:
 		_planes_materials.push_back(material);
 	}
 
-	void add_primitive(const Triangle& primitive, const Material& material) {
-		_triangles.push_back(primitive);
-		_triangles_materials.push_back(material);
+	void add_primitive(const Mesh& primitive, const Material& material) {
+		_meshes.push_back(primitive);
+		_meshes_materials.push_back(material);
 	}
 	
 	void add_light(Light& light)
@@ -68,8 +69,8 @@ private:
 	std::vector<Plane> _planes;
 	std::vector<Material> _planes_materials;
 
-	std::vector<Triangle> _triangles;
-	std::vector<Material> _triangles_materials;
+	std::vector<Mesh> _meshes;
+	std::vector<Material> _meshes_materials;
 
 	std::vector<Light> _lights;
 };
@@ -89,7 +90,7 @@ glm::vec3 raytracer::Scene::trace_ray(const TRay& ray, int current_depth) const 
 	{
 		Sphere,
 		Plane,
-		Triangle
+		Mesh
 	};
 
 	// Find the closest intersection
@@ -97,6 +98,7 @@ glm::vec3 raytracer::Scene::trace_ray(const TRay& ray, int current_depth) const 
 	int i_current_hit = -1;
 	glm::vec3 normal_current_hit;
 	Type type_current_hit;
+	Triangle hit_triangle;
 	// Check sphere intersections
 	for (unsigned int i = 0; i < _spheres.size(); ++i) {
 		float intersect_time;
@@ -116,12 +118,17 @@ glm::vec3 raytracer::Scene::trace_ray(const TRay& ray, int current_depth) const 
 		}
 	}
 	// Check triangle intersections
-	for (unsigned int i = 0; i < _triangles.size(); ++i) {
-		float intersect_time;
-		if (intersect(ray, _triangles[i], intersect_time) && intersect_time < min_intersect_time) {
-			min_intersect_time = intersect_time;
-			type_current_hit = Type::Triangle;
-			i_current_hit = i;
+	for (unsigned int i = 0; i < _meshes.size(); ++i) {
+		const Mesh& mesh = _meshes[i];
+		for (auto& indices : mesh._triangleIndices) {
+			float intersect_time;
+			const Triangle triangle = mesh.getTriangle(indices);
+			if (intersect(ray, triangle, intersect_time)) {
+				min_intersect_time = intersect_time;
+				type_current_hit = Type::Mesh;
+				hit_triangle = triangle;
+				i_current_hit = i;
+			}
 		}
 	}
 
@@ -143,15 +150,15 @@ glm::vec3 raytracer::Scene::trace_ray(const TRay& ray, int current_depth) const 
 			material = _planes_materials[i_current_hit];
 			return whittedShading(direction, point, normal, material, _planes[i_current_hit], *this, current_depth);
 		}
-		else if (type_current_hit == Type::Triangle)
+		else if (type_current_hit == Type::Mesh)
 		{
 			// TODO: check if the normal is always pointing to the correct side of the triangle
-			const glm::vec3* points = _triangles[i_current_hit].points;
+			const glm::vec3* points = hit_triangle.points;
 			normal = glm::cross(
 				points[1] - points[0],
 				points[2] - points[0]);
-			material = _triangles_materials[i_current_hit];
-			return whittedShading(direction, point, normal, material, _triangles[i_current_hit], *this, current_depth);
+			material = _meshes_materials[i_current_hit];
+			return whittedShading(direction, point, normal, material, hit_triangle, *this, current_depth);
 		}
 	}
 	
