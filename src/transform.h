@@ -16,6 +16,10 @@ struct Transform
 		glm::mat4 location_matrix =  glm::translate(glm::mat4(), location);
 		return location_matrix * orientation_matrix;
 	}
+
+	Transform() {}
+
+	Transform(const glm::vec3& location, const glm::quat& orientation) : location(location), orientation(orientation) {}
 };
 
 }

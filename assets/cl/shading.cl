@@ -90,7 +90,6 @@ float3 whittedShading(
 {
 	if (material->type == Diffuse) {
 		float3 matColour = material->colour;
-		
 		return multiplier * diffuseShade(rayDirection, intersection, normal, scene, matColour);
 	} else if (material->type == Reflective) {
 		float3 matColour = material->colour;

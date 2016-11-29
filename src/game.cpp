@@ -64,10 +64,10 @@ void Game::Init()
 	std::cout << "Sizeof light: " << sizeof(Light) << std::endl;
 	std::cout << "Sizeof material: " << sizeof(Material) << std::endl;
 
-	Transform monkey_transform;
-	monkey_transform.location.z = 4;
-	monkey_transform.location.x = -4;
-	_scene->add_primitive(Mesh::LoadFromFile("assets/obj/monkey.obj", monkey_transform), Material::Diffuse(glm::vec3(0.8f, 0.5f, 0.4f)));
+	_scene->add_primitive(
+		Mesh::LoadFromFile( "assets/obj/monkey.obj", Transform(glm::vec3(-4,0,4), glm::quat()) ),
+		Material::Diffuse( glm::vec3(0.4f, 0.4f, 0.4f) )
+	);
 
 	/*Timer timer;
 	raytrace(*_camera, *_scene, *_screen);
