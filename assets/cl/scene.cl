@@ -29,6 +29,11 @@ typedef struct
 	float refractiveIndex;
 } Scene;
 
+void getVertices(float3* out_vertices, uint* indices, Scene* scene) {
+	out_vertices[0] = scene->vertices[indices[0]];
+	out_vertices[1] = scene->vertices[indices[1]];
+	out_vertices[2] = scene->vertices[indices[2]];
+}
 
 // TODO: instead of using a for loop in the "main" thread. Let every thread copy
 //  a tiny bit of data (IE workgroups of 128).
@@ -108,6 +113,19 @@ bool checkRay(const Scene* scene, const Ray* ray)
 		}
 	}
 
+	// check triangles
+	for (int i = 0; i < scene->numTriangles; i++)
+	{
+		float t;
+		TriangleData triang = scene->triangles[i];
+		float3 vertices[3];
+		getVertices(vertices, triang.indices, scene);
+		if (intersectRayTriangle(ray, vertices, &t))
+		{
+			return true;
+		}
+	}
+
 	return false;
 }
 
@@ -130,6 +148,19 @@ bool checkLine(const Scene* scene, const Line* line)
 		float t;
 		Plane plane = scene->planes[i];
 		if (intersectLinePlane(line, &plane, &t))
+		{
+			return true;
+		}
+	}
+
+	// check triangles
+	for (int i = 0; i < scene->numTriangles; i++)
+	{
+		float t;
+		TriangleData triang = scene->triangles[i];
+		float3 vertices[3];
+		getVertices(vertices, triang.indices, scene);
+		if (intersectRayTriangle(line, vertices, &t))
 		{
 			return true;
 		}
@@ -186,9 +217,7 @@ float3 traceRay(
 	for (int i = 0; i < scene->numTriangles; ++i) {
 		float t;
 		triang = scene->triangles[i];
-		vertices[0] = scene->vertices[triang.indices[0]];
-		vertices[1] = scene->vertices[triang.indices[1]];
-		vertices[2] = scene->vertices[triang.indices[2]];
+		getVertices(vertices, triang.indices, scene);
 		if (intersectRayTriangle(ray, vertices, &t) && t < minT)
 		{
 			minT = t;

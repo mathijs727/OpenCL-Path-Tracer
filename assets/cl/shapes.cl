@@ -156,6 +156,22 @@ bool intersectLinePlane(const Line* line, const Plane* plane, float* time)
 	return false;
 }
 
+bool intersectLineTriangle(const Line* line, const float3* vertices, float* time) {
+	float t;
+	float3 dir = line->dest - line->origin;
+	float maxT2 = dot(dir, dir);
+
+	Ray ray;
+	ray.origin = line->origin;
+	ray.direction = normalize(dir);
+	if (intersectRayTriangle(&ray, vertices, &t) && (t*t) < maxT2)
+	{
+		*time = t;
+		return true;
+	}
+	return false;
+}
+
 float intersectInsideSphere(const Ray* ray, const Sphere* sphere, float3* outNormal)
 {
 	float3 distance = sphere->centre - ray->origin;
