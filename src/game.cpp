@@ -43,7 +43,7 @@ void Game::Init()
 		Material material = Material::Diffuse(glm::vec3(0.8f, 0.2f, 0.4f));
 		//Material material = Material::Diffuse(
 		//	new Surface("checkerboard.png"));
-		//_scene->add_primitive(plane, material);
+		_scene->add_primitive(plane, material);
 	}
 
 	{
@@ -66,6 +66,7 @@ void Game::Init()
 
 	Transform monkey_transform;
 	monkey_transform.location.z = 4;
+	monkey_transform.location.x = -4;
 	_scene->add_primitive(Mesh::LoadFromFile("assets/obj/monkey.obj", monkey_transform), Material::Diffuse(glm::vec3(0.8f, 0.5f, 0.4f)));
 
 	/*Timer timer;

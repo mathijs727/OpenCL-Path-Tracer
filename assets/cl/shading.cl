@@ -88,9 +88,6 @@ float3 whittedShading(
 	float3 multiplier,
 	Stack* stack)
 {
-	if (type == MeshType) {
-		return (float3)(1.f, 1.f, 1.f);
-	}
 	if (material->type == Diffuse) {
 		float3 matColour = material->colour;
 		

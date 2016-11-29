@@ -54,25 +54,54 @@ bool intersectRaySphere(const Ray* ray, const Sphere* sphere, float* time)
 
 #define EPSILON 0.00001
 
+// as described in https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
 bool intersectRayTriangle(const Ray* ray, const float3* vertices, float* time) {
-	float3 edge1 = vertices[1] - vertices[0];
-	float3 edge2 = vertices[2] - vertices[0];
-	float3 P = cross(ray->direction, edge2);
-	float det = dot(edge1, P);
-	if (det > -EPSILON && det < EPSILON) return false;
-	float inv_det = 1.f/ det;
-	float3 T = ray->origin - vertices[0];
-	float u = dot(T,P) * inv_det;
-	if (u < 0.f || u > 1.f) return false;
-	float3 Q = cross(T,edge1);
-	float v = dot(ray->direction,Q) * inv_det;
-	if (v < 0.f || v > 1.f) return false;
-	float t = dot(edge2, Q) * inv_det;
-	if (t > EPSILON) {
+	float3 O = ray->origin;
+	float3 D = ray->direction;
+	float3 V1 = vertices[0];
+	float3 V2 = vertices[1];
+	float3 V3 = vertices[2];
+	float3 e1, e2;  //Edge1, Edge2
+	float3 P, Q, T;
+	float det, inv_det, u, v;
+	float t;
+
+	//Find vectors for two edges sharing V1
+	e1 = V2 - V1;
+	e2 = V3 - V1;
+	//Begin calculating determinant - also used to calculate u parameter
+	P = cross(D,e2);
+	//if determinant is near zero, ray lies in plane of triangle or ray is parallel to plane of triangle
+	det = dot(e1, P);
+	//NOT CULLING
+	if(det > -EPSILON && det < EPSILON) return 0;
+	inv_det = 1.f / det;
+
+	//calculate distance from V1 to ray origin
+	T = O - V1;
+
+	//Calculate u parameter and test bound
+	u = dot(T, P) * inv_det;
+	//The intersection lies outside of the triangle
+	if(u < 0.f || u > 1.f) return 0;
+
+	//Prepare to test v parameter
+	Q = cross(T, e1);
+
+	//Calculate V parameter and test bound
+	v = dot(D, Q) * inv_det;
+	//The intersection lies outside of the triangle
+	if(v < 0.f || u + v  > 1.f) return 0;
+
+	t = dot(e2, Q) * inv_det;
+
+	if(t > EPSILON) { //ray intersection
 		*time = t;
-		return true;
+		return 1;
 	}
-	return false;
+
+	// No hit, no win
+	return 0;
 }
 
 bool intersectRayPlane(const Ray* ray, const Plane* plane, float* time)
