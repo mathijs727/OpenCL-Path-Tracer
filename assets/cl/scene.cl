@@ -152,6 +152,7 @@ float3 traceRay(
 	// Storage for the shape pointer that only expires at the end of this function
 	Plane plane;
 	Sphere sphere;
+	TriangleData triang;
 	float3 vertices[3];
 	// Check sphere intersections
 	for (int i = 0; i < scene->numSpheres; i++)
@@ -181,12 +182,13 @@ float3 traceRay(
 		}
 	}
 
-	
+	// check mesh intersection
 	for (int i = 0; i < scene->numTriangles; ++i) {
 		float t;
-		vertices[0] = scene->vertices[scene->triangles[i].indices[0]];
-		vertices[1] = scene->vertices[scene->triangles[i].indices[1]];
-		vertices[2] = scene->vertices[scene->triangles[i].indices[2]];
+		triang = scene->triangles[i];
+		vertices[0] = scene->vertices[triang.indices[0]];
+		vertices[1] = scene->vertices[triang.indices[1]];
+		vertices[2] = scene->vertices[triang.indices[2]];
 		if (intersectRayTriangle(ray, vertices, &t) && t < minT)
 		{
 			minT = t;
@@ -213,7 +215,7 @@ float3 traceRay(
 			normal = cross(vertices[1]-vertices[0], vertices[2]-vertices[0]);
 			material = scene->meshMaterials[scene->triangles[i_current_hit].mat_index];
 		}
-
+		//return (float3)(1.0f, 1.0f, 1.0f);
 		return whittedShading(
 			scene,
 			ray->direction,

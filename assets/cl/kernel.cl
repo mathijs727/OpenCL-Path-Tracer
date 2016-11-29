@@ -27,15 +27,14 @@ __kernel void hello(
 	__global Light* lights) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
-	numVertices = 0;
-	numTriangles = 0;
+	//numTriangles = 0;
 	Scene l_scene;
 	//if (get_local_id(0) == 0 && get_local_id(1) == 0)
 	{
 		loadScene(numSpheres, spheres, numPlanes, planes, numVertices, vertices, numTriangles, triangles, materials, numLights, lights, &l_scene);
 	}
 	//barrier(CLK_LOCAL_MEM_FENCE);
-
+	
 	float3 screenPoint = screen + u_step * (float)x + v_step * (float)y;	
 	StackItem item;
 	item.ray.origin = eye;

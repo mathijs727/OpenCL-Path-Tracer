@@ -12,8 +12,21 @@
 #include <fstream>
 #include <utility>
 #include <thread>
+#include <stdlib.h>
 //#include <OpenGL/wglew.h>
 #include "template/includes.h"
+
+#ifdef WIN32
+int setenv(const char *name, const char *value, int overwrite) {
+	int errcode = 0;
+	if (!overwrite) {
+		size_t envsize = 0;
+		errcode = getenv_s(&envsize, NULL, 0, name);
+		if (errcode || envsize) return errcode;
+	}
+	return _putenv_s(name, value);
+}
+#endif
 
 using namespace raytracer;
 
@@ -57,18 +70,22 @@ void raytracer::RayTracer::InitBuffers(int numSpheres, int numPlanes, int numVer
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
-	_spheres = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		numSpheres * sizeof(Sphere),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-	_planes = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		numPlanes * sizeof(Plane),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
+	if (numSpheres > 0) {
+		_spheres = cl::Buffer(_context,
+			CL_MEM_READ_ONLY,
+			numSpheres * sizeof(Sphere),
+			NULL,
+			&err);
+		checkClErr(err, "Buffer::Buffer()");
+	}
+	if (numPlanes > 0) {
+		_planes = cl::Buffer(_context,
+			CL_MEM_READ_ONLY,
+			numPlanes * sizeof(Plane),
+			NULL,
+			&err);
+		checkClErr(err, "Buffer::Buffer()");
+	}
 	_materials = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		(numMeshMaterials + numSpheres + numPlanes) * sizeof(Material),
@@ -122,20 +139,24 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	std::cout << "total number of materials: " << materials.size() << std::endl;
 
 	cl_int err;
-	err = _queue.enqueueWriteBuffer(
-		_spheres,
-		CL_TRUE,
-		0,
-		_num_spheres * sizeof(Sphere),
-		scene.GetSpheres().data());
-	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-	err = _queue.enqueueWriteBuffer(
-		_planes,
-		CL_TRUE,
-		0,
-		_num_planes * sizeof(Plane),
-		scene.GetPlanes().data());
-	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	if (_num_spheres > 0) {
+		err = _queue.enqueueWriteBuffer(
+			_spheres,
+			CL_TRUE,
+			0,
+			_num_spheres * sizeof(Sphere),
+			scene.GetSpheres().data());
+		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	}
+	if (_num_planes > 0) {
+		err = _queue.enqueueWriteBuffer(
+			_planes,
+			CL_TRUE,
+			0,
+			_num_planes * sizeof(Plane),
+			scene.GetPlanes().data());
+		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	}	
 	err = _queue.enqueueWriteBuffer(
 		_materials,
 		CL_TRUE,
@@ -230,6 +251,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 // https://www.codeproject.com/articles/685281/opengl-opencl-interoperability-a-case-study-using
 void raytracer::RayTracer::InitOpenCL()
 {
+	setenv("CUDA_CACHE_DISABLE", "1", 1);
 	cl_int lError = CL_SUCCESS;
 	std::string lBuffer;
 

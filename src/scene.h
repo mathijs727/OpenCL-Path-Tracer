@@ -31,18 +31,7 @@ public:
 		_planes_materials.push_back(material);
 	}
 
-	void add_primitive(const Mesh& primitive, const Material& material) {
-		u32 starting_vertex_index = _vertices.size();
-		u32 material_index = _meshes_materials.size();
-		_meshes_materials.push_back(material);
-		for (auto& triangleVertexIndices : primitive._triangleIndices) {
-			TriangleSceneData triangleData;
-			triangleData.indices = triangleVertexIndices + glm::u32vec3(starting_vertex_index);
-			triangleData.material_index = material_index;
-			_triangle_indices.push_back(triangleData);
-		}
-		for (auto& vertex : primitive._vertices) _vertices.push_back(vertex);
-	}
+	void add_primitive(const Mesh& primitive, const Material& material);
 	
 	void add_light(Light& light)
 	{

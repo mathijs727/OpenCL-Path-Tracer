@@ -52,7 +52,7 @@ bool intersectRaySphere(const Ray* ray, const Sphere* sphere, float* time)
 	return false;
 }
 
-#define EPSILON 0.0000001
+#define EPSILON 0.00001
 
 bool intersectRayTriangle(const Ray* ray, const float3* vertices, float* time) {
 	float3 edge1 = vertices[1] - vertices[0];

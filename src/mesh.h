@@ -4,6 +4,7 @@
 #include "types.h"
 #include <vector>
 #include "shapes.h"
+#include "transform.h"
 
 class aiMesh;
 
@@ -15,8 +16,8 @@ public:
 	std::vector<glm::u32vec3> _triangleIndices;
 
 	bool isValid() const { return !_triangleIndices.empty() && !_vertices.empty(); }
-	void addData(aiMesh* mesh);
-	static Mesh LoadFromFile(const char* file);
+	void addData(aiMesh* mesh, const glm::mat4&);
+	static Mesh LoadFromFile(const char* file, const Transform& offset = Transform());
 };
 }
 
