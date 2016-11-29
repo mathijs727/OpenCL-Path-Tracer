@@ -58,7 +58,7 @@ raytracer::RayTracer::~RayTracer()
 {
 }
 
-void raytracer::RayTracer::InitBuffers(int numSpheres, int numPlanes, int numVertices, int numTriangles, int numMeshMaterials, int numLights)
+void raytracer::RayTracer::InitBuffers()
 {
 	cl_int err;
 	// Create output (float) color buffer
@@ -70,43 +70,43 @@ void raytracer::RayTracer::InitBuffers(int numSpheres, int numPlanes, int numVer
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
-	if (numSpheres > 0) {
+	if (_num_spheres > 0) {
 		_spheres = cl::Buffer(_context,
 			CL_MEM_READ_ONLY,
-			numSpheres * sizeof(Sphere),
+			_num_spheres * sizeof(Sphere),
 			NULL,
 			&err);
 		checkClErr(err, "Buffer::Buffer()");
 	}
-	if (numPlanes > 0) {
+	if (_num_planes > 0) {
 		_planes = cl::Buffer(_context,
 			CL_MEM_READ_ONLY,
-			numPlanes * sizeof(Plane),
+			_num_planes * sizeof(Plane),
 			NULL,
 			&err);
 		checkClErr(err, "Buffer::Buffer()");
 	}
 	_materials = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		(numMeshMaterials + numSpheres + numPlanes) * sizeof(Material),
+		(_num_mesh_materials + _num_spheres + _num_planes) * sizeof(Material),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 	_lights = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		numLights * sizeof(Light),
+		_num_lights * sizeof(Light),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 	_vertices = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		numVertices * sizeof(glm::vec4),
+		_num_vertices * sizeof(glm::vec4),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 	_triangles = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		numTriangles * sizeof(Scene::TriangleSceneData),
+		_num_triangles * sizeof(Scene::TriangleSceneData),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
@@ -120,7 +120,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	_num_vertices = scene.GetVertices().size();
 	_num_triangles = scene.GetTriangleIndices().size();
 	_num_mesh_materials = scene.GetMeshMaterials().size();
-	InitBuffers(_num_spheres, _num_planes, _num_vertices, _num_triangles, _num_mesh_materials, _num_lights);
+	InitBuffers();
 	auto& sphereMaterials = scene.GetSphereMaterials();
 	auto& planeMaterials = scene.GetPlaneMaterials();
 	auto& meshMaterials = scene.GetMeshMaterials();

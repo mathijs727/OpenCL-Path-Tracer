@@ -24,7 +24,7 @@ public:
 	void RayTrace(const Camera& camera);
 private:
 	void InitOpenCL();
-	void InitBuffers(int numSpheres, int numPlanes, int numVertices, int numTriangles, int numMeshMaterials, int numLights);
+	void InitBuffers();
 	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
 private:
 	size_t _buffer_size;
