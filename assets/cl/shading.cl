@@ -83,7 +83,7 @@ float3 whittedShading(
 	float3 intersection,
 	float3 normal,
 	ShapeType type,
-	const void* shape,
+	const uint shape_index,
 	const Material* material,
 	float3 multiplier,
 	Stack* stack)
@@ -121,9 +121,11 @@ float3 whittedShading(
 			float intersect_inside_distance;
 			if (type == SphereType)
 			{
-				intersectInsideSphere(&refractive_ray, (Sphere*)shape, &intersect_inside_normal);
+				Sphere sphere = scene->spheres[shape_index];
+				intersectInsideSphere(&refractive_ray, &sphere, &intersect_inside_normal);
 			} else if (type == PlaneType) {
-				intersectInsidePlane(&refractive_ray, (Plane*)shape, &intersect_inside_normal);
+				Plane plane = scene->planes[shape_index];
+				intersectInsidePlane(&refractive_ray, &plane, &intersect_inside_normal);
 			} else {
 				return (float3)(0.0f, 0.0f, 0.0f);
 			}

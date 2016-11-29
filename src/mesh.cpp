@@ -17,11 +17,18 @@ glm::mat4 remove_translation(const glm::mat4& mat) {
 	return result;
 }
 
+glm::mat4 ai2glm(const aiMatrix4x4& t) {
+	return glm::mat4(t.a1, t.a2, t.a3, t.a4, t.b1, t.b2, t.b3, t.b4, t.c1, t.c2, t.c3, t.c4, t.d1, t.d2, t.d3, t.d4 );
+}
+
+glm::vec3 ai2glm(const aiVector3D& v) {
+	return glm::vec3(v.x,v.y,v.z);
+}
+
 void raytracer::Mesh::addData(aiMesh* in_mesh, const glm::mat4& transform_matrix) {
 	uint vertex_starting_index = _vertices.size();
 	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
-		auto position = in_mesh->mVertices[v];
-		glm::vec4 vertex = transform_matrix * glm::vec4(position.x, position.y, position.z, 1);
+		glm::vec4 vertex = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
 		//std::cout << "importing vertex: " << position.x << ", " << position.y << ", " << position.z << std::endl;
 		_vertices.push_back(vertex);
 	}
@@ -32,18 +39,18 @@ void raytracer::Mesh::addData(aiMesh* in_mesh, const glm::mat4& transform_matrix
 			continue;
 		}
 		auto indices = in_face->mIndices;
-		auto& n = in_mesh->mNormals[f];
 		MeshFace face;
-		face.normal = glm::mat3(transform_matrix) * glm::vec3(n.x, n.y, n.z);
+		glm::vec3 v0 = ai2glm(in_mesh->mVertices[indices[0]]);
+		glm::vec3 v1 = ai2glm(in_mesh->mVertices[indices[1]]);
+		glm::vec3 v2 = ai2glm(in_mesh->mVertices[indices[2]]);
+		face.normal = glm::normalize(glm::mat3(transform_matrix) * glm::cross(v1-v0, v2-v0));
 		face.indices = glm::u32vec3(indices[0], indices[1], indices[2]) + vertex_starting_index;
 		_faces.push_back(face);
 		//std::cout << "importing face: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", starting index: " << vertex_starting_index << std::endl;
 	}
 }
 
-glm::mat4 ai2glm(const aiMatrix4x4& t) {
-	return glm::mat4(t.a1, t.a2, t.a3, t.a4, t.b1, t.b2, t.b3, t.b4, t.c1, t.c2, t.c3, t.c4, t.d1, t.d2, t.d3, t.d4 );
-}
+
 
 Mesh raytracer::Mesh::LoadFromFile(const char* file, const Transform& offset) {
 	struct StackElement
@@ -54,7 +61,7 @@ Mesh raytracer::Mesh::LoadFromFile(const char* file, const Transform& offset) {
 	};
 
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices | aiProcess_ImproveCacheLocality);
+	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices | aiProcess_ImproveCacheLocality);
 	Mesh result;
 	
 	if (scene != nullptr && scene->mFlags != AI_SCENE_FLAGS_INCOMPLETE && scene->mRootNode != nullptr) {

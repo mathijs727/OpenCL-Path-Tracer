@@ -159,7 +159,6 @@ float3 traceRay(
 	float minT = 100000.0f;
 	int i_current_hit = -1;
 	ShapeType type;
-	void* shape;
 	// Storage for the shape pointer that only expires at the end of this function
 	
 	// Check sphere intersections
@@ -172,7 +171,6 @@ float3 traceRay(
 			minT = t;
 			i_current_hit = i;
 			type = SphereType;
-			shape = (void*)&s;
 		}
 	}
 
@@ -186,7 +184,6 @@ float3 traceRay(
 			minT = t;
 			i_current_hit = i;
 			type = PlaneType;
-			shape = (void*)&p;
 		}
 	}
 
@@ -199,12 +196,11 @@ float3 traceRay(
 		float3 edge1 = v[1] - v[0];
 		float3 edge2 = v[2] - v[0];
 		bool backface = dot(ray->direction, cross(edge2, edge1)) < 0;
-		if (intersectRayTriangle(ray, v, &t) && t < minT)
+		if (!backface && intersectRayTriangle(ray, v, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
 			type = MeshType;
-			shape = (void*)&triangle;
 		}
 	}
 
@@ -222,13 +218,9 @@ float3 traceRay(
 			normal = normalize(scene->planes[i_current_hit].normal);
 			material = scene->planeMaterials[i_current_hit];
 		} else if (type == MeshType) {
-			float3 v[3];
-			TriangleData* triangle = shape;
-			getVertices(v, triangle->indices, scene);
-			float3 edge1 = v[1] - v[0];
-			float3 edge2 = v[2] - v[0];
-			normal = normalize(-cross(edge2, edge1));
-			material = scene->meshMaterials[triangle->mat_index];
+			TriangleData triangle = scene->triangles[i_current_hit];
+			normal = triangle.normal;
+			material = scene->meshMaterials[triangle.mat_index];
 		}
 		//return (float3)(1.0f, 1.0f, 1.0f);
 		return whittedShading(
@@ -237,7 +229,7 @@ float3 traceRay(
 			intersection,
 			normal,
 			type,
-			shape,
+			i_current_hit,
 			&material,
 			multiplier,
 			stack);
