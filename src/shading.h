@@ -23,7 +23,7 @@ glm::vec3 whittedShading(
 	// TODO: move this to the material class
 	if (material.type == Material::Type::Diffuse) {
 		glm::vec3 diffuse_colour;
-		if (material.diffuse.diffuse_texture != nullptr)
+		/*if (material.diffuse.diffuse_texture != nullptr)
 		{
 			Tmpl8::Surface* texture = material.diffuse.diffuse_texture;
 
@@ -38,7 +38,7 @@ glm::vec3 whittedShading(
 			diffuse_colour = glm::vec3(r / 255.f, g / 255.f, b / 255.f);
 		} else {
 			diffuse_colour = material.colour;
-		}
+		}*/
 		return diffuse_colour * diffuse_shade(rayDirection, intersection, normal, scene);
 	}
 	else if (material.type == Material::Type::Reflective) {

@@ -12,6 +12,8 @@ typedef struct
 {
 	float3 normal;
 	float offset;
+
+	float u_size, v_size;
 } Plane;
 
 typedef enum

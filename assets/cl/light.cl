@@ -26,7 +26,6 @@ typedef struct
 
 typedef struct
 {
-	LightType type;
 	float3 colour;
 	union
 	{
@@ -39,6 +38,7 @@ typedef struct
 			float3 direction;
 		} directional;
 	};
+	LightType type;
 } Light;
 
 /*typedef struct

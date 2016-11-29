@@ -9,10 +9,13 @@ typedef enum {
 
 typedef struct
 {
-	MaterialType type;
 	float3 colour;
 	union
 	{
+		struct
+		{
+			int tex_id;
+		} diffuse;
 		struct
 		{
 			float specularity;
@@ -22,12 +25,14 @@ typedef struct
 			float refractiveIndex;
 		} fresnel;
 	};
+	MaterialType type;
+	
 } Material;
 
 typedef struct
 {
-	MaterialType type;
 	float colour[3];
+	MaterialType type;
 	union
 	{
 		struct

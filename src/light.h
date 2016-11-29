@@ -1,6 +1,7 @@
 #pragma once
 #include <glm.hpp>
 #include "ray.h"
+#include "types.h"
 
 namespace raytracer
 {
@@ -14,19 +15,20 @@ namespace raytracer
 			Directional
 		};
 
-		Type type;
-		glm::vec3 colour;
+		glm::vec3 colour; byte __padding1[4];// 16 bytes
 		union
 		{
 			struct
 			{
-				glm::vec3 position;
+				glm::vec3 position; 
 			} point;
 			struct
 			{
 				glm::vec3 direction;
 			} directional;
+			byte __padding2[16];// 16 bytes
 		};
+		Type type; byte __padding3[12];// 16 bytes
 
 		// Apperently necesarry (maybe got something to do with glm::vec in union???)
 		Light() {};

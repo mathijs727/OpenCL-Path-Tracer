@@ -3,6 +3,7 @@
 #include "types.h"
 #include "light.h"
 #include <algorithm>
+#include "template/includes.h"
 
 #define RAYTRACER_EPSILON 0.0001f
 
@@ -16,7 +17,7 @@ class Scene;
 
 struct Material
 {
-	enum class Type
+	enum class Type : cl_int
 	{
 		Reflective,
 		Diffuse,
@@ -34,41 +35,42 @@ struct Material
 		memcpy(this, &m, sizeof(Material));
 		return *this;
 	}
-
-	Type type;
-	glm::vec3 colour;
-	
-	union
+	union {
+		glm::vec3 colour;
+		cl_float3 __cl_colour;
+	};
+	union// 4 bytes
 	{
 		struct
 		{
-			Tmpl8::Surface* diffuse_texture;
+			cl_int tex_id;
 		} diffuse;
 		struct
 		{
-			float specularity;
+			cl_float specularity;
 		} glossy;
 		struct
 		{
-			float refractive_index;
+			cl_float refractive_index;
 		} fresnel;
 	};
+	Type type;// 4 bytes
 
 	static Material Diffuse(const glm::vec3& colour) {
 		Material result;
 		result.type = Type::Diffuse;
 		result.colour = colour;
-		result.diffuse.diffuse_texture = nullptr;
+		//result.diffuse.diffuse_texture = nullptr;
 		return result;
 	}
 
-	static Material Diffuse(Tmpl8::Surface* diffuse) {
+	/*static Material Diffuse(Tmpl8::Surface* diffuse) {
 		Material result;
 		result.type = Type::Diffuse;
 		result.colour = glm::vec3(0);
 		result.diffuse.diffuse_texture = diffuse;
 		return result;
-	}
+	}*/
 
 	static Material Reflective(const glm::vec3& colour)
 	{

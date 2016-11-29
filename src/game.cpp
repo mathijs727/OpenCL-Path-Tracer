@@ -60,6 +60,11 @@ void Game::Init()
 		_scene->add_light(light);
 	}
 
+	std::cout << "Sizeof sphere: " << sizeof(Sphere) << std::endl;
+	std::cout << "Sizeof plane: " << sizeof(Plane) << std::endl;
+	std::cout << "Sizeof light: " << sizeof(Light) << std::endl;
+	std::cout << "Sizeof material: " << sizeof(Material) << std::endl;
+
 	/*Timer timer;
 	raytrace(*_camera, *_scene, *_screen);
 	auto elapsedMs = timer.elapsed() * 1000.0f;// Miliseconds

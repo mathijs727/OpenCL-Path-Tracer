@@ -25,49 +25,41 @@ typedef struct
 //  a tiny bit of data (IE workgroups of 128).
 void loadScene(
 	int numSpheres,
-	__global RawSphere* spheres,
+	__global Sphere* spheres,
 	int numPlanes,
-	__global RawPlane* planes,
+	__global Plane* planes,
 	__global RawMaterial* materials,
 	int numLights,
-	__global RawLight* lights,
+	__global Light* lights,
 	__local Scene* scene) {
 	
 	scene->numSpheres = numSpheres;
 	scene->numPlanes = numPlanes;
 	for (int i = 0; i < numSpheres; i++)
 	{
-		RawSphere rawSphere = spheres[i];
-		Sphere sphere;
-		convertRawSphere(&rawSphere, &sphere);
-		scene->spheres[i] = sphere;
-
-		RawMaterial rawMaterial = materials[i];
+		scene->spheres[i] = spheres[i];
+		
 		Material material;
-		convertRawMaterial(&rawMaterial, &material);
+		convertRawMaterial(materials[i], material);
 		scene->sphereMaterials[i] = material;
 	}
 
 	for (int i = 0; i < numPlanes; i++)
 	{
-		RawPlane rawPlane = planes[i];
-		Plane plane;
-		convertRawPlane(&rawPlane, &plane);
-		scene->planes[i] = plane;
+		scene->planes[i] = planes[i];
 
-		RawMaterial rawMaterial = materials[numSpheres + i];
 		Material material;
-		convertRawMaterial(&rawMaterial, &material);
+		convertRawMaterial(materials[numSpheres + i], material);
 		scene->planeMaterials[i] = material;
 	}
 
 	scene->numLights = numLights;
 	for (int i = 0; i < numLights; i++)
 	{
-		RawLight rawLight = lights[i];
+		/*RawLight rawLight = lights[i];
 		Light light;
-		convertRawLight(&rawLight, &light);
-		scene->lights[i] = light;
+		convertRawLight(&rawLight, &light);*/
+		scene->lights[i] = lights[i];
 	}
 
 	scene->refractiveIndex =  1.000277f;

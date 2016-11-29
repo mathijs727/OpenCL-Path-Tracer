@@ -40,10 +40,6 @@ set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-msse4.1")
 #    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 #endif()
 
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wnonportable-include-path")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wnonportable-include-path")
-
 set_target_properties(raytracer PROPERTIES
     CXX_STANDARD 14# Require C++ 14
     CXX_STANDARD_REQUIRED ON

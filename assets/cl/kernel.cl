@@ -15,12 +15,12 @@ __kernel void hello(
 	float3 u_step,// Horizontal distance between pixels in world space
 	float3 v_step,// Vertical distance between pixels in world space
 	int numSpheres,// Scene
-	__global RawSphere* spheres,
+	__global Sphere* spheres,
 	int numPlanes,
-	__global RawPlane* planes,
+	__global Plane* planes,
 	__global RawMaterial* materials,
 	int numLights,
-	__global RawLight* lights) {
+	__global Light* lights) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 
