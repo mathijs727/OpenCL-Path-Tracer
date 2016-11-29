@@ -74,7 +74,7 @@ bool intersectRayTriangle(const Ray* ray, const float3* vertices, float* time) {
 	//if determinant is near zero, ray lies in plane of triangle or ray is parallel to plane of triangle
 	det = dot(e1, P);
 	//NOT CULLING
-	if(det > -EPSILON && det < EPSILON) return 0;
+	if(det > -EPSILON && det < EPSILON) return false;
 	inv_det = 1.f / det;
 
 	//calculate distance from V1 to ray origin
@@ -83,7 +83,7 @@ bool intersectRayTriangle(const Ray* ray, const float3* vertices, float* time) {
 	//Calculate u parameter and test bound
 	u = dot(T, P) * inv_det;
 	//The intersection lies outside of the triangle
-	if(u < 0.f || u > 1.f) return 0;
+	if(u < 0.f || u > 1.f) return false;
 
 	//Prepare to test v parameter
 	Q = cross(T, e1);
@@ -91,17 +91,17 @@ bool intersectRayTriangle(const Ray* ray, const float3* vertices, float* time) {
 	//Calculate V parameter and test bound
 	v = dot(D, Q) * inv_det;
 	//The intersection lies outside of the triangle
-	if(v < 0.f || u + v  > 1.f) return 0;
+	if(v < 0.f || u + v  > 1.f) return false;
 
 	t = dot(e2, Q) * inv_det;
 
-	if(t > EPSILON) { //ray intersection
+	if(t > 0.f) { //ray intersection
 		*time = t;
-		return 1;
+		return true;
 	}
 
 	// No hit, no win
-	return 0;
+	return false;
 }
 
 bool intersectRayPlane(const Ray* ray, const Plane* plane, float* time)
@@ -122,55 +122,24 @@ bool intersectRayPlane(const Ray* ray, const Plane* plane, float* time)
 	return false;
 }
 
-bool intersectLineSphere(const Line* line, const Sphere* sphere, float* time)
-{
-	float t;
-	float3 dir = line->dest - line->origin;
-	float maxT2 = dot(dir, dir);
+#define DECLARE_INTERSECT_LINE(Name, VarType) \
+bool intersectLine##Name(const Line* line, const VarType* shape, float* time) { \
+	float t; \
+	float3 dir = line->dest - line->origin; \
+	float maxT2 = dot(dir, dir); \
+	Ray ray; \
+	ray.origin = line->origin; \
+	ray.direction = normalize(dir); \
+	if (intersectRay##Name(&ray, shape, &t) && (t*t) < maxT2) { \
+		*time = t; \
+		return true; \
+	} \
+	return false; \
+} \
 
-	Ray ray;
-	ray.origin = line->origin;
-	ray.direction = normalize(dir);
-	if (intersectRaySphere(&ray, sphere, &t) && (t*t) < maxT2)
-	{
-		*time = t;
-		return true;
-	}
-	return false;
-}
-
-bool intersectLinePlane(const Line* line, const Plane* plane, float* time)
-{
-	float t;
-	float3 dir = line->dest - line->origin;
-	float maxT2 = dot(dir, dir);
-
-	Ray ray;
-	ray.origin = line->origin;
-	ray.direction = normalize(dir);
-	if (intersectRayPlane(&ray, plane, &t) && (t*t) < maxT2)
-	{
-		*time = t;
-		return true;
-	}
-	return false;
-}
-
-bool intersectLineTriangle(const Line* line, const float3* vertices, float* time) {
-	float t;
-	float3 dir = line->dest - line->origin;
-	float maxT2 = dot(dir, dir);
-
-	Ray ray;
-	ray.origin = line->origin;
-	ray.direction = normalize(dir);
-	if (intersectRayTriangle(&ray, vertices, &t) && (t*t) < maxT2)
-	{
-		*time = t;
-		return true;
-	}
-	return false;
-}
+DECLARE_INTERSECT_LINE(Sphere, Sphere)
+DECLARE_INTERSECT_LINE(Plane, Plane)
+DECLARE_INTERSECT_LINE(Triangle, float3)
 
 float intersectInsideSphere(const Ray* ray, const Sphere* sphere, float3* outNormal)
 {
