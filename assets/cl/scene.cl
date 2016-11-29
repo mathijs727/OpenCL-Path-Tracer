@@ -40,7 +40,8 @@ void loadScene(
 		scene->spheres[i] = spheres[i];
 		
 		Material material;
-		convertRawMaterial(materials[i], material);
+		RawMaterial rawMaterial = materials[i];
+		convertRawMaterial(&rawMaterial, &material);
 		scene->sphereMaterials[i] = material;
 	}
 
@@ -49,7 +50,8 @@ void loadScene(
 		scene->planes[i] = planes[i];
 
 		Material material;
-		convertRawMaterial(materials[numSpheres + i], material);
+		RawMaterial rawMaterial = materials[numSpheres + i];
+		convertRawMaterial(&rawMaterial, &material);
 		scene->planeMaterials[i] = material;
 	}
 

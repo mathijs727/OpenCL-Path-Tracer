@@ -120,11 +120,11 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	int i = 0;
 	for (const Material& mat : sphereMaterials)
 	{
-		materials[i++] = mat;//SerializedMaterial(mat);
+		materials[i++] = SerializedMaterial(mat);
 	}
 	for (const Material& mat : planeMaterials)
 	{
-		materials[i++] = mat;//SerializedMaterial(mat);
+		materials[i++] = SerializedMaterial(mat);
 	}
 
 	_num_lights = scene.GetLights().size();
