@@ -5,7 +5,8 @@
 #include <cassert>
 #include <stack>
 #include <iostream>
-#include <cl/cl.h>
+#include "template/includes.h"// Includes opencl
+
 using namespace raytracer;
 
 void raytracer::Mesh::addData(aiMesh* in_mesh) {
