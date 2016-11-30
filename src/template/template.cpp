@@ -98,7 +98,7 @@ void redirectIO()
 int main( int argc, char **argv ) 
 {
 #ifdef OPENCL
-	redirectIO();
+	//redirectIO();
 	printf("application started.\n");
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
