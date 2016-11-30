@@ -7,38 +7,56 @@
 
 #define MAX_ITERATIONS 4
 
+typedef struct
+{
+	// Camera
+	float3 eye;// Position of the camera "eye"
+	float3 screen;// Left top of screen in world space
+	float3 u_step;// Horizontal distance between pixels in world space
+	float3 v_step;// Vertical distance between pixels in world space
+	uint width;// Render target width
+
+	// Scene
+	int numSpheres, numPlanes, numVertices, numTriangles, numLights;
+} KernelData;
+
 __kernel void hello(
 	__write_only image2d_t output,
-	uint width,// Render target width
-	float3 eye,// Position of the camera "eye"
-	float3 screen,// Left top of screen in world space
-	float3 u_step,// Horizontal distance between pixels in world space
-	float3 v_step,// Vertical distance between pixels in world space
-	int numSpheres,// Scene
+	__global KernelData* inputData,
 	__global Sphere* spheres,
-	int numPlanes,
 	__global Plane* planes,
-	int numVertices,
 	__global float3* vertices,
-	int numTriangles,
 	__global TriangleData* triangles,
 	__global Material* materials,
-	int numLights,
 	__global Light* lights) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
-	//numTriangles = 0;
-	Scene l_scene;
+
+	Scene scene;
 	//if (get_local_id(0) == 0 && get_local_id(1) == 0)
 	{
-		loadScene(numSpheres, spheres, numPlanes, planes, numVertices, vertices, numTriangles, triangles, materials, numLights, lights, &l_scene);
+		loadScene(
+			inputData->numSpheres,
+			spheres,
+			inputData->numPlanes,
+			planes,
+			inputData->numVertices,
+			vertices,
+			inputData->numTriangles,
+			triangles,
+			materials,
+			inputData->numLights,
+			lights,
+			&scene);
 	}
 	//barrier(CLK_LOCAL_MEM_FENCE);
 	
-	float3 screenPoint = screen + u_step * (float)x + v_step * (float)y;	
+	float3 screenPoint = inputData->screen + \
+		inputData->u_step * (float)x + inputData->v_step * (float)y;	
+
 	StackItem item;
-	item.ray.origin = eye;
-	item.ray.direction = normalize(screenPoint - eye);
+	item.ray.origin = inputData->eye;
+	item.ray.direction = normalize(screenPoint - inputData->eye);
 	item.multiplier = (float3)(1.0f, 1.0f, 1.0f);
 
 	uint iterCount = 0;
@@ -50,7 +68,7 @@ __kernel void hello(
 	{
 		StackItem item;
 		StackPop(&stack, &item);
-		outColor += traceRay(&l_scene, &item.ray, item.multiplier, &stack);
+		outColor += traceRay(&scene, &item.ray, item.multiplier, &stack);
 
 		if (++iterCount >= MAX_ITERATIONS)
 		{

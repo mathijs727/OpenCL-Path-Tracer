@@ -16,6 +16,20 @@
 //#include <OpenGL/wglew.h>
 #include "template/includes.h"
 
+struct KernelData
+{
+	// Camera
+	cl_float3 eye;// Position of the camera "eye"
+	cl_float3 screen;// Left top of screen in world space
+	cl_float3 u_step;// Horizontal distance between pixels in world space
+	cl_float3 v_step;// Vertical distance between pixels in world space
+	uint width;// Render target width
+
+	// Scene
+	int numSpheres, numPlanes, numVertices, numTriangles, numLights;
+};
+
+
 #ifdef WIN32
 int setenv(const char *name, const char *value, int overwrite) {
 	int errcode = 0;
@@ -61,15 +75,7 @@ raytracer::RayTracer::~RayTracer()
 void raytracer::RayTracer::InitBuffers()
 {
 	cl_int err;
-	// Create output (float) color buffer
-	_buffer_size = _scr_width * _scr_height * 3 * sizeof(float);
-	_outHost = std::make_unique<float[]>(_scr_width * _scr_height * 3);
-	_outDevice = cl::Buffer(_context,
-		CL_MEM_WRITE_ONLY,
-		_buffer_size,
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
+	
 	if (_num_spheres > 0) {
 		_spheres = cl::Buffer(_context,
 			CL_MEM_READ_ONLY,
@@ -78,6 +84,7 @@ void raytracer::RayTracer::InitBuffers()
 			&err);
 		checkClErr(err, "Buffer::Buffer()");
 	}
+
 	if (_num_planes > 0) {
 		_planes = cl::Buffer(_context,
 			CL_MEM_READ_ONLY,
@@ -86,27 +93,38 @@ void raytracer::RayTracer::InitBuffers()
 			&err);
 		checkClErr(err, "Buffer::Buffer()");
 	}
+
 	_materials = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		(_num_mesh_materials + _num_spheres + _num_planes) * sizeof(Material),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
+
 	_lights = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		_num_lights * sizeof(Light),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
+
 	_vertices = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		_num_vertices * sizeof(glm::vec4),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
+
 	_triangles = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		_num_triangles * sizeof(Scene::TriangleSceneData),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
+	_kernel_data = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		sizeof(KernelData),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
@@ -120,7 +138,10 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	_num_vertices = scene.GetVertices().size();
 	_num_triangles = scene.GetTriangleIndices().size();
 	_num_mesh_materials = scene.GetMeshMaterials().size();
+
 	InitBuffers();
+
+
 	auto& sphereMaterials = scene.GetSphereMaterials();
 	auto& planeMaterials = scene.GetPlaneMaterials();
 	auto& meshMaterials = scene.GetMeshMaterials();
@@ -139,6 +160,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	std::cout << "mesh materials: " << meshMaterials.size() << std::endl;
 	std::cout << "total number of materials: " << materials.size() << std::endl;
 
+
 	cl_int err;
 	if (_num_spheres > 0) {
 		err = _queue.enqueueWriteBuffer(
@@ -149,6 +171,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 			scene.GetSpheres().data());
 		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 	}
+
 	if (_num_planes > 0) {
 		err = _queue.enqueueWriteBuffer(
 			_planes,
@@ -157,7 +180,8 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 			_num_planes * sizeof(Plane),
 			scene.GetPlanes().data());
 		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-	}	
+	}
+
 	err = _queue.enqueueWriteBuffer(
 		_materials,
 		CL_TRUE,
@@ -165,6 +189,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 		materials.size() * sizeof(Material),
 		materials.data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+
 	err = _queue.enqueueWriteBuffer(
 		_lights,
 		CL_TRUE,
@@ -172,6 +197,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 		_num_lights * sizeof(Light),
 		scene.GetLights().data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+
 	err = _queue.enqueueWriteBuffer(
 		_vertices,
 		CL_TRUE,
@@ -179,6 +205,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 		_num_vertices * sizeof(glm::vec4),
 		scene.GetVertices().data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+
 	err = _queue.enqueueWriteBuffer(
 		_triangles,
 		CL_TRUE,
@@ -191,7 +218,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 void raytracer::RayTracer::SetTarget(GLuint glTexture)
 {
 	cl_int err;
-	_outputImage = cl::ImageGL(_context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, glTexture, &err);
+	_output_image = cl::ImageGL(_context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, glTexture, &err);
 	checkClErr(err, "ImageGL");
 }
 
@@ -208,29 +235,44 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 
 	// We must make sure that OpenGL is done with the textures, so we ask to sync.
 	glFinish();
+	
+	{
+		// Copy camera (and scene) data to the device using a struct so we dont use 20 kernel arguments
+		KernelData data = {};
+		data.eye = glmToCl(eye);
+		data.screen = glmToCl(scr_base_origin);
+		data.u_step = glmToCl(u_step);
+		data.v_step = glmToCl(v_step);
+		data.width = _scr_width;
 
-	std::vector<cl::Memory> images = { _outputImage };
+		data.numSpheres = _num_spheres;
+		data.numPlanes = _num_planes;
+		data.numVertices = _num_vertices;
+		data.numTriangles = _num_triangles;
+		data.numLights = _num_lights;
+
+		cl_int err = _queue.enqueueWriteBuffer(
+			_kernel_data,
+			CL_TRUE,
+			0,
+			sizeof(KernelData),
+			&data);
+		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	}
+
+	std::vector<cl::Memory> images = { _output_image };
 	_queue.enqueueAcquireGLObjects(&images);
 
 	cl_int err;
 	cl::Event event;
-	_helloWorldKernel.setArg(0, _outputImage);
-	_helloWorldKernel.setArg(1, _scr_width);
-	_helloWorldKernel.setArg(2, glmToCl(eye));
-	_helloWorldKernel.setArg(3, glmToCl(scr_base_origin));
-	_helloWorldKernel.setArg(4, glmToCl(u_step));
-	_helloWorldKernel.setArg(5, glmToCl(v_step));
-	_helloWorldKernel.setArg(6, _num_spheres);// Num spheres
-	_helloWorldKernel.setArg(7, _spheres);
-	_helloWorldKernel.setArg(8, _num_planes);// Num spheres
-	_helloWorldKernel.setArg(9, _planes);
-	_helloWorldKernel.setArg(10, _num_vertices);
-	_helloWorldKernel.setArg(11, _vertices);
-	_helloWorldKernel.setArg(12, _num_triangles);
-	_helloWorldKernel.setArg(13, _triangles);
-	_helloWorldKernel.setArg(14, _materials);
-	_helloWorldKernel.setArg(15, _num_lights);
-	_helloWorldKernel.setArg(16, _lights);
+	_helloWorldKernel.setArg(0, _output_image);
+	_helloWorldKernel.setArg(1, _kernel_data);
+	_helloWorldKernel.setArg(2, _spheres);
+	_helloWorldKernel.setArg(3, _planes);
+	_helloWorldKernel.setArg(4, _vertices);
+	_helloWorldKernel.setArg(5, _triangles);
+	_helloWorldKernel.setArg(6, _materials);
+	_helloWorldKernel.setArg(7, _lights);
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,
 		cl::NullRange,

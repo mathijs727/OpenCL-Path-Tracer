@@ -27,7 +27,6 @@ private:
 	void InitBuffers();
 	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
 private:
-	size_t _buffer_size;
 	cl_uint _scr_width, _scr_height;
 
 	cl::Context _context;
@@ -36,8 +35,7 @@ private:
 
 	cl::Kernel _helloWorldKernel;
 
-	std::unique_ptr<float[]> _outHost;
-	cl::Buffer _outDevice;
+	cl::Buffer _kernel_data;
 
 	cl_int _num_spheres;
 	cl::Buffer _spheres;
@@ -53,7 +51,7 @@ private:
 	cl_int _num_lights;
 	cl::Buffer _lights;
 
-	cl::ImageGL _outputImage;
+	cl::ImageGL _output_image;
 };
 }
 
