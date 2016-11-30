@@ -39,9 +39,10 @@ float3 diffuseShade(
 
 		if (lightVisible)
 		{
+			float lightFallOff = getLightFallOff(&light, intersection);
 			float3 lightDir = getLightVector(&light, intersection);
 			float NdotL = max(0.0f, dot(normal, lightDir));
-			result += NdotL * light.colour;
+			result += NdotL * light.colour * lightFallOff;
 		}
 	}
 	return diffuseColour * result;
