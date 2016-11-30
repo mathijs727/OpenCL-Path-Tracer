@@ -167,12 +167,14 @@ float3 traceRay(
 	for (int i = 0; i < scene->numSpheres; i++)
 	{
 		float t;
+		float3 n;
 		Sphere s = scene->spheres[i];
-		if (intersectRaySphere(ray, &s, &normal, &t) && t < minT)
+		if (intersectRaySphere(ray, &s, &n, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
 			type = SphereType;
+			normal = n;
 		}
 	}
 
@@ -180,29 +182,33 @@ float3 traceRay(
 	for (int i = 0; i < scene->numPlanes; i++)
 	{
 		float t;
+		float3 n;
 		Plane p = scene->planes[i];
-		if (intersectRayPlane(ray, &p, &normal, &t) && t < minT)
+		if (intersectRayPlane(ray, &p, &n, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
 			type = PlaneType;
+			normal = n;
 		}
 	}
 
 	// check mesh intersection
 	for (int i = 0; i < scene->numTriangles; ++i) {
 		float t;
+		float3 n;
 		float3 v[3];
 		TriangleData triangle = scene->triangles[i];
 		getVertices(v, triangle.indices, scene);
 		float3 edge1 = v[1] - v[0];
 		float3 edge2 = v[2] - v[0];
 		bool backface = dot(ray->direction, cross(edge2, edge1)) < 0;
-		if (!backface && intersectRayTriangle(ray, v, &normal, &t) && t < minT)
+		if (!backface && intersectRayTriangle(ray, v, &n, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
 			type = MeshType;
+			normal = n;
 		}
 	}
 
