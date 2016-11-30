@@ -14,6 +14,8 @@ public:
 private:
 	GLuint LoadShader(const char* fileName, GLenum type);
 private:
+	bool _initialized;
+
 	GLuint m_texture;
 	GLuint m_vbo, m_vao;
 	GLuint m_shader;

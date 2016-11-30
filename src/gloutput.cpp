@@ -9,12 +9,21 @@ GLOutput::GLOutput()
 
 GLOutput::~GLOutput()
 {
+	if (_initialized)
+	{
+		glDeleteTextures(1, &m_texture);
+		glDeleteVertexArrays(1, &m_vao);
+		glDeleteBuffers(1, &m_vbo);
+		glDeleteProgram(m_shader);
+	}
 }
 
 void GLOutput::Init(int width, int height)
 {
-	// Temporary to test
-	//Tmpl8::Surface surface("assets/images/glorious.png");
+	if (_initialized)
+		return;
+	else
+		_initialized = true;
 
 	// Generate texture
 	glGenTextures(1, &m_texture);
