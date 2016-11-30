@@ -16,6 +16,11 @@
 //#include <OpenGL/wglew.h>
 #include "template/includes.h"
 
+// TODO: make dynamic
+// Texture sizes for glorious.png
+#define TEXTURE_SIZE_X 650
+#define TEXTURE_SIZE_Y 365
+
 struct KernelData
 {
 	// Camera
@@ -63,8 +68,8 @@ raytracer::RayTracer::RayTracer(int width, int height)
 {
 	_scr_width = width;
 	_scr_height = height;
-
 	InitOpenCL();
+	std::cout << "RayTracer::RayTracer()" << std::endl;
 	_helloWorldKernel = LoadKernel("assets/cl/kernel.cl", "hello");
 }
 
@@ -76,23 +81,19 @@ void raytracer::RayTracer::InitBuffers()
 {
 	cl_int err;
 	
-	if (_num_spheres > 0) {
-		_spheres = cl::Buffer(_context,
-			CL_MEM_READ_ONLY,
-			_num_spheres * sizeof(Sphere),
-			NULL,
-			&err);
-		checkClErr(err, "Buffer::Buffer()");
-	}
+	_spheres = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1, _num_spheres) * sizeof(Sphere),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
 
-	if (_num_planes > 0) {
-		_planes = cl::Buffer(_context,
-			CL_MEM_READ_ONLY,
-			_num_planes * sizeof(Plane),
-			NULL,
-			&err);
-		checkClErr(err, "Buffer::Buffer()");
-	}
+	_planes = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1, _num_planes) * sizeof(Plane),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
 
 	_materials = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
@@ -128,6 +129,17 @@ void raytracer::RayTracer::InitBuffers()
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
+
+	// https://www.khronos.org/registry/cl/specs/opencl-cplusplus-1.2.pdf
+	_material_textures = cl::Image2DArray(_context,
+		CL_MEM_READ_ONLY,
+		cl::ImageFormat(CL_BGRA, CL_UNORM_INT8),
+		std::max(1u, _num_textures),
+		TEXTURE_SIZE_X,
+		TEXTURE_SIZE_Y,
+		0, 0, NULL,// Unused host_ptr
+		&err);
+	checkClErr(err, "cl::Image2DArray");
 }
 
 void raytracer::RayTracer::SetScene(const Scene& scene)
@@ -138,9 +150,9 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	_num_vertices = scene.GetVertices().size();
 	_num_triangles = scene.GetTriangleIndices().size();
 	_num_mesh_materials = scene.GetMeshMaterials().size();
+	_num_textures = Material::s_textures.size();
 
 	InitBuffers();
-
 
 	auto& sphereMaterials = scene.GetSphereMaterials();
 	auto& planeMaterials = scene.GetPlaneMaterials();
@@ -160,27 +172,47 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	std::cout << "mesh materials: " << meshMaterials.size() << std::endl;
 	std::cout << "total number of materials: " << materials.size() << std::endl;
 
-
 	cl_int err;
-	if (_num_spheres > 0) {
-		err = _queue.enqueueWriteBuffer(
-			_spheres,
+
+	// Copy textures to the GPU
+	for (int i = 0; i < _num_textures; i++)
+	{
+		std::cout << "Copy texture" << ::std::endl;
+		Tmpl8::Surface* surface = Material::s_textures[i];
+
+		// Origin (o) and region (r)
+		cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = i;
+
+		cl::size_t<3> r;
+		r[0] = surface->GetWidth();
+		r[1] = surface->GetHeight();
+		r[2] = 1;// r[2] must be 1?
+		err = _queue.enqueueWriteImage(
+			_material_textures,
 			CL_TRUE,
+			o,
+			r,
 			0,
-			_num_spheres * sizeof(Sphere),
-			scene.GetSpheres().data());
-		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+			0,
+			surface->GetBuffer());
+		checkClErr(err, "CommandQueue::enqueueWriteImage");
 	}
 
-	if (_num_planes > 0) {
-		err = _queue.enqueueWriteBuffer(
-			_planes,
-			CL_TRUE,
-			0,
-			_num_planes * sizeof(Plane),
-			scene.GetPlanes().data());
-		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-	}
+	err = _queue.enqueueWriteBuffer(
+		_spheres,
+		CL_TRUE,
+		0,
+		_num_spheres * sizeof(Sphere),
+		scene.GetSpheres().data());
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+
+	err = _queue.enqueueWriteBuffer(
+		_planes,
+		CL_TRUE,
+		0,
+		_num_planes * sizeof(Plane),
+		scene.GetPlanes().data());
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 
 	err = _queue.enqueueWriteBuffer(
 		_materials,
@@ -272,7 +304,9 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	_helloWorldKernel.setArg(4, _vertices);
 	_helloWorldKernel.setArg(5, _triangles);
 	_helloWorldKernel.setArg(6, _materials);
-	_helloWorldKernel.setArg(7, _lights);
+	_helloWorldKernel.setArg(7, _material_textures);
+	_helloWorldKernel.setArg(8, _lights);
+	//_helloWorldKernel.setArg(8, _material_textures);
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,
 		cl::NullRange,
@@ -412,6 +446,8 @@ void raytracer::RayTracer::InitOpenCL()
 cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* funcName)
 {
 	cl_int err;
+
+	std::cout << "RayTracer::LoadKernel" << std::endl;
 
 	std::ifstream file(fileName);
 	{

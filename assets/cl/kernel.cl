@@ -22,13 +22,15 @@ typedef struct
 
 __kernel void hello(
 	__write_only image2d_t output,
-	__global KernelData* inputData,
-	__global Sphere* spheres,
-	__global Plane* planes,
-	__global float3* vertices,
-	__global TriangleData* triangles,
-	__global Material* materials,
-	__global Light* lights) {
+	__read_only __global KernelData* inputData,
+	__read_only __global Sphere* spheres,
+	__read_only __global Plane* planes,
+	__read_only __global float3* vertices,
+	__read_only __global TriangleData* triangles,
+	__read_only __global Material* materials,
+	image2d_array_t textures,
+	__read_only __global Light* lights) {
+	//__read_only image2d_array_t textures) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 
@@ -45,6 +47,7 @@ __kernel void hello(
 			inputData->numTriangles,
 			triangles,
 			materials,
+			&textures,
 			inputData->numLights,
 			lights,
 			&scene);

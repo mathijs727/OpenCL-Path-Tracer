@@ -16,16 +16,15 @@ typedef struct
 typedef struct
 {
 	int numSpheres, numPlanes, numLights, numVertices, numTriangles;
-	__global Sphere* spheres;
-	__global Plane* planes;
-	__global float3* vertices;
-	__global TriangleData* triangles;
-	__global Material* sphereMaterials;
-	__global Material* planeMaterials;
-	__global Material* meshMaterials;
-	//PointLight pointLights[8];
-	//DirectionalLight directionalLights[8];
-	__global Light* lights;
+	const __global Sphere* spheres;
+	const __global Plane* planes;
+	const __global float3* vertices;
+	const __global TriangleData* triangles;
+	const __global Material* sphereMaterials;
+	const __global Material* planeMaterials;
+	const __global Material* meshMaterials;
+	image2d_array_t textures;
+	const __global Light* lights;
 
 	float refractiveIndex;
 } Scene;
@@ -40,16 +39,17 @@ void getVertices(float3* out_vertices, uint* indices, const Scene* scene) {
 //  a tiny bit of data (IE workgroups of 128).
 void loadScene(
 	int numSpheres,
-	__global Sphere* spheres,
+	const __global Sphere* spheres,
 	int numPlanes,
-	__global Plane* planes,
+	const __global Plane* planes,
 	int numVertices,
-	__global float3* vertices,
+	const __global float3* vertices,
 	int numTriangles,
-	__global TriangleData* triangles,
-	__global Material* materials,
+	const __global TriangleData* triangles,
+	const __global Material* materials,
+	const image2d_array_t*  textures,
 	int numLights,
-	__global Light* lights,
+	const __global Light* lights,
 	Scene* scene) {
 	scene->refractiveIndex =  1.000277f;
 	
@@ -64,6 +64,7 @@ void loadScene(
 	scene->sphereMaterials = materials;
 	scene->planeMaterials = &materials[numSpheres];
 	scene->meshMaterials = &materials[numSpheres + numPlanes];
+	scene->textures = *textures;
 	scene->triangles = triangles;
 	scene->vertices = vertices;
 	scene->lights = lights;
@@ -72,13 +73,14 @@ void loadScene(
 bool checkRay(const Scene* scene, const Ray* ray)
 {
 	float3 n;
+	float2 texCoords;
 
 	// Check sphere intersections
 	for (int i = 0; i < scene->numSpheres; i++)
 	{
 		float t;
 		Sphere sphere = scene->spheres[i];
-		if (intersectRaySphere(ray, &sphere, &n, &t))
+		if (intersectRaySphere(ray, &sphere, &n, &texCoords, &t))
 		{
 			return true;
 		}
@@ -89,7 +91,7 @@ bool checkRay(const Scene* scene, const Ray* ray)
 	{
 		float t;
 		Plane plane = scene->planes[i];
-		if (intersectRayPlane(ray, &plane, &n, &t))
+		if (intersectRayPlane(ray, &plane, &n, &texCoords, &t))
 		{
 			return true;
 		}
@@ -102,7 +104,7 @@ bool checkRay(const Scene* scene, const Ray* ray)
 		TriangleData triang = scene->triangles[i];
 		float3 vertices[3];
 		getVertices(vertices, triang.indices, scene);
-		if (intersectRayTriangle(ray, vertices, &n, &t))
+		if (intersectRayTriangle(ray, vertices, &n, &texCoords, &t))
 		{
 			return true;
 		}
@@ -162,19 +164,22 @@ float3 traceRay(
 	int i_current_hit = -1;
 	ShapeType type;
 	float3 normal;
+	float2 tex_coords;
 	
 	// Check sphere intersections
 	for (int i = 0; i < scene->numSpheres; i++)
 	{
 		float t;
 		float3 n;
+		float2 tex_coords_tmp;
 		Sphere s = scene->spheres[i];
-		if (intersectRaySphere(ray, &s, &n, &t) && t < minT)
+		if (intersectRaySphere(ray, &s, &n, &tex_coords_tmp, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
 			type = SphereType;
 			normal = n;
+			tex_coords = tex_coords_tmp;
 		}
 	}
 
@@ -183,13 +188,15 @@ float3 traceRay(
 	{
 		float t;
 		float3 n;
+		float2 tex_coords_tmp;
 		Plane p = scene->planes[i];
-		if (intersectRayPlane(ray, &p, &n, &t) && t < minT)
+		if (intersectRayPlane(ray, &p, &n, &tex_coords_tmp, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
 			type = PlaneType;
 			normal = n;
+			tex_coords = tex_coords_tmp;
 		}
 	}
 
@@ -197,18 +204,21 @@ float3 traceRay(
 	for (int i = 0; i < scene->numTriangles; ++i) {
 		float t;
 		float3 n;
+		float2 tex_coords_tmp;
+
 		float3 v[3];
 		TriangleData triangle = scene->triangles[i];
 		getVertices(v, triangle.indices, scene);
 		float3 edge1 = v[1] - v[0];
 		float3 edge2 = v[2] - v[0];
 		bool backface = dot(ray->direction, cross(edge2, edge1)) < 0;
-		if (!backface && intersectRayTriangle(ray, v, &n, &t) && t < minT)
+		if (!backface && intersectRayTriangle(ray, v, &n, &tex_coords_tmp, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
 			type = MeshType;
 			normal = n;
+			tex_coords = tex_coords_tmp;
 		}
 	}
 
@@ -236,6 +246,7 @@ float3 traceRay(
 			ray->direction,
 			intersection,
 			normal,
+			tex_coords,
 			type,
 			i_current_hit,
 			&material,

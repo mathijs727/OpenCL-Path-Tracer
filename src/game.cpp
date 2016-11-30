@@ -24,8 +24,6 @@ void Game::Init()
 	{
 		Sphere sphere(glm::vec3(0, 1, 5), 1);
 		Material material = Material::Diffuse(glm::vec3(0.5f, 0.3f, 0.2f));
-		//Material material = Material::Diffuse(
-		//	new Surface("checkerboard.png"));
 		_scene->add_primitive(sphere, material);
 	}
 
@@ -34,7 +32,9 @@ void Game::Init()
 		//Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.2f);
 		//Material material = Material::Diffuse(glm::vec3(0.8f, 0.2f, 0.4f));
 		//Material material = Material::Reflective(glm::vec3(0.5f, 0.5f, 0.5f));
-		Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.5f);
+		//Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.5f);
+		Material material = Material::Diffuse(
+			new Surface("assets/images/glorious.png"));
 		_scene->add_primitive(sphere, material);
 	}
 
@@ -47,15 +47,15 @@ void Game::Init()
 	}
 
 	{
-		Light light = Light::Point(glm::vec3(0.8f, 0.0f, 0.0f), glm::vec3(0, 3, 3));
+		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(0, 3, 3));
 		_scene->add_light(light);
 	}
 	{
-		Light light = Light::Point(glm::vec3(0.0f, 0.8f, 0.0f), glm::vec3(-3, 3, -6));
+		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(-3, 3, -6));
 		_scene->add_light(light);
 	}
 	{
-		Light light = Light::Directional(glm::vec3(0.0f, 0.0f, 0.8f), glm::vec3(-1, -1, 0));
+		Light light = Light::Directional(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(-1, -1, 0));
 		_scene->add_light(light);
 	}
 

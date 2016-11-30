@@ -1,8 +1,3 @@
 #include "material.h"
-#include "scene.h"
-#include "ray.h"
-#include "light.h"
-#include <glm.hpp>
-#include <algorithm>
-#include <assert.h>
-#include "template/surface.h"
+
+std::vector<Tmpl8::Surface*> raytracer::Material::s_textures = std::vector<Tmpl8::Surface*>();

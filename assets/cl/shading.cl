@@ -6,6 +6,11 @@
 
 #define RAYTRACER_EPSILON 0.00001f
 
+__constant sampler_t sampler =
+	CLK_NORMALIZED_COORDS_TRUE |
+	CLK_ADDRESS_CLAMP_TO_EDGE |
+	CLK_FILTER_LINEAR;
+
 float3 diffuseShade(
 	float3 rayDirection,
 	float3 intersection,
@@ -82,6 +87,7 @@ float3 whittedShading(
 	float3 rayDirection,
 	float3 intersection,
 	float3 normal,
+	float2 tex_coords,
 	ShapeType type,
 	const uint shape_index,
 	const Material* material,
@@ -89,7 +95,18 @@ float3 whittedShading(
 	Stack* stack)
 {
 	if (material->type == Diffuse) {
-		float3 matColour = material->colour;
+		float3 matColour;
+		if (material->diffuse.tex_id == -1)
+		{
+			matColour = material->colour;
+		} else {
+			float4 tex_coords3d = (float4)(tex_coords.x, tex_coords.y, material->diffuse.tex_id, 0.0f);
+			float4 colourWithAlpha = read_imagef(
+				scene->textures,
+				sampler,
+				tex_coords3d);
+			matColour = colourWithAlpha.xyz;
+		}
 		return multiplier * diffuseShade(rayDirection, intersection, normal, scene, matColour);
 	} else if (material->type == Reflective) {
 		float3 matColour = material->colour;

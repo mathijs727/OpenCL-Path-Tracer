@@ -18,6 +18,8 @@ class Scene;
 
 struct Material
 {
+	static std::vector<Tmpl8::Surface*> s_textures;
+
 	enum class Type : cl_int
 	{
 		Reflective,
@@ -34,6 +36,8 @@ struct Material
 		glm::vec3 colour;
 		cl_float3 __cl_colour;
 	};
+
+	// 16 bytes total
 	Type type; // 4 bytes
 	union // 4 bytes
 	{
@@ -50,23 +54,26 @@ struct Material
 			cl_float refractive_index;
 		} fresnel;
 	};
-	byte __padding[8];
+	byte __padding[8];// 8 bytes
 
 	static Material Diffuse(const glm::vec3& colour) {
 		Material result;
 		result.type = Type::Diffuse;
 		result.colour = colour;
-		//result.diffuse.diffuse_texture = nullptr;
+		result.diffuse.tex_id = -1;
 		return result;
 	}
 
-	/*static Material Diffuse(Tmpl8::Surface* diffuse) {
+	static Material Diffuse(Tmpl8::Surface* diffuse) {
+		cl_int tex_id = static_cast<cl_int>(s_textures.size());
+		s_textures.push_back(diffuse);
+
 		Material result;
 		result.type = Type::Diffuse;
 		result.colour = glm::vec3(0);
-		result.diffuse.diffuse_texture = diffuse;
+		result.diffuse.tex_id = tex_id;
 		return result;
-	}*/
+	}
 
 	static Material Reflective(const glm::vec3& colour)	{
 		Material result;

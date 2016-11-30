@@ -3,6 +3,7 @@
 #include "ray.cl"
 
 #define EPSILON 0.00001f
+#define PI 3.14159265359f
 
 typedef struct
 {
@@ -29,6 +30,7 @@ bool intersectRaySphere(
 	const Ray* ray,
 	const Sphere* sphere,
 	float3* out_normal,
+	float2* out_uv,
 	float* out_time)
 {
 	float3 distance = sphere->centre - ray->origin;
@@ -48,6 +50,14 @@ bool intersectRaySphere(
 		float t = component_parallel - sqrt(radius_squared - component_normal_squared);
 		if (t > 0.0f)
 		{
+			// https://en.wikipedia.org/wiki/UV_mapping
+			float3 intersection = (ray->origin + t * ray->direction);
+			// Unit vector from intersection to sphere center
+			float3 d = normalize(sphere->centre - intersection);
+
+			out_uv->x = 0.5f + atan2(d.z, d.x) / (2.0f * PI);
+			out_uv->y = 0.5f - asin(d.y) / PI;
+
 			*out_normal = vec_normal;
 			*out_time = t;
 			return true;
@@ -63,6 +73,7 @@ bool intersectRayPlane(
 	const Ray* ray,
 	const Plane* plane,
 	float3* out_normal,
+	float2* out_uv,
 	float* out_time)
 {
 	// http://stackoverflow.com/questions/23975555/how-to-do-ray-plane-intersection
@@ -75,6 +86,7 @@ bool intersectRayPlane(
 		if (t > 0.0f)
 		{
 			*out_normal = plane->normal;
+			*out_uv = (float2)(0.0f, 0.0f);
 			*out_time = t;
 			return true;
 		}
@@ -87,6 +99,7 @@ bool intersectRayTriangle(
 	const Ray* ray,
 	const float3* vertices,
 	float3* out_normal,
+	float2* out_uv,
 	float* out_time) {
 	float3 O = ray->origin;
 	float3 D = ray->direction;
@@ -129,6 +142,7 @@ bool intersectRayTriangle(
 
 	if(t > 0.f) { //ray intersection
 		*out_time = t;
+		*out_uv = (float2)(0.0f, 0.0f);
 		*out_normal = cross(e1, e2);
 		return true;
 	}
@@ -141,12 +155,13 @@ bool intersectRayTriangle(
 bool intersectLine##Name(const Line* line, const VarType* shape, float* time) { \
 	float t; \
 	float3 n; \
+	float2 uv; \
 	float3 dir = line->dest - line->origin; \
 	float maxT2 = dot(dir, dir); \
 	Ray ray; \
 	ray.origin = line->origin; \
 	ray.direction = normalize(dir); \
-	if (intersectRay##Name(&ray, shape, &n, &t) && (t*t) < maxT2) { \
+	if (intersectRay##Name(&ray, shape, &n, &uv, &t) && (t*t) < maxT2) { \
 		*time = t; \
 		return true; \
 	} \
