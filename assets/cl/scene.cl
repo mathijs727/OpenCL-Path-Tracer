@@ -71,12 +71,14 @@ void loadScene(
 
 bool checkRay(const Scene* scene, const Ray* ray)
 {
+	float3 n;
+
 	// Check sphere intersections
 	for (int i = 0; i < scene->numSpheres; i++)
 	{
 		float t;
 		Sphere sphere = scene->spheres[i];
-		if (intersectRaySphere(ray, &sphere, &t))
+		if (intersectRaySphere(ray, &sphere, &n, &t))
 		{
 			return true;
 		}
@@ -87,7 +89,7 @@ bool checkRay(const Scene* scene, const Ray* ray)
 	{
 		float t;
 		Plane plane = scene->planes[i];
-		if (intersectRayPlane(ray, &plane, &t))
+		if (intersectRayPlane(ray, &plane, &n, &t))
 		{
 			return true;
 		}
@@ -100,7 +102,7 @@ bool checkRay(const Scene* scene, const Ray* ray)
 		TriangleData triang = scene->triangles[i];
 		float3 vertices[3];
 		getVertices(vertices, triang.indices, scene);
-		if (intersectRayTriangle(ray, vertices, &t))
+		if (intersectRayTriangle(ray, vertices, &n, &t))
 		{
 			return true;
 		}
@@ -159,14 +161,14 @@ float3 traceRay(
 	float minT = 100000.0f;
 	int i_current_hit = -1;
 	ShapeType type;
-	// Storage for the shape pointer that only expires at the end of this function
+	float3 normal;
 	
 	// Check sphere intersections
 	for (int i = 0; i < scene->numSpheres; i++)
 	{
 		float t;
 		Sphere s = scene->spheres[i];
-		if (intersectRaySphere(ray, &s, &t) && t < minT)
+		if (intersectRaySphere(ray, &s, &normal, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
@@ -179,7 +181,7 @@ float3 traceRay(
 	{
 		float t;
 		Plane p = scene->planes[i];
-		if (intersectRayPlane(ray, &p, &t) && t < minT)
+		if (intersectRayPlane(ray, &p, &normal, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
@@ -196,7 +198,7 @@ float3 traceRay(
 		float3 edge1 = v[1] - v[0];
 		float3 edge2 = v[2] - v[0];
 		bool backface = dot(ray->direction, cross(edge2, edge1)) < 0;
-		if (!backface && intersectRayTriangle(ray, v, &t) && t < minT)
+		if (!backface && intersectRayTriangle(ray, v, &normal, &t) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;

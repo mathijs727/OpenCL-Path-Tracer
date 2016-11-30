@@ -2,6 +2,8 @@
 #define __SHAPES_CL
 #include "ray.cl"
 
+#define EPSILON 0.00001f
+
 typedef struct
 {
 	float3 centre;
@@ -23,7 +25,11 @@ typedef enum
 	MeshType
 } ShapeType;
 
-bool intersectRaySphere(const Ray* ray, const Sphere* sphere, float* time)
+bool intersectRaySphere(
+	const Ray* ray,
+	const Sphere* sphere,
+	float3* out_normal,
+	float* out_time)
 {
 	float3 distance = sphere->centre - ray->origin;
 
@@ -42,7 +48,8 @@ bool intersectRaySphere(const Ray* ray, const Sphere* sphere, float* time)
 		float t = component_parallel - sqrt(radius_squared - component_normal_squared);
 		if (t > 0.0f)
 		{
-			*time = t;
+			*out_normal = vec_normal;
+			*out_time = t;
 			return true;
 		}
 		else {
@@ -52,10 +59,35 @@ bool intersectRaySphere(const Ray* ray, const Sphere* sphere, float* time)
 	return false;
 }
 
-#define EPSILON 0.00001
+bool intersectRayPlane(
+	const Ray* ray,
+	const Plane* plane,
+	float3* out_normal,
+	float* out_time)
+{
+	// http://stackoverflow.com/questions/23975555/how-to-do-ray-plane-intersection
+	float denom = dot(plane->normal, ray->direction);
+    if (fabs(denom) > 1e-6f)// Check that ray not parallel to plane
+	{
+		// A known point on the plane
+		float3 center = plane->offset * plane->normal;
+		float t = dot(center - ray->origin, plane->normal) / denom;
+		if (t > 0.0f)
+		{
+			*out_normal = plane->normal;
+			*out_time = t;
+			return true;
+		}
+	}
+	return false;
+}
 
 // as described in https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
-bool intersectRayTriangle(const Ray* ray, const float3* vertices, float* time) {
+bool intersectRayTriangle(
+	const Ray* ray,
+	const float3* vertices,
+	float3* out_normal,
+	float* out_time) {
 	float3 O = ray->origin;
 	float3 D = ray->direction;
 	float3 V1 = vertices[0];
@@ -96,7 +128,8 @@ bool intersectRayTriangle(const Ray* ray, const float3* vertices, float* time) {
 	t = dot(e2, Q) * inv_det;
 
 	if(t > 0.f) { //ray intersection
-		*time = t;
+		*out_time = t;
+		*out_normal = cross(e1, e2);
 		return true;
 	}
 
@@ -104,33 +137,16 @@ bool intersectRayTriangle(const Ray* ray, const float3* vertices, float* time) {
 	return false;
 }
 
-bool intersectRayPlane(const Ray* ray, const Plane* plane, float* time)
-{
-	// http://stackoverflow.com/questions/23975555/how-to-do-ray-plane-intersection
-	float denom = dot(plane->normal, ray->direction);
-    if (fabs(denom) > 1e-6f)// Check that ray not parallel to plane
-	{
-		// A known point on the plane
-		float3 center = plane->offset * plane->normal;
-		float t = dot(center - ray->origin, plane->normal) / denom;
-		if (t > 0.0f)
-		{
-			*time = t;
-			return true;
-		}
-	}
-	return false;
-}
-
 #define DECLARE_INTERSECT_LINE(Name, VarType) \
 bool intersectLine##Name(const Line* line, const VarType* shape, float* time) { \
 	float t; \
+	float3 n; \
 	float3 dir = line->dest - line->origin; \
 	float maxT2 = dot(dir, dir); \
 	Ray ray; \
 	ray.origin = line->origin; \
 	ray.direction = normalize(dir); \
-	if (intersectRay##Name(&ray, shape, &t) && (t*t) < maxT2) { \
+	if (intersectRay##Name(&ray, shape, &n, &t) && (t*t) < maxT2) { \
 		*time = t; \
 		return true; \
 	} \
