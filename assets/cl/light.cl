@@ -15,6 +15,8 @@ typedef struct
 		struct
 		{
 			float3 position;
+			float sqrAttRadius;
+			float invSqrAttRadius;
 		} point;
 		struct
 		{
@@ -50,15 +52,43 @@ int getShadowLineRay(const Light* light, float3 intersection, Line* line, Ray* r
 	return 0;
 }
 
-float getLightFallOff(const Light* light, float3 intersection)
+bool isLightCulled(const Light* light, float3 intersection)
 {
 	if (light->type == PointLightType)
 	{
 		float3 dir = (light->point.position - intersection);
 		float distSquare = dot(dir, dir);
-		return 1.0f / distSquare;
+		return (distSquare > light->point.sqrAttRadius);
 	} else {
-		return 1.0f;
+		return false;
+	}
+}
+
+// http://www.frostbite.com/wp-content/uploads/2014/11/course_notes_moving_frostbite_to_pbr.pdf
+float smoothDistanceAtt(float squaredDistance, float invSqrAttRadius)
+{
+	float factor = squaredDistance * invSqrAttRadius ;
+	float smoothFactor = clamp(1.0f - factor * factor, 0.0f, 1.0f);
+	return smoothFactor * smoothFactor ;
+}
+
+// http://www.frostbite.com/wp-content/uploads/2014/11/course_notes_moving_frostbite_to_pbr.pdf
+float getDistanceAtt(float3 unormalizedLightVector, float invSqrAttRadius)
+{
+	float sqrDist = dot(unormalizedLightVector , unormalizedLightVector);
+	float attenuation = 1.0f / (max(sqrDist, 0.01f*0.01f));
+	attenuation *= smoothDistanceAtt(sqrDist, invSqrAttRadius);
+	return attenuation;
+}
+
+float3 getLightIntensity(const Light* light, float3 intersection)
+{
+	if (light->type == PointLightType)
+	{
+		float3 dir = (light->point.position - intersection);
+		return getDistanceAtt(dir, light->point.invSqrAttRadius);
+	} else {
+		return light->colour;
 	}
 }
 #endif// __LIGHT_CL

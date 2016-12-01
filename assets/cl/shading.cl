@@ -22,6 +22,8 @@ float3 diffuseShade(
 	for (int i = 0; i < scene->numLights; i++)
 	{
 		Light light = scene->lights[i];
+		if (isLightCulled(&light, intersection))
+			continue;
 		
 		// Shadow test
 		bool lightVisible = false;
@@ -39,10 +41,9 @@ float3 diffuseShade(
 
 		if (lightVisible)
 		{
-			float lightFallOff = getLightFallOff(&light, intersection);
 			float3 lightDir = getLightVector(&light, intersection);
 			float NdotL = max(0.0f, dot(normal, lightDir));
-			result += NdotL * light.colour * lightFallOff;
+			result += NdotL * getLightIntensity(&light, intersection);
 		}
 	}
 	return diffuseColour * result;

@@ -233,20 +233,13 @@ float3 traceRay(
 		// Calculate the normal of the hit surface and retrieve the material
 		float3 direction = ray->direction;
 		float3 intersection = minT * direction + ray->origin;
-		float3 normal;
 		Material material;
 		if (type == SphereType) {
-			normal = normalize(intersection - scene->spheres[i_current_hit].centre);
 			material = scene->sphereMaterials[i_current_hit];
 		} else if (type == PlaneType) {
-			normal = normalize(scene->planes[i_current_hit].normal);
 			material = scene->planeMaterials[i_current_hit];
 		} else if (type == MeshType) {
 			TriangleData triangle = scene->triangles[i_current_hit];
-			float3 n[3]; float3 vert[3];
-			getNormals(n, triangle.indices, scene);
-			getVertices(vert, triangle.indices, scene);
-			normal = normalize( n[0] + (n[1]-n[0]) * uf + (n[2]-n[0]) * vf );
 			material = scene->meshMaterials[triangle.mat_index];
 		}
 		//return (float3)(1.0f, 1.0f, 1.0f);

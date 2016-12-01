@@ -16,19 +16,19 @@ namespace raytracer
 		};
 
 		glm::vec3 colour; byte __padding1[4];// 16 bytes
-		union
+		union// 20 bytes
 		{
-			struct
+			struct// 20 bytes
 			{
-				glm::vec3 position; 
+				glm::vec3 position; byte __padding2[4];// 16 bytes
+				float invSqrAttRadius; float sqrAttRadius; byte __padding5[8];// 16 bytes
 			} point;
-			struct
+			struct// 16 bytes
 			{
-				glm::vec3 direction;
+				glm::vec3 direction; byte __padding3[4];// 16 bytes
 			} directional;
-			byte __padding2[16];// 16 bytes
 		};
-		Type type; byte __padding3[12];// 16 bytes
+		Type type; byte __padding4[12];// 16 bytes
 
 		// Apperently necesarry (maybe got something to do with glm::vec in union???)
 		Light() {};
@@ -48,10 +48,14 @@ namespace raytracer
 
 		static Light Point(const glm::vec3& colour, const glm::vec3 pos)
 		{
+			float radius = 5.0f;
+
 			Light light;
 			light.type = Type::Point;
 			light.colour = colour;
 			light.point.position = pos;
+			light.point.sqrAttRadius = radius * radius;
+			light.point.invSqrAttRadius = 1.0f / (radius * radius);
 			return light;
 		}
 

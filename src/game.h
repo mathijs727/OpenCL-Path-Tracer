@@ -5,8 +5,8 @@
 #include "gloutput.h"
 #include <unordered_map>
 
-#define SCRWIDTH	 1280
-#define SCRHEIGHT	 720
+#define SCRWIDTH	 800
+#define SCRHEIGHT	 480
 #define CAMERA_VIEW_SPEED 0.1f
 #define CAMERA_MOVE_SPEED 1
 
