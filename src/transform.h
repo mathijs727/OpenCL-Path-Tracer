@@ -19,7 +19,15 @@ struct Transform
 
 	Transform() {}
 
-	Transform(const glm::vec3& location, const glm::quat& orientation) : location(location), orientation(orientation) {}
+	Transform(const glm::vec3& location, const glm::quat& orientation = glm::quat()) : location(location), orientation(orientation) {}
+
+	glm::vec3 transform(glm::vec3 vector) {
+		return glm::vec3(matrix() * glm::vec4(vector, 1));
+	};
+
+	glm::vec3 transformDirection(glm::vec3 direction) {
+		return glm::mat3_cast(orientation) * direction;
+	};
 };
 
 }

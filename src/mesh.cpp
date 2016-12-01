@@ -29,8 +29,10 @@ void raytracer::Mesh::addData(aiMesh* in_mesh, const glm::mat4& transform_matrix
 	uint vertex_starting_index = _vertices.size();
 	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
 		glm::vec4 vertex = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
+		glm::vec4 normal = remove_translation(transform_matrix) * glm::vec4(ai2glm(in_mesh->mNormals[v]), 1);
 		//std::cout << "importing vertex: " << position.x << ", " << position.y << ", " << position.z << std::endl;
 		_vertices.push_back(vertex);
+		_normals.push_back(normal);
 	}
 	for (uint f = 0; f < in_mesh->mNumFaces; ++f) {
 		aiFace* in_face = &in_mesh->mFaces[f];
@@ -39,12 +41,7 @@ void raytracer::Mesh::addData(aiMesh* in_mesh, const glm::mat4& transform_matrix
 			continue;
 		}
 		auto indices = in_face->mIndices;
-		MeshFace face;
-		glm::vec3 v0 = ai2glm(in_mesh->mVertices[indices[0]]);
-		glm::vec3 v1 = ai2glm(in_mesh->mVertices[indices[1]]);
-		glm::vec3 v2 = ai2glm(in_mesh->mVertices[indices[2]]);
-		face.normal = glm::normalize(glm::mat3(transform_matrix) * glm::cross(v1-v0, v2-v0));
-		face.indices = glm::u32vec3(indices[0], indices[1], indices[2]) + vertex_starting_index;
+		auto face = glm::u32vec3(indices[0], indices[1], indices[2]) + vertex_starting_index;
 		_faces.push_back(face);
 		//std::cout << "importing face: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", starting index: " << vertex_starting_index << std::endl;
 	}

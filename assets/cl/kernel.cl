@@ -26,6 +26,7 @@ __kernel void hello(
 	__read_only __global Sphere* spheres,
 	__read_only __global Plane* planes,
 	__read_only __global float3* vertices,
+	__read_only __global float3* normals,
 	__read_only __global TriangleData* triangles,
 	__read_only __global Material* materials,
 	image2d_array_t textures,
@@ -44,10 +45,10 @@ __kernel void hello(
 			planes,
 			inputData->numVertices,
 			vertices,
+			normals,
 			inputData->numTriangles,
 			triangles,
 			materials,
-			&textures,
 			inputData->numLights,
 			lights,
 			&scene);
@@ -71,7 +72,7 @@ __kernel void hello(
 	{
 		StackItem item;
 		StackPop(&stack, &item);
-		outColor += traceRay(&scene, &item.ray, item.multiplier, &stack);
+		outColor += traceRay(&scene, &item.ray, item.multiplier, &stack, textures);
 
 		if (++iterCount >= MAX_ITERATIONS)
 		{

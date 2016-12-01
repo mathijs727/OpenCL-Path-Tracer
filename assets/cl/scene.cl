@@ -10,7 +10,6 @@ typedef struct
 {
 	uint indices[3];
 	uint mat_index;
-	float3 normal;
 } TriangleData;
 
 typedef struct
@@ -19,11 +18,11 @@ typedef struct
 	const __global Sphere* spheres;
 	const __global Plane* planes;
 	const __global float3* vertices;
+	const __global float3* normals;
 	const __global TriangleData* triangles;
 	const __global Material* sphereMaterials;
 	const __global Material* planeMaterials;
 	const __global Material* meshMaterials;
-	image2d_array_t textures;
 	const __global Light* lights;
 
 	float refractiveIndex;
@@ -35,6 +34,12 @@ void getVertices(float3* out_vertices, uint* indices, const Scene* scene) {
 	out_vertices[2] = scene->vertices[indices[2]];
 }
 
+void getNormals(float3* out_normals, uint* indices, const Scene* scene) {
+	out_normals[0] = scene->normals[indices[0]];
+	out_normals[1] = scene->normals[indices[1]];
+	out_normals[2] = scene->normals[indices[2]];
+}
+
 // TODO: instead of using a for loop in the "main" thread. Let every thread copy
 //  a tiny bit of data (IE workgroups of 128).
 void loadScene(
@@ -44,10 +49,10 @@ void loadScene(
 	const __global Plane* planes,
 	int numVertices,
 	const __global float3* vertices,
+	const __global float3* normals,
 	int numTriangles,
 	const __global TriangleData* triangles,
 	const __global Material* materials,
-	const image2d_array_t*  textures,
 	int numLights,
 	const __global Light* lights,
 	Scene* scene) {
@@ -64,9 +69,9 @@ void loadScene(
 	scene->sphereMaterials = materials;
 	scene->planeMaterials = &materials[numSpheres];
 	scene->meshMaterials = &materials[numSpheres + numPlanes];
-	scene->textures = *textures;
 	scene->triangles = triangles;
 	scene->vertices = vertices;
+	scene->normals = normals;
 	scene->lights = lights;
 }
 
@@ -158,7 +163,8 @@ float3 traceRay(
 	const Scene* scene,
 	const Ray* ray,
 	float3 multiplier,
-	Stack* stack)
+	Stack* stack,
+	image2d_array_t textures)
 {
 	float minT = 100000.0f;
 	int i_current_hit = -1;
@@ -237,7 +243,10 @@ float3 traceRay(
 			material = scene->planeMaterials[i_current_hit];
 		} else if (type == MeshType) {
 			TriangleData triangle = scene->triangles[i_current_hit];
-			normal = triangle.normal;
+			float3 n[3]; float3 vert[3];
+			getNormals(n, triangle.indices, scene);
+			getVertices(vert, triangle.indices, scene);
+			normal = normalize( n[0] + (n[1]-n[0]) * uf + (n[2]-n[0]) * vf );
 			material = scene->meshMaterials[triangle.mat_index];
 		}
 		//return (float3)(1.0f, 1.0f, 1.0f);
@@ -250,6 +259,7 @@ float3 traceRay(
 			type,
 			i_current_hit,
 			&material,
+			textures,
 			multiplier,
 			stack);
 	}

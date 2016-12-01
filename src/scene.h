@@ -19,7 +19,6 @@ public:
 	{
 		glm::u32vec3 indices;
 		u32 material_index;
-		glm::vec4 normal;
 	};
 
 	void add_primitive(const Sphere& primitive, const Material& material) {
@@ -47,6 +46,7 @@ public:
 
 	const std::vector<Light>& GetLights() const { return _lights; };
 	const std::vector<glm::vec4> GetVertices() const { return _vertices; }
+	const std::vector<glm::vec4> GetNormals() const { return _normals; }
 	const std::vector<Material> GetMeshMaterials() const { return _meshes_materials; }
 	const std::vector<TriangleSceneData> GetTriangleIndices() const { return _triangle_indices; }
 public:
@@ -72,6 +72,7 @@ private:
 	std::vector<Material> _planes_materials;
 
 	std::vector<glm::vec4> _vertices;
+	std::vector<glm::vec4> _normals;
 	std::vector<TriangleSceneData> _triangle_indices;
 	std::vector<Material> _meshes_materials;
 

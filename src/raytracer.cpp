@@ -116,6 +116,13 @@ void raytracer::RayTracer::InitBuffers()
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
+	_normals = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		_num_vertices * sizeof(glm::vec4),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
 	_triangles = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		_num_triangles * sizeof(Scene::TriangleSceneData),
@@ -175,7 +182,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	cl_int err;
 
 	// Copy textures to the GPU
-	for (int i = 0; i < _num_textures; i++)
+	for (uint i = 0; i < _num_textures; i++)
 	{
 		std::cout << "Copy texture" << ::std::endl;
 		Tmpl8::Surface* surface = Material::s_textures[i];
@@ -232,6 +239,14 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 
 	err = _queue.enqueueWriteBuffer(
 		_vertices,
+		CL_TRUE,
+		0,
+		_num_vertices * sizeof(glm::vec4),
+		scene.GetVertices().data());
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+
+	err = _queue.enqueueWriteBuffer(
+		_normals,
 		CL_TRUE,
 		0,
 		_num_vertices * sizeof(glm::vec4),
@@ -302,10 +317,11 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	_helloWorldKernel.setArg(2, _spheres);
 	_helloWorldKernel.setArg(3, _planes);
 	_helloWorldKernel.setArg(4, _vertices);
-	_helloWorldKernel.setArg(5, _triangles);
-	_helloWorldKernel.setArg(6, _materials);
-	_helloWorldKernel.setArg(7, _material_textures);
-	_helloWorldKernel.setArg(8, _lights);
+	_helloWorldKernel.setArg(5, _normals);
+	_helloWorldKernel.setArg(6, _triangles);
+	_helloWorldKernel.setArg(7, _materials);
+	_helloWorldKernel.setArg(8, _material_textures);
+	_helloWorldKernel.setArg(9, _lights);
 	//_helloWorldKernel.setArg(8, _material_textures);
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,

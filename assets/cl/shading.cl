@@ -92,6 +92,7 @@ float3 whittedShading(
 	ShapeType type,
 	const uint shape_index,
 	const Material* material,
+	image2d_array_t textures,
 	float3 multiplier,
 	Stack* stack)
 {
@@ -103,7 +104,7 @@ float3 whittedShading(
 		} else {
 			float4 tex_coords3d = (float4)(tex_coords.x, tex_coords.y, material->diffuse.tex_id, 0.0f);
 			float4 colourWithAlpha = read_imagef(
-				scene->textures,
+				textures,
 				sampler,
 				tex_coords3d);
 			matColour = colourWithAlpha.xyz;
