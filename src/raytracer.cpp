@@ -111,14 +111,7 @@ void raytracer::RayTracer::InitBuffers()
 
 	_vertices = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		_num_vertices * sizeof(glm::vec4),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-
-	_normals = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		_num_vertices * sizeof(glm::vec4),
+		_num_vertices * sizeof(Scene::VertexSceneData),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
@@ -241,15 +234,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 		_vertices,
 		CL_TRUE,
 		0,
-		_num_vertices * sizeof(glm::vec4),
-		scene.GetVertices().data());
-	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-
-	err = _queue.enqueueWriteBuffer(
-		_normals,
-		CL_TRUE,
-		0,
-		_num_vertices * sizeof(glm::vec4),
+		_num_vertices * sizeof(Scene::VertexSceneData),
 		scene.GetVertices().data());
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 
@@ -317,11 +302,10 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	_helloWorldKernel.setArg(2, _spheres);
 	_helloWorldKernel.setArg(3, _planes);
 	_helloWorldKernel.setArg(4, _vertices);
-	_helloWorldKernel.setArg(5, _normals);
-	_helloWorldKernel.setArg(6, _triangles);
-	_helloWorldKernel.setArg(7, _materials);
-	_helloWorldKernel.setArg(8, _material_textures);
-	_helloWorldKernel.setArg(9, _lights);
+	_helloWorldKernel.setArg(5, _triangles);
+	_helloWorldKernel.setArg(6, _materials);
+	_helloWorldKernel.setArg(7, _material_textures);
+	_helloWorldKernel.setArg(8, _lights);
 	//_helloWorldKernel.setArg(8, _material_textures);
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,

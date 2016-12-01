@@ -13,8 +13,10 @@ void raytracer::Scene::add_primitive(const Mesh& primitive, const Material& mate
 	u32 starting_vertex_index = _vertices.size();
 	int i = 0;
 	for (auto& vertex : primitive._vertices) {
-		_vertices.push_back(vertex);
-		_normals.push_back(primitive._normals[i]);
+		VertexSceneData vertexData;
+		vertexData.vertex = vertex;
+		vertexData.normal = primitive._normals[i];
+		_vertices.push_back(vertexData);
 		i++;
 	}
 	u32 material_index = _meshes_materials.size();

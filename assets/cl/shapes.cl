@@ -7,6 +7,18 @@
 
 typedef struct
 {
+	uint indices[3];
+	uint mat_index;
+} TriangleData;
+
+typedef struct
+{
+	float3 vertex;
+	float3 normal;
+} VertexData;
+
+typedef struct
+{
 	float3 centre;
 	float radius;
 } Sphere;
@@ -58,7 +70,7 @@ bool intersectRaySphere(
 			out_uv->x = 0.5f + atan2(d.z, d.x) / (2.0f * PI);
 			out_uv->y = 0.5f - asin(d.y) / PI;
 
-			*out_normal = vec_normal;
+			*out_normal = normalize(intersection - sphere->centre);
 			*out_time = t;
 			return true;
 		}
@@ -97,15 +109,15 @@ bool intersectRayPlane(
 // as described in https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
 bool intersectRayTriangle(
 	const Ray* ray,
-	const float3* vertices,
+	const VertexData* vertices,
 	float3* out_normal,
-	float2* out_uv,
+	float2* out_texcoords,
 	float* out_time) {
 	float3 O = ray->origin;
 	float3 D = ray->direction;
-	float3 V1 = vertices[0];
-	float3 V2 = vertices[1];
-	float3 V3 = vertices[2];
+	float3 V1 = vertices[0].vertex;
+	float3 V2 = vertices[1].vertex;
+	float3 V3 = vertices[2].vertex;
 	float3 e1, e2;  //Edge1, Edge2
 	float3 P, Q, T;
 	float det, inv_det, u, v;
@@ -142,8 +154,12 @@ bool intersectRayTriangle(
 
 	if(t > 0.f) { //ray intersection
 		*out_time = t;
-		*out_uv = (float2)(0.0f, 0.0f);
-		*out_normal = cross(e1, e2);
+		*out_texcoords = (float2)(0,0);
+		float3 n0 = vertices[0].normal;
+		float3 n1 = vertices[1].normal;
+		float3 n2 = vertices[2].normal;
+		*out_normal = normalize( n0 + (n1-n0) * u + (n2-n0) * v );
+		//*out_normal = normalize(cross(e1,e2));
 		return true;
 	}
 
@@ -170,7 +186,7 @@ bool intersectLine##Name(const Line* line, const VarType* shape, float* time) { 
 
 DECLARE_INTERSECT_LINE(Sphere, Sphere)
 DECLARE_INTERSECT_LINE(Plane, Plane)
-DECLARE_INTERSECT_LINE(Triangle, float3)
+DECLARE_INTERSECT_LINE(Triangle, VertexData)
 
 float intersectInsideSphere(const Ray* ray, const Sphere* sphere, float3* outNormal)
 {

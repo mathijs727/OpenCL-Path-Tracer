@@ -8,17 +8,10 @@
 
 typedef struct
 {
-	uint indices[3];
-	uint mat_index;
-} TriangleData;
-
-typedef struct
-{
 	int numSpheres, numPlanes, numLights, numVertices, numTriangles;
 	const __global Sphere* spheres;
 	const __global Plane* planes;
-	const __global float3* vertices;
-	const __global float3* normals;
+	const __global VertexData* vertices;
 	const __global TriangleData* triangles;
 	const __global Material* sphereMaterials;
 	const __global Material* planeMaterials;
@@ -28,16 +21,10 @@ typedef struct
 	float refractiveIndex;
 } Scene;
 
-void getVertices(float3* out_vertices, uint* indices, const Scene* scene) {
+void getVertices(VertexData* out_vertices, uint* indices, const Scene* scene) {
 	out_vertices[0] = scene->vertices[indices[0]];
 	out_vertices[1] = scene->vertices[indices[1]];
 	out_vertices[2] = scene->vertices[indices[2]];
-}
-
-void getNormals(float3* out_normals, uint* indices, const Scene* scene) {
-	out_normals[0] = scene->normals[indices[0]];
-	out_normals[1] = scene->normals[indices[1]];
-	out_normals[2] = scene->normals[indices[2]];
 }
 
 // TODO: instead of using a for loop in the "main" thread. Let every thread copy
@@ -48,8 +35,7 @@ void loadScene(
 	int numPlanes,
 	const __global Plane* planes,
 	int numVertices,
-	const __global float3* vertices,
-	const __global float3* normals,
+	const __global VertexData* vertices,
 	int numTriangles,
 	const __global TriangleData* triangles,
 	const __global Material* materials,
@@ -71,7 +57,6 @@ void loadScene(
 	scene->meshMaterials = &materials[numSpheres + numPlanes];
 	scene->triangles = triangles;
 	scene->vertices = vertices;
-	scene->normals = normals;
 	scene->lights = lights;
 }
 
@@ -107,7 +92,7 @@ bool checkRay(const Scene* scene, const Ray* ray)
 	{
 		float t;
 		TriangleData triang = scene->triangles[i];
-		float3 vertices[3];
+		VertexData vertices[3];
 		getVertices(vertices, triang.indices, scene);
 		if (intersectRayTriangle(ray, vertices, &n, &texCoords, &t))
 		{
@@ -147,7 +132,7 @@ bool checkLine(const Scene* scene, const Line* line)
 	{
 		float t;
 		TriangleData triang = scene->triangles[i];
-		float3 vertices[3];
+		VertexData vertices[3];
 		getVertices(vertices, triang.indices, scene);
 		if (intersectLineTriangle(line, vertices, &t))
 		{
@@ -212,11 +197,11 @@ float3 traceRay(
 		float3 n;
 		float2 tex_coords_tmp;
 
-		float3 v[3];
+		VertexData v[3];
 		TriangleData triangle = scene->triangles[i];
 		getVertices(v, triangle.indices, scene);
-		float3 edge1 = v[1] - v[0];
-		float3 edge2 = v[2] - v[0];
+		float3 edge1 = v[1].vertex - v[0].vertex;
+		float3 edge2 = v[2].vertex - v[0].vertex;
 		bool backface = dot(ray->direction, cross(edge2, edge1)) < 0;
 		if (!backface && intersectRayTriangle(ray, v, &n, &tex_coords_tmp, &t) && t < minT)
 		{
@@ -239,8 +224,7 @@ float3 traceRay(
 		} else if (type == PlaneType) {
 			material = scene->planeMaterials[i_current_hit];
 		} else if (type == MeshType) {
-			TriangleData triangle = scene->triangles[i_current_hit];
-			material = scene->meshMaterials[triangle.mat_index];
+			material = scene->meshMaterials[scene->triangles[i_current_hit].mat_index];
 		}
 		//return (float3)(1.0f, 1.0f, 1.0f);
 		return whittedShading(

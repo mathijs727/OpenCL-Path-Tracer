@@ -21,6 +21,12 @@ public:
 		u32 material_index;
 	};
 
+	struct VertexSceneData
+	{
+		glm::vec4 vertex;
+		glm::vec4 normal;
+	}; 
+	
 	void add_primitive(const Sphere& primitive, const Material& material) {
 		_spheres.push_back(primitive);
 		_sphere_materials.push_back(material);
@@ -45,8 +51,7 @@ public:
 	const std::vector<Material>& GetPlaneMaterials() const { return _planes_materials; };
 
 	const std::vector<Light>& GetLights() const { return _lights; };
-	const std::vector<glm::vec4> GetVertices() const { return _vertices; }
-	const std::vector<glm::vec4> GetNormals() const { return _normals; }
+	const std::vector<VertexSceneData> GetVertices() const { return _vertices; }
 	const std::vector<Material> GetMeshMaterials() const { return _meshes_materials; }
 	const std::vector<TriangleSceneData> GetTriangleIndices() const { return _triangle_indices; }
 public:
@@ -71,8 +76,7 @@ private:
 	std::vector<Plane> _planes;
 	std::vector<Material> _planes_materials;
 
-	std::vector<glm::vec4> _vertices;
-	std::vector<glm::vec4> _normals;
+	std::vector<VertexSceneData> _vertices;
 	std::vector<TriangleSceneData> _triangle_indices;
 	std::vector<Material> _meshes_materials;
 

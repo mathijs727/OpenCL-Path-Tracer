@@ -43,7 +43,6 @@ private:
 	cl::Buffer _planes;
 	cl_int _num_vertices;
 	cl::Buffer _vertices;
-	cl::Buffer _normals;
 	cl_int _num_triangles;
 	cl::Buffer _triangles;
 
