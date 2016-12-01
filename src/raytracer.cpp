@@ -16,11 +16,6 @@
 //#include <OpenGL/wglew.h>
 #include "template/includes.h"
 
-// TODO: make dynamic
-// Texture sizes for glorious.png
-#define TEXTURE_SIZE_X 650
-#define TEXTURE_SIZE_Y 365
-
 struct KernelData
 {
 	// Camera
@@ -68,8 +63,8 @@ raytracer::RayTracer::RayTracer(int width, int height)
 {
 	_scr_width = width;
 	_scr_height = height;
+
 	InitOpenCL();
-	std::cout << "RayTracer::RayTracer()" << std::endl;
 	_helloWorldKernel = LoadKernel("assets/cl/kernel.cl", "hello");
 }
 
@@ -135,8 +130,8 @@ void raytracer::RayTracer::InitBuffers()
 		CL_MEM_READ_ONLY,
 		cl::ImageFormat(CL_BGRA, CL_UNORM_INT8),
 		std::max(1u, _num_textures),
-		TEXTURE_SIZE_X,
-		TEXTURE_SIZE_Y,
+		Material::TEXTURE_WIDTH,
+		Material::TEXTURE_HEIGHT,
 		0, 0, NULL,// Unused host_ptr
 		&err);
 	checkClErr(err, "cl::Image2DArray");
@@ -177,7 +172,6 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	// Copy textures to the GPU
 	for (uint i = 0; i < _num_textures; i++)
 	{
-		std::cout << "Copy texture" << ::std::endl;
 		Tmpl8::Surface* surface = Material::s_textures[i];
 
 		// Origin (o) and region (r)
@@ -446,8 +440,6 @@ void raytracer::RayTracer::InitOpenCL()
 cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* funcName)
 {
 	cl_int err;
-
-	std::cout << "RayTracer::LoadKernel" << std::endl;
 
 	std::ifstream file(fileName);
 	{

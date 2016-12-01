@@ -2,9 +2,13 @@
 
 #include <glm.hpp>
 #include "template/includes.h"
+#include "template/surface.h"
 #include "types.h"
 #include "light.h"
 #include <algorithm>
+#include <vector>
+#include <iostream>
+#include <unordered_map>
 
 #define RAYTRACER_EPSILON 0.0001f
 
@@ -18,6 +22,9 @@ class Scene;
 
 struct Material
 {
+	static const uint TEXTURE_WIDTH = 1024;
+	static const uint TEXTURE_HEIGHT = 1024;
+	static std::unordered_map<Tmpl8::Surface*, int> s_texturesMap;
 	static std::vector<Tmpl8::Surface*> s_textures;
 
 	enum class Type : cl_int
@@ -65,8 +72,34 @@ struct Material
 	}
 
 	static Material Diffuse(Tmpl8::Surface* diffuse) {
-		cl_int tex_id = static_cast<cl_int>(s_textures.size());
-		s_textures.push_back(diffuse);
+		cl_int tex_id;
+		auto res = s_texturesMap.find(diffuse);
+		if (res == s_texturesMap.end())
+		{
+			Tmpl8::Surface* texture;
+			if (diffuse->GetWidth() != TEXTURE_WIDTH ||
+				diffuse->GetHeight() != TEXTURE_HEIGHT)
+			{
+				if (diffuse->m_fileName != nullptr)
+				{
+					texture = new Tmpl8::Surface(diffuse->m_fileName, TEXTURE_WIDTH, TEXTURE_HEIGHT);
+				}
+				else {
+					std::cout << "ERROR: Texture should be of size: (" << TEXTURE_WIDTH << ", " << TEXTURE_HEIGHT << ")" << std::endl;
+					exit(EXIT_FAILURE);
+				}
+			}
+			else {
+				texture = diffuse;
+			}
+
+			tex_id = static_cast<cl_int>(s_textures.size());
+			s_textures.push_back(texture);
+			s_texturesMap.insert(std::pair<Tmpl8::Surface*, int>(diffuse, tex_id));
+		}
+		else {
+			tex_id = res->second;
+		}
 
 		Material result;
 		result.type = Type::Diffuse;

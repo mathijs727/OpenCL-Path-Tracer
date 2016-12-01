@@ -31,9 +31,10 @@ Surface::Surface( int a_Width, int a_Height ) :
 	m_Buffer = (Pixel*)MALLOC64( a_Width * a_Height * sizeof( Pixel ) );
 }
 
-Surface::Surface( const char* a_File ) :
+Surface::Surface( const char* a_File, int width, int height) :
 	m_Buffer( NULL ),
-	m_Width( 0 ), m_Height( 0 )
+	m_Width( 0 ), m_Height( 0 ),
+	m_fileName(a_File)
 {
 	FILE* f = fopen( a_File, "rb" );
 	if (!f) 
@@ -46,15 +47,17 @@ Surface::Surface( const char* a_File ) :
 	else fclose( f );
 
 	std::string copyFileName(a_File);
-	LoadImage( &copyFileName[0] );
+	LoadImage( &copyFileName[0], width, height );
 }
 
-void Surface::LoadImage( char* a_File )
+void Surface::LoadImage( char* a_File, int width, int height)
 {
 	FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
 	fif = FreeImage_GetFileType( a_File, 0 );
 	if (fif == FIF_UNKNOWN) fif = FreeImage_GetFIFFromFilename( a_File );
 	FIBITMAP* tmp = FreeImage_Load( fif, a_File );
+	if (width > 0 && height > 0)
+		tmp = FreeImage_Rescale(tmp, width, height, FILTER_LANCZOS3);
 	FIBITMAP* dib = FreeImage_ConvertTo32Bits( tmp );
 	FreeImage_Unload( tmp );
 	unsigned char* bits = FreeImage_GetBits( dib );

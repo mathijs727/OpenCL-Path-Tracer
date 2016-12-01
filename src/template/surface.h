@@ -59,7 +59,7 @@ public:
 	// constructor / destructor
 	Surface( int a_Width, int a_Height, Pixel* a_Buffer, int a_Pitch );
 	Surface( int a_Width, int a_Height );
-	Surface( const char* a_File );
+	Surface( const char* a_File, int width = -1, int height = -1);
 	~Surface();
 	// member data access
 	Pixel* GetBuffer() { return m_Buffer; }
@@ -80,13 +80,15 @@ public:
 	void ThickLine( int ax1, int ay1, int ax2, int ay2, Pixel c );
 	void Plot( int x, int y, Pixel c );
 	void AddPlot( int x, int y, Pixel c );
-	void LoadImage( char* a_File );
+	void LoadImage( char* a_File, int width = -1, int height = -1);
 	void CopyTo( Surface* a_Dst, int a_X, int a_Y );
 	void BlendCopyTo( Surface* a_Dst, int a_X, int a_Y );
 	void ScaleColor( unsigned int a_Scale );
 	void Box( int x1, int y1, int x2, int y2, Pixel color );
 	void Bar( int x1, int y1, int x2, int y2, Pixel color );
 	void Resize( Surface* a_Orig );
+public:
+	const char* m_fileName = nullptr;
 private:
 	// Attributes
 	Pixel* m_Buffer;	

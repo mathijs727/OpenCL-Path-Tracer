@@ -23,7 +23,9 @@ void Game::Init()
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1);
 	{
 		Sphere sphere(glm::vec3(0, 1, 5), 1);
-		Material material = Material::Diffuse(glm::vec3(0.5f, 0.3f, 0.2f));
+		//Material material = Material::Diffuse(glm::vec3(0.5f, 0.3f, 0.2f));
+		Material material = Material::Diffuse(
+			new Surface("assets/images/checkerboard.png"));
 		_scene->add_primitive(sphere, material);
 	}
 
