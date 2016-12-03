@@ -25,7 +25,7 @@ void Game::Init()
 		Sphere sphere(glm::vec3(0, 1, 5), 1);
 		//Material material = Material::Diffuse(glm::vec3(0.5f, 0.3f, 0.2f));
 		Material material = Material::Diffuse(
-			new Surface("assets/images/checkerboard.png"));
+			Texture("assets/images/checkerboard.png"));
 		_scene->add_primitive(sphere, material);
 	}
 
@@ -36,7 +36,7 @@ void Game::Init()
 		//Material material = Material::Reflective(glm::vec3(0.5f, 0.5f, 0.5f));
 		//Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.5f);
 		Material material = Material::Diffuse(
-			new Surface("assets/images/glorious.png"));
+			Texture("assets/images/glorious.png"));
 		_scene->add_primitive(sphere, material);
 	}
 

@@ -4,6 +4,7 @@
 #include "template/includes.h"
 #include "template/surface.h"
 #include "types.h"
+#include "Texture.h"
 #include "light.h"
 #include <algorithm>
 #include <vector>
@@ -22,11 +23,6 @@ class Scene;
 
 struct Material
 {
-	static const uint TEXTURE_WIDTH = 1024;
-	static const uint TEXTURE_HEIGHT = 1024;
-	static std::unordered_map<Tmpl8::Surface*, int> s_texturesMap;
-	static std::vector<Tmpl8::Surface*> s_textures;
-
 	enum class Type : cl_int
 	{
 		Reflective,
@@ -71,40 +67,11 @@ struct Material
 		return result;
 	}
 
-	static Material Diffuse(Tmpl8::Surface* diffuse) {
-		cl_int tex_id;
-		auto res = s_texturesMap.find(diffuse);
-		if (res == s_texturesMap.end())
-		{
-			Tmpl8::Surface* texture;
-			if (diffuse->GetWidth() != TEXTURE_WIDTH ||
-				diffuse->GetHeight() != TEXTURE_HEIGHT)
-			{
-				if (diffuse->m_fileName != nullptr)
-				{
-					texture = new Tmpl8::Surface(diffuse->m_fileName, TEXTURE_WIDTH, TEXTURE_HEIGHT);
-				}
-				else {
-					std::cout << "ERROR: Texture should be of size: (" << TEXTURE_WIDTH << ", " << TEXTURE_HEIGHT << ")" << std::endl;
-					exit(EXIT_FAILURE);
-				}
-			}
-			else {
-				texture = diffuse;
-			}
-
-			tex_id = static_cast<cl_int>(s_textures.size());
-			s_textures.push_back(texture);
-			s_texturesMap.insert(std::pair<Tmpl8::Surface*, int>(diffuse, tex_id));
-		}
-		else {
-			tex_id = res->second;
-		}
-
+	static Material Diffuse(const raytracer::Texture& diffuse) {
 		Material result;
 		result.type = Type::Diffuse;
 		result.colour = glm::vec3(0);
-		result.diffuse.tex_id = tex_id;
+		result.diffuse.tex_id = diffuse.getId();
 		return result;
 	}
 

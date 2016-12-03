@@ -33,8 +33,7 @@ Surface::Surface( int a_Width, int a_Height ) :
 
 Surface::Surface( const char* a_File, int width, int height) :
 	m_Buffer( NULL ),
-	m_Width( 0 ), m_Height( 0 ),
-	m_fileName(a_File)
+	m_Width( 0 ), m_Height( 0 )
 {
 	FILE* f = fopen( a_File, "rb" );
 	if (!f) 

@@ -5,6 +5,7 @@
 #include "template/surface.h"
 #include "ray.h"
 #include "pixel.h"
+#include "Texture.h"
 #include <algorithm>
 #include <iostream>
 #include <emmintrin.h>
@@ -48,16 +49,26 @@ cl_float3 glmToCl(const glm::vec3& vec);
 //void floatToPixel(float* floats, uint32_t* pixels, int count);
 
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/
-inline void checkClErr(cl_int err, const char* name)
-{
-	if (err != CL_SUCCESS) {
-		std::cout << "OpenCL ERROR: " << name << " (" << err << ")" << std::endl;
 #ifdef _WIN32
-		system("PAUSE");
-#endif
-		exit(EXIT_FAILURE);
+
+#ifdef _DEBUG
+#define checkClErr(ERROR_CODE, NAME) \
+	if ((ERROR_CODE) != CL_SUCCESS) { \
+		std::cout << "OpenCL ERROR: " << NAME << " " << (ERROR_CODE) << " (" << __FILE__ << ":" << __LINE__ << ")" << std::endl; \
+		system("PAUSE"); \
+		exit(EXIT_FAILURE); \
 	}
-}
+#else
+#define checkClErr(ERROR_CODE, NAME)
+#endif
+
+#else
+#define checkClErr(ERROR_CODE, NAME) \
+	if ((ERROR_CODE) != CL_SUCCESS) { \
+		std::cout << "OpenCL ERROR: " << NAME << " " << (ERROR_CODE) << " (" << __FILE__ << ":" << __LINE__ << ")" << std::endl; \
+		exit(EXIT_FAILURE); \
+	}
+#endif
 
 raytracer::RayTracer::RayTracer(int width, int height)
 {
@@ -76,6 +87,8 @@ void raytracer::RayTracer::InitBuffers()
 {
 	cl_int err;
 	
+	// Create buffers even if we're not gonna used them.
+	// OpenCL requires us to pass in a buffer to each function argument, even when unused.
 	_spheres = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		std::max(1, _num_spheres) * sizeof(Sphere),
@@ -92,28 +105,28 @@ void raytracer::RayTracer::InitBuffers()
 
 	_materials = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		(_num_mesh_materials + _num_spheres + _num_planes) * sizeof(Material),
+		std::max(_num_mesh_materials + _num_spheres + _num_planes, 1) * sizeof(Material),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
 	_lights = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		_num_lights * sizeof(Light),
+		std::max(1, _num_lights) * sizeof(Light),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
 	_vertices = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		_num_vertices * sizeof(Scene::VertexSceneData),
+		std::max(1, _num_vertices) * sizeof(Scene::VertexSceneData),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
 	_triangles = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		_num_triangles * sizeof(Scene::TriangleSceneData),
+		std::max(1, _num_triangles) * sizeof(Scene::TriangleSceneData),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
@@ -130,8 +143,8 @@ void raytracer::RayTracer::InitBuffers()
 		CL_MEM_READ_ONLY,
 		cl::ImageFormat(CL_BGRA, CL_UNORM_INT8),
 		std::max(1u, _num_textures),
-		Material::TEXTURE_WIDTH,
-		Material::TEXTURE_HEIGHT,
+		Texture::TEXTURE_WIDTH,
+		Texture::TEXTURE_HEIGHT,
 		0, 0, NULL,// Unused host_ptr
 		&err);
 	checkClErr(err, "cl::Image2DArray");
@@ -145,7 +158,7 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	_num_vertices = scene.GetVertices().size();
 	_num_triangles = scene.GetTriangleIndices().size();
 	_num_mesh_materials = scene.GetMeshMaterials().size();
-	_num_textures = Material::s_textures.size();
+	_num_textures = Texture::getNumUniqueSurfaces();
 
 	InitBuffers();
 
@@ -170,16 +183,16 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 	cl_int err;
 
 	// Copy textures to the GPU
-	for (uint i = 0; i < _num_textures; i++)
+	for (uint texId = 0; texId < _num_textures; texId++)
 	{
-		Tmpl8::Surface* surface = Material::s_textures[i];
+		Tmpl8::Surface* surface = Texture::getSurface(texId);
 
 		// Origin (o) and region (r)
-		cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = i;
+		cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = texId;
 
 		cl::size_t<3> r;
-		r[0] = surface->GetWidth();
-		r[1] = surface->GetHeight();
+		r[0] = Texture::TEXTURE_WIDTH;
+		r[1] = Texture::TEXTURE_HEIGHT;
 		r[2] = 1;// r[2] must be 1?
 		err = _queue.enqueueWriteImage(
 			_material_textures,
@@ -192,53 +205,71 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 		checkClErr(err, "CommandQueue::enqueueWriteImage");
 	}
 
-	err = _queue.enqueueWriteBuffer(
-		_spheres,
-		CL_TRUE,
-		0,
-		_num_spheres * sizeof(Sphere),
-		scene.GetSpheres().data());
-	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	if (_num_spheres > 0)
+	{
+		err = _queue.enqueueWriteBuffer(
+			_spheres,
+			CL_TRUE,
+			0,
+			_num_spheres * sizeof(Sphere),
+			scene.GetSpheres().data());
+		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	}
 
-	err = _queue.enqueueWriteBuffer(
-		_planes,
-		CL_TRUE,
-		0,
-		_num_planes * sizeof(Plane),
-		scene.GetPlanes().data());
-	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	if (_num_planes > 0)
+	{
+		err = _queue.enqueueWriteBuffer(
+			_planes,
+			CL_TRUE,
+			0,
+			_num_planes * sizeof(Plane),
+			scene.GetPlanes().data());
+		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	}
 
-	err = _queue.enqueueWriteBuffer(
-		_materials,
-		CL_TRUE,
-		0,
-		materials.size() * sizeof(Material),
-		materials.data());
-	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	if (materials.size() > 0)
+	{
+		err = _queue.enqueueWriteBuffer(
+			_materials,
+			CL_TRUE,
+			0,
+			materials.size() * sizeof(Material),
+			materials.data());
+		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	}
 
-	err = _queue.enqueueWriteBuffer(
-		_lights,
-		CL_TRUE,
-		0,
-		_num_lights * sizeof(Light),
-		scene.GetLights().data());
-	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	if (_num_lights > 0)
+	{
+		err = _queue.enqueueWriteBuffer(
+			_lights,
+			CL_TRUE,
+			0,
+			_num_lights * sizeof(Light),
+			scene.GetLights().data());
+		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	}
 
-	err = _queue.enqueueWriteBuffer(
-		_vertices,
-		CL_TRUE,
-		0,
-		_num_vertices * sizeof(Scene::VertexSceneData),
-		scene.GetVertices().data());
-	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	if (_num_vertices > 0)
+	{
+		err = _queue.enqueueWriteBuffer(
+			_vertices,
+			CL_TRUE,
+			0,
+			_num_vertices * sizeof(Scene::VertexSceneData),
+			scene.GetVertices().data());
+		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	}
 
-	err = _queue.enqueueWriteBuffer(
-		_triangles,
-		CL_TRUE,
-		0,
-		_num_triangles * sizeof(Scene::TriangleSceneData),
-		scene.GetTriangleIndices().data());
-	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	if (_num_triangles > 0)
+	{
+		err = _queue.enqueueWriteBuffer(
+			_triangles,
+			CL_TRUE,
+			0,
+			_num_triangles * sizeof(Scene::TriangleSceneData),
+			scene.GetTriangleIndices().data());
+		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	}
 }
 
 void raytracer::RayTracer::SetTarget(GLuint glTexture)
