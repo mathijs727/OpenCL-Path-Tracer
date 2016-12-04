@@ -10,7 +10,6 @@ typedef enum {
 typedef struct
 {
 	float3 colour;
-	MaterialType type;
 	union
 	{
 		struct
@@ -23,9 +22,11 @@ typedef struct
 		} glossy;
 		struct
 		{
+			float3 absorption;
 			float refractiveIndex;
 		} fresnel;
-	};	
+	};
+	MaterialType type;
 } Material;
 
 typedef struct

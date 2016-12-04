@@ -206,21 +206,6 @@ float intersectInsideSphere(const Ray* ray, const Sphere* sphere, float3* outNor
 	float t = component_parallel + sqrt(radius_squared - component_normal_squared);
 	*outNormal = normalize(sphere->centre - (ray->origin + ray->direction * t));
 	return t;
-
-	/*if (component_normal_squared < radius_squared) {
-		// the time is the "t" parameter in the P = O + rD equation of the ray
-		// we use pythagoras's theorem to calc the missing cathetus
-		float t = component_parallel - sqrt(radius_squared - component_normal_squared);
-		if (t > 0.0f)
-		{
-			*time = t;
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-	return false;*/
 }
 
 float intersectInsidePlane(const Ray* ray, const Plane* plane, float3* outNormal)

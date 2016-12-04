@@ -142,10 +142,10 @@ float3 whittedShading(
 			if (type == SphereType)
 			{
 				Sphere sphere = scene->spheres[shape_index];
-				intersectInsideSphere(&refractive_ray, &sphere, &intersect_inside_normal);
+				intersect_inside_distance = intersectInsideSphere(&refractive_ray, &sphere, &intersect_inside_normal);
 			} else if (type == PlaneType) {
 				Plane plane = scene->planes[shape_index];
-				intersectInsidePlane(&refractive_ray, &plane, &intersect_inside_normal);
+				intersect_inside_distance = intersectInsidePlane(&refractive_ray, &plane, &intersect_inside_normal);
 			} else {
 				return (float3)(0.0f, 0.0f, 0.0f);
 			}
@@ -167,6 +167,14 @@ float3 whittedShading(
 				calcReflectiveRay(rayDirection, intersection, normal, &item1.ray);
 				item1.multiplier = multiplier * material->colour * reflection_coeff;
 				StackPush(stack, &item1);
+
+				//Beer's law
+				float3 ab = material->fresnel.absorption;
+
+				float3 beer_factor;
+				beer_factor.x = exp( -ab.x * intersect_inside_distance );
+				beer_factor.y = exp( -ab.y * intersect_inside_distance );
+				beer_factor.z = exp( -ab.z * intersect_inside_distance );
 
 				StackItem item2;
 				item2.ray = second_refractive_ray;

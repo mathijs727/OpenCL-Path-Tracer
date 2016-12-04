@@ -31,7 +31,7 @@ void Game::Init()
 
 	{
 		Sphere sphere(glm::vec3(1, -0.5f, 3), 1);
-		//Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.2f);
+		//Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.5f, glm::vec3(1.f));
 		//Material material = Material::Diffuse(glm::vec3(0.8f, 0.2f, 0.4f));
 		//Material material = Material::Reflective(glm::vec3(0.5f, 0.5f, 0.5f));
 		//Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.5f);

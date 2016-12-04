@@ -40,9 +40,7 @@ struct Material
 		cl_float3 __cl_colour;
 	};
 
-	// 16 bytes total
-	Type type; // 4 bytes
-	union // 4 bytes
+	union // 20 bytes
 	{
 		struct
 		{
@@ -54,9 +52,16 @@ struct Material
 		} glossy;
 		struct
 		{
+			union
+			{ //16 bytes
+				glm::vec3 absorption;
+				cl_float3 __cl_absorption;
+			}; 
 			cl_float refractive_index;
 		} fresnel;
 	};
+	// 36 bytes total
+	Type type; // 4 bytes
 	byte __padding[8];// 8 bytes
 
 	static Material Diffuse(const glm::vec3& colour) {
@@ -90,11 +95,12 @@ struct Material
 		return result;
 	}
 
-	static Material Fresnel(const glm::vec3& colour, float refractive_index) {
+	static Material Fresnel(const glm::vec3& colour, float refractive_index, glm::vec3 absorption) {
 		Material result;
 		result.type = Type::Fresnel;
 		result.colour = colour;
 		result.fresnel.refractive_index = std::max(refractive_index, 1.f);
+		result.fresnel.absorption = absorption;
 		return result;
 	}
 };
