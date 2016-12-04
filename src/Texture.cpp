@@ -17,7 +17,7 @@ raytracer::Texture::Texture(const char* fileName)
 	if (res == s_texturesMap.end())
 	{
 		texId = static_cast<int>(s_textures.size());
-		s_textures.push_back(std::make_unique<Tmpl8::Surface>(fileName, TEXTURE_WIDTH, TEXTURE_HEIGHT));
+		s_textures.push_back(std::make_unique<Tmpl8::Surface>(fileName, TEXTURE_WIDTH, TEXTURE_HEIGHT, true));
 		s_texturesMap.insert(std::pair<const char*, int>(fileName, texId));
 	}
 	else {

@@ -4,6 +4,7 @@
 #include "scene.cl"
 #include "light.cl"
 #include "stack.cl"
+#include "gamma.cl"
 
 #define MAX_ITERATIONS 4
 
@@ -78,5 +79,6 @@ __kernel void hello(
 		}
 	}
 
+	outColor = accurateLinearToSRGB(outColor);
 	write_imagef(output, (int2)(x, y), (float4)(outColor, 1.0f));
 }
