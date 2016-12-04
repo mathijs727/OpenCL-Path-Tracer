@@ -16,6 +16,7 @@ void raytracer::Scene::add_primitive(const Mesh& primitive, const Material& mate
 		VertexSceneData vertexData;
 		vertexData.vertex = vertex;
 		vertexData.normal = primitive._normals[i];
+		vertexData.texCoord = primitive._textureCoords[i];
 		_vertices.push_back(vertexData);
 		i++;
 	}

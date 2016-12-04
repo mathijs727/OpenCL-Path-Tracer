@@ -30,9 +30,15 @@ void raytracer::Mesh::addData(aiMesh* in_mesh, const glm::mat4& transform_matrix
 	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
 		glm::vec4 vertex = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
 		glm::vec4 normal = remove_translation(transform_matrix) * glm::vec4(ai2glm(in_mesh->mNormals[v]), 1);
+		glm::vec2 texCoords;
+		if (in_mesh->HasTextureCoords(0)) {
+			texCoords.x = in_mesh->mTextureCoords[0][v].x;
+			texCoords.y = in_mesh->mTextureCoords[0][v].y;
+		}
 		//std::cout << "importing vertex: " << position.x << ", " << position.y << ", " << position.z << std::endl;
 		_vertices.push_back(vertex);
 		_normals.push_back(normal);
+		_textureCoords.push_back(texCoords);
 	}
 	for (uint f = 0; f < in_mesh->mNumFaces; ++f) {
 		aiFace* in_face = &in_mesh->mFaces[f];
