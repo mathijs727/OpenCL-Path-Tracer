@@ -34,13 +34,13 @@ struct Material
 	Material() { }
 	Material(const Material& m) { memcpy(this, &m, sizeof(Material)); }
 	Material& operator=(const Material& m) { memcpy(this, &m, sizeof(Material)); return *this; }
-	
+
 	union { //16 bytes
 		glm::vec3 colour;
 		cl_float3 __cl_colour;
 	};
-
-	union // 20 bytes
+	
+	union
 	{
 		struct
 		{
@@ -52,17 +52,16 @@ struct Material
 		} glossy;
 		struct
 		{
-			union
-			{ //16 bytes
+			union { //16 bytes
 				glm::vec3 absorption;
 				cl_float3 __cl_absorption;
-			}; 
-			cl_float refractive_index;
+			};
+			cl_float refractive_index;// 4 bytes
+			byte __padding1[12];
 		} fresnel;
 	};
-	// 36 bytes total
 	Type type; // 4 bytes
-	byte __padding[8];// 8 bytes
+	byte __padding2[12];
 
 	static Material Diffuse(const glm::vec3& colour) {
 		Material result;
@@ -80,7 +79,7 @@ struct Material
 		return result;
 	}
 
-	static Material Reflective(const glm::vec3& colour)	{
+	static Material Reflective(const glm::vec3& colour) {
 		Material result;
 		result.type = Type::Reflective;
 		result.colour = colour;
@@ -91,7 +90,7 @@ struct Material
 		Material result;
 		result.type = Type::Glossy;
 		result.colour = colour;
-		result.glossy.specularity = std::min(std::max(specularity, 0.0f),1.0f);
+		result.glossy.specularity = std::min(std::max(specularity, 0.0f), 1.0f);
 		return result;
 	}
 
@@ -102,40 +101,6 @@ struct Material
 		result.fresnel.refractive_index = std::max(refractive_index, 1.f);
 		result.fresnel.absorption = absorption;
 		return result;
-	}
-};
-
-struct SerializedMaterial
-{
-	Material::Type type;
-	glm::vec3 colour;
-
-	union
-	{
-		struct
-		{
-			float specularity;
-		} glossy;
-		struct
-		{
-			float refrective_index;
-		} fresnel;
-	};
-
-	SerializedMaterial() { }
-	SerializedMaterial(const Material& other)
-	{
-		type = other.type;
-		colour = other.colour;
-
-		if (other.type == Material::Type::Fresnel)
-		{
-			fresnel.refrective_index = other.fresnel.refractive_index;
-		}
-		else if (other.type == Material::Type::Glossy)
-		{
-			glossy.specularity = other.glossy.specularity;
-		}
 	}
 };
 }
