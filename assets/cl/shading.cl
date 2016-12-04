@@ -178,7 +178,7 @@ float3 whittedShading(
 
 				StackItem item2;
 				item2.ray = second_refractive_ray;
-				item2.multiplier = multiplier * material->colour * (1.0f - reflection_coeff);
+				item2.multiplier = multiplier * material->colour * (1.0f - reflection_coeff) * beer_factor;
 				StackPush(stack, &item2);
 				return (float3)(0.0f, 0.0f, 0.0f);
 			}
