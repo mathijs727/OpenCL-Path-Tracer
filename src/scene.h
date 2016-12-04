@@ -25,6 +25,8 @@ public:
 	{
 		glm::vec4 vertex;
 		glm::vec4 normal;
+		glm::vec2 texCoord;
+		byte __padding[8];
 	}; 
 	
 	void add_primitive(const Sphere& primitive, const Material& material) {

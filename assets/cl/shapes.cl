@@ -15,6 +15,7 @@ typedef struct
 {
 	float3 vertex;
 	float3 normal;
+	float2 texCoord;
 } VertexData;
 
 typedef struct
@@ -154,7 +155,10 @@ bool intersectRayTriangle(
 
 	if(t > 0.f) { //ray intersection
 		*out_time = t;
-		*out_texcoords = (float2)(0,0);
+		float2 t0 = vertices[0].texCoord;
+		float2 t1 = vertices[1].texCoord;
+		float2 t2 = vertices[2].texCoord;
+		*out_texcoords = t0 + (t1-t0) * u + (t2-t0) * v;
 		float3 n0 = vertices[0].normal;
 		float3 n1 = vertices[1].normal;
 		float3 n2 = vertices[2].normal;
