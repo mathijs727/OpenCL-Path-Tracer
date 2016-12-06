@@ -240,6 +240,13 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 
 	if (_num_lights > 0)
 	{
+		for (auto light : scene.GetLights())
+		{
+			if (light.type == Light::Type::Point)
+			{
+				std::cout << "Light atten radius:" << light.point.sqrAttRadius << std::endl;
+			}
+		}
 		err = _queue.enqueueWriteBuffer(
 			_lights,
 			CL_TRUE,
