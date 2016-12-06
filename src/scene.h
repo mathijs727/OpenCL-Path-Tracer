@@ -54,8 +54,8 @@ public:
 
 	const std::vector<Light>& GetLights() const { return _lights; };
 	const std::vector<VertexSceneData> GetVertices() const { return _vertices; }
-	const std::vector<Material> GetMeshMaterials() const { return _meshes_materials; }
 	const std::vector<TriangleSceneData> GetTriangleIndices() const { return _triangle_indices; }
+	const std::vector<Material> GetMeshMaterials() const { return _meshes_materials; }
 public:
 	struct LightIterableConst {
 		const Scene& scene;
