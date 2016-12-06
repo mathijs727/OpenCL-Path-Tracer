@@ -58,7 +58,7 @@ void Game::Init()
 	}
 	{
 		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(-1, -1, 0));
-		//_scene->add_light(light);
+		_scene->add_light(light);
 	}
 
 	std::cout << "Sizeof sphere: " << sizeof(Sphere) << std::endl;
@@ -66,7 +66,25 @@ void Game::Init()
 	std::cout << "Sizeof light: " << sizeof(Light) << std::endl;
 	std::cout << "Sizeof material: " << sizeof(Material) << std::endl;
 
-	auto meshes = Mesh::LoadFromFile( "assets/obj/CornellBox-Empty-RG.obj", Transform(glm::vec3(0,-0.5f,0), glm::quat()) );
+	std::vector<Mesh> meshes;
+	Mesh::LoadFromFile(
+		meshes,
+		"assets/obj/CornellBox-Empty-RG.obj",
+		Transform(glm::vec3(0.f,-0.5f,0.f), glm::quat())
+	);
+
+	Mesh::LoadFromFile(
+		meshes,
+		"assets/obj/monkey.obj",
+		Transform(glm::vec3(-4.f, 0.f, 7.f), glm::quat())
+	);
+
+	Mesh::LoadFromFile(
+		meshes,
+		"assets/obj/cube.obj",
+		Transform(glm::vec3(6.f, 0.f, 7.f), glm::quat())
+	);
+
 	for (auto& mesh : meshes) {
 		_scene->add_primitive(mesh);// , &Material::Diffuse(glm::vec3(0.4f)));
 	}

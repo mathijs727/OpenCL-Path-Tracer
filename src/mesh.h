@@ -22,10 +22,7 @@ public:
 	std::vector<glm::vec2> _textureCoords;
 	bool isValid() const { return !_faces.empty() && !_vertices.empty(); }
 	static Mesh makeMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix);
-	static std::vector<Mesh> LoadFromFile(const char* file, const Transform& offset = Transform());
+	static void LoadFromFile(std::vector<Mesh>& out_vec, const char* file, const Transform& offset = Transform());
 };
 }
-
-
-
 

@@ -11,24 +11,24 @@
 
 using namespace raytracer;
 
-glm::mat4 remove_translation(const glm::mat4& mat) {
+inline glm::mat4 ai2glm(const aiMatrix4x4& t) {
+	return glm::mat4(t.a1, t.a2, t.a3, t.a4, t.b1, t.b2, t.b3, t.b4, t.c1, t.c2, t.c3, t.c4, t.d1, t.d2, t.d3, t.d4);
+}
+
+inline glm::vec3 ai2glm(const aiVector3D& v) {
+	return glm::vec3(v.x, v.y, v.z);
+}
+
+inline glm::vec3 ai2glm(const aiColor3D& c) {
+	return glm::vec3(c.r, c.g, c.b);
+}
+
+inline glm::mat4 remove_translation(const glm::mat4& mat) {
 	glm::mat4 result = mat;
 	result[3][0] = 0;
 	result[3][1] = 0;
 	result[3][2] = 0;
 	return result;
-}
-
-glm::mat4 ai2glm(const aiMatrix4x4& t) {
-	return glm::mat4(t.a1, t.a2, t.a3, t.a4, t.b1, t.b2, t.b3, t.b4, t.c1, t.c2, t.c3, t.c4, t.d1, t.d2, t.d3, t.d4 );
-}
-
-glm::vec3 ai2glm(const aiVector3D& v) {
-	return glm::vec3(v.x,v.y,v.z);
-}
-
-glm::vec3 ai2glm(const aiColor3D& c) {
-	return glm::vec3(c.r, c.g, c.b);
 }
 
 Mesh raytracer::Mesh::makeMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix) {
@@ -85,9 +85,7 @@ Mesh raytracer::Mesh::makeMesh(const aiScene* scene, uint mesh_index, const glm:
 	return result;
 }
 
-
-
-std::vector<Mesh> raytracer::Mesh::LoadFromFile(const char* file, const Transform& offset) {
+void raytracer::Mesh::LoadFromFile(std::vector<Mesh>& out_vec, const char* file, const Transform& offset) {
 	struct StackElement
 	{
 		aiNode* node;
@@ -97,8 +95,7 @@ std::vector<Mesh> raytracer::Mesh::LoadFromFile(const char* file, const Transfor
 
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
-	std::vector<Mesh> result;
-	
+
 	if (scene != nullptr && scene->mFlags != AI_SCENE_FLAGS_INCOMPLETE && scene->mRootNode != nullptr) {
 		std::stack<StackElement> stack;
 		stack.push(StackElement(scene->mRootNode, offset.matrix()));
@@ -111,13 +108,11 @@ std::vector<Mesh> raytracer::Mesh::LoadFromFile(const char* file, const Transfor
 				Mesh mesh = makeMesh(scene, current.node->mMeshes[i], cur_transform);
 				if (!mesh.isValid()) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
 				else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
-				result.push_back(mesh);
+				out_vec.push_back(mesh);
 			}
-			for (uint i = 0; i < current.node->mNumChildren; ++i) { 
+			for (uint i = 0; i < current.node->mNumChildren; ++i) {
 				stack.push(StackElement(current.node->mChildren[i], cur_transform));
 			}
 		}
 	}
-	
-	return result;
 }
