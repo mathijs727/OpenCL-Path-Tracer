@@ -68,7 +68,7 @@ void Game::Init()
 
 	auto meshes = Mesh::LoadFromFile( "assets/obj/CornellBox-Empty-RG.obj", Transform(glm::vec3(-4,0,4), glm::quat()) );
 	for (auto& mesh : meshes) {
-		//_scene->add_primitive(mesh);
+		_scene->add_primitive(mesh, &Material::Diffuse(glm::vec3(0.4f)));
 	}
 
 	/*Timer timer;

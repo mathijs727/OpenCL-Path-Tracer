@@ -101,7 +101,7 @@ std::vector<Mesh> raytracer::Mesh::LoadFromFile(const char* file, const Transfor
 	
 	if (scene != nullptr && scene->mFlags != AI_SCENE_FLAGS_INCOMPLETE && scene->mRootNode != nullptr) {
 		std::stack<StackElement> stack;
-		stack.push(StackElement(scene->mRootNode));
+		stack.push(StackElement(scene->mRootNode, offset.matrix()));
 		while (!stack.empty()) {
 			std::cout << "loading .obj node..." << std::endl;
 			auto current = stack.top();
