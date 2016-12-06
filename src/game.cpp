@@ -66,9 +66,9 @@ void Game::Init()
 	std::cout << "Sizeof light: " << sizeof(Light) << std::endl;
 	std::cout << "Sizeof material: " << sizeof(Material) << std::endl;
 
-	auto meshes = Mesh::LoadFromFile( "assets/obj/monkey.obj", Transform(glm::vec3(-4,0,4), glm::quat()) );
+	auto meshes = Mesh::LoadFromFile( "assets/obj/CornellBox-Empty-RG.obj", Transform(glm::vec3(-4,0,4), glm::quat()) );
 	for (auto& mesh : meshes) {
-		_scene->add_primitive(mesh, &Material::Diffuse( glm::vec3(0.4f, 0.4f, 0.4f) ));
+		_scene->add_primitive(mesh);
 	}
 
 	/*Timer timer;

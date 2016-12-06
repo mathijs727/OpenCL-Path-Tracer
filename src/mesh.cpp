@@ -96,24 +96,26 @@ std::vector<Mesh> raytracer::Mesh::LoadFromFile(const char* file, const Transfor
 	};
 
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(file,  aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices | aiProcess_ImproveCacheLocality);
+	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
 	std::vector<Mesh> result;
 	
 	if (scene != nullptr && scene->mFlags != AI_SCENE_FLAGS_INCOMPLETE && scene->mRootNode != nullptr) {
 		std::stack<StackElement> stack;
-		stack.push(StackElement(scene->mRootNode, offset.matrix()));
+		stack.push(StackElement(scene->mRootNode));
 		while (!stack.empty()) {
 			std::cout << "loading .obj node..." << std::endl;
 			auto current = stack.top();
 			stack.pop();
 			glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
 			for (uint i = 0; i < current.node->mNumMeshes; ++i) {
-				Mesh mesh = makeMesh(scene, i, cur_transform);
+				Mesh mesh = makeMesh(scene, current.node->mMeshes[i], cur_transform);
 				if (!mesh.isValid()) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
 				else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
 				result.push_back(mesh);
 			}
-			for (uint i = 0; i < current.node->mNumChildren; ++i) stack.push(StackElement(current.node->mChildren[i], cur_transform));
+			for (uint i = 0; i < current.node->mNumChildren; ++i) { 
+				stack.push(StackElement(current.node->mChildren[i], cur_transform));
+			}
 		}
 	}
 	
