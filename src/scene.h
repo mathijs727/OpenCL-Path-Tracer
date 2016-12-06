@@ -39,7 +39,7 @@ public:
 		_planes_materials.push_back(material);
 	}
 
-	void add_primitive(const Mesh& primitive, const Material& material);
+	void add_primitive(const Mesh& primitive, const Material* material = nullptr);
 	
 	void add_light(Light& light)
 	{

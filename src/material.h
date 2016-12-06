@@ -71,10 +71,10 @@ struct Material
 		return result;
 	}
 
-	static Material Diffuse(const raytracer::Texture& diffuse) {
+	static Material Diffuse(const raytracer::Texture& diffuse, const glm::vec3& colour = glm::vec3(0)) {
 		Material result;
 		result.type = Type::Diffuse;
-		result.colour = glm::vec3(0);
+		result.colour = colour;
 		result.diffuse.tex_id = diffuse.getId();
 		return result;
 	}

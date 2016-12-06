@@ -44,7 +44,7 @@ void Game::Init()
 		Plane plane(glm::vec3(0, 1, 0), glm::vec3(0, -2.f, 0));
 		Material material = Material::Diffuse(glm::vec3(0.8f, 0.2f, 0.4f));
 		//Material material = Material::Diffuse(
-		//	new Surface("checkerboard.png"));
+		//	Texture("checkerboard.png"));
 		_scene->add_primitive(plane, material);
 	}
 
@@ -66,10 +66,10 @@ void Game::Init()
 	std::cout << "Sizeof light: " << sizeof(Light) << std::endl;
 	std::cout << "Sizeof material: " << sizeof(Material) << std::endl;
 
-	_scene->add_primitive(
-		Mesh::LoadFromFile( "assets/obj/monkey.obj", Transform(glm::vec3(-4,0,4), glm::quat()) ),
-		Material::Diffuse( glm::vec3(0.4f, 0.4f, 0.4f) )
-	);
+	auto meshes = Mesh::LoadFromFile( "assets/obj/monkey.obj", Transform(glm::vec3(-4,0,4), glm::quat()) );
+	for (auto& mesh : meshes) {
+		_scene->add_primitive(mesh, &Material::Diffuse( glm::vec3(0.4f, 0.4f, 0.4f) ));
+	}
 
 	/*Timer timer;
 	raytrace(*_camera, *_scene, *_screen);

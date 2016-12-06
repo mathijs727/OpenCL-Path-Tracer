@@ -9,7 +9,7 @@ raytracer::Scene::Scene() {
 	_sphere_materials.reserve(256);
 }
 
-void raytracer::Scene::add_primitive(const Mesh& primitive, const Material& material) {
+void raytracer::Scene::add_primitive(const Mesh& primitive, const Material* material) {
 	u32 starting_vertex_index = _vertices.size();
 	int i = 0;
 	for (auto& vertex : primitive._vertices) {
@@ -21,7 +21,8 @@ void raytracer::Scene::add_primitive(const Mesh& primitive, const Material& mate
 		i++;
 	}
 	u32 material_index = _meshes_materials.size();
-	_meshes_materials.push_back(material);
+	if (!material) material = &primitive._material;
+	_meshes_materials.push_back(*material);
 	for (auto& face : primitive._faces) {
 		TriangleSceneData triangleData;
 		triangleData.indices = face + glm::u32vec3(starting_vertex_index);
