@@ -22,10 +22,21 @@ void Game::Init()
 	camera_transform.location = glm::vec3(0, 0, 0);
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1);
 	{
-		Sphere sphere(glm::vec3(0.f, 1.f, 5.f), 1.f);
+		Sphere sphere(glm::vec3(0.f, 1.f, 7.f), 1.f);
 		//Material material = Material::Diffuse(glm::vec3(0.5f, 0.3f, 0.2f));
 		Material material = Material::Diffuse(
 			Texture("assets/images/glorious.png"));
+		_scene->add_primitive(sphere, material);
+	}
+
+	{
+		Sphere sphere(glm::vec3(0, 0.5f, 4.f), 0.8f);
+		Material material = Material::Glossy(glm::vec3(0.5f, 0.6f, 0.7f), 0.8f);
+		//Material material = Material::Diffuse(glm::vec3(0.8f, 0.2f, 0.4f));
+		//Material material = Material::Reflective(glm::vec3(0.5f, 0.5f, 0.5f));
+		//Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.5f);
+		//Material material = Material::Diffuse(
+		//	Texture("assets/images/glorious.png"));
 		_scene->add_primitive(sphere, material);
 	}
 
@@ -39,6 +50,7 @@ void Game::Init()
 		//	Texture("assets/images/glorious.png"));
 		_scene->add_primitive(sphere, material);
 	}
+
 
 	{
 		Plane plane(glm::vec3(0, 1, 0), glm::vec3(0, -2.f, 0));
