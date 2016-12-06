@@ -53,7 +53,7 @@ void Game::Init()
 		_scene->add_light(light);
 	}
 	{
-		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(-3, 3, -6));
+		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(0,0.6f,0));
 		_scene->add_light(light);
 	}
 	{
@@ -66,9 +66,9 @@ void Game::Init()
 	std::cout << "Sizeof light: " << sizeof(Light) << std::endl;
 	std::cout << "Sizeof material: " << sizeof(Material) << std::endl;
 
-	auto meshes = Mesh::LoadFromFile( "assets/obj/CornellBox-Empty-RG.obj", Transform(glm::vec3(-4,0,4), glm::quat()) );
+	auto meshes = Mesh::LoadFromFile( "assets/obj/CornellBox-Empty-RG.obj", Transform(glm::vec3(0,-0.5f,0), glm::quat()) );
 	for (auto& mesh : meshes) {
-		_scene->add_primitive(mesh, &Material::Diffuse(glm::vec3(0.4f)));
+		_scene->add_primitive(mesh);// , &Material::Diffuse(glm::vec3(0.4f)));
 	}
 
 	/*Timer timer;
