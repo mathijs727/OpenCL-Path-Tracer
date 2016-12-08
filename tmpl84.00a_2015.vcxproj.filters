@@ -17,7 +17,6 @@
       <Filter>template code</Filter>
     </ClCompile>
     <ClCompile Include="src\camera.cpp" />
-    <ClCompile Include="src\shapes.cpp" />
     <ClCompile Include="src\scene.cpp" />
     <ClCompile Include="src\raytracer.cpp" />
     <ClCompile Include="src\light.cpp" />

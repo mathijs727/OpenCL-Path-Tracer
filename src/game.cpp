@@ -20,7 +20,7 @@ void Game::Init()
 	Transform camera_transform;
 	camera_transform.orientation = glm::quat(_camera_euler); // identity
 	camera_transform.location = glm::vec3(0, 0, 0);
-	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1);
+	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.f);
 	{
 		Sphere sphere(glm::vec3(0.f, 1.f, 7.f), 1.f);
 		//Material material = Material::Diffuse(glm::vec3(0.5f, 0.3f, 0.2f));
@@ -73,33 +73,25 @@ void Game::Init()
 		_scene->add_light(light);
 	}
 
-	std::cout << "Sizeof sphere: " << sizeof(Sphere) << std::endl;
-	std::cout << "Sizeof plane: " << sizeof(Plane) << std::endl;
-	std::cout << "Sizeof light: " << sizeof(Light) << std::endl;
-	std::cout << "Sizeof material: " << sizeof(Material) << std::endl;
+	std::cout << "Size of sphere: " << sizeof(Sphere) << std::endl;
+	std::cout << "Size of plane: " << sizeof(Plane) << std::endl;
+	std::cout << "Size of light: " << sizeof(Light) << std::endl;
+	std::cout << "Size of material: " << sizeof(Material) << std::endl;
 
-	std::vector<Mesh> meshes;
+	std::vector<Mesh> cornell_box;
 	Mesh::LoadFromFile(
-		meshes,
-		"assets/obj/CornellBox-Empty-RG.obj",
-		Transform(glm::vec3(0.f,-0.5f,0.f), glm::quat())
+		cornell_box,
+		"assets/obj/CornellBox-Empty-RG.obj"
 	);
 
-	Mesh::LoadFromFile(
-		meshes,
-		"assets/obj/monkey.obj",
-		Transform(glm::vec3(-4.f, 0.f, 7.f), glm::quat())
-	);
+	std::vector<Mesh> monkey;
+	Mesh::LoadFromFile(monkey, "assets/obj/monkey.obj");
 
-	Mesh::LoadFromFile(
-		meshes,
-		"assets/obj/cube.obj",
-		Transform(glm::vec3(6.f, 0.f, 7.f), glm::quat())
-	);
+	std::vector<Mesh> cube;
+	Mesh::LoadFromFile(cube, "assets/obj/cube.obj");
 
-	for (auto& mesh : meshes) {
-		_scene->add_primitive(mesh);// , &Material::Diffuse(glm::vec3(0.4f)));
-	}
+	_scene->add_node(cornell_box, Transform(glm::vec3(0.f,-0.5f,0.f)));
+	_scene->add_node(cube, Transform(glm::vec3(6.f, 0.f, 7.f)));
 
 	/*Timer timer;
 	raytrace(*_camera, *_scene, *_screen);
