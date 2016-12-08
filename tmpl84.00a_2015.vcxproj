@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\bvh.cpp" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\game.cpp" />
     <ClCompile Include="src\gloutput.cpp" />
@@ -32,6 +33,7 @@
     <ClCompile Include="src\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\bvh.h" />
     <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\game.h" />
     <ClInclude Include="src\gloutput.h" />

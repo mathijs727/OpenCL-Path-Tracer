@@ -31,6 +31,8 @@ struct SceneNode
 class Scene
 {
 public:
+	friend class Bvh;
+
 	Scene();
 
 	struct TriangleSceneData
