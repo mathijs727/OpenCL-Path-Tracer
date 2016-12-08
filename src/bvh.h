@@ -41,8 +41,14 @@ struct ThinBvhNode
 
 class Bvh
 {
-	void build(Scene& scene);
-
+public:
+	Bvh(Scene& scene) : _scene(scene) {}
+	void build();
+private:
+	void partition(ThinBvhNode& node, ThinBvhNode* buffer, u32& nodeCount);
+	void subdivide(ThinBvhNode& node, ThinBvhNode* buffer, u32& nodeCount);
+	AABB create_bounds(u32 first_index, u32 count);
+	Scene& _scene;
 	std::vector<FatBvhNode> _fatBuffer;
 	std::vector<ThinBvhNode> _thinBuffer;
 };
