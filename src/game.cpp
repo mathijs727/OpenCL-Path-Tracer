@@ -91,7 +91,7 @@ void Game::Init()
 	Mesh::LoadFromFile(cube, "assets/obj/cube.obj");
 
 	_scene->add_node(cornell_box, Transform(glm::vec3(0.f,-0.5f,0.f)));
-	_scene->add_node(cube, Transform(glm::vec3(6.f, 0.f, 7.f)));
+	//_scene->add_node(cube, Transform(glm::vec3(6.f, 0.f, 7.f)));
 
 	/*Timer timer;
 	raytrace(*_camera, *_scene, *_screen);

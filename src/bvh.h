@@ -35,22 +35,34 @@ struct ThinBvhNode
 	union
 	{
 		u32 leftChildIndex;
-		u32 triangleFirstIndex;
+		u32 firstTriangleIndex;
 	};
-	u32 count;
+	u32 triangleCount;
+
+	ThinBvhNode()
+	{
+		leftChildIndex = 0;
+		triangleCount = 0;
+	}
 };
 
 class Bvh
 {
 public:
-	Bvh(Scene& scene) : _scene(scene) {}
+	Bvh(Scene& scene) : _scene(scene), _poolPtr(0) {}
 	void build();
 private:
-	void partition(ThinBvhNode& node, ThinBvhNode* bvhNodeBuffer, u32& nodeCount);
-	void subdivide(ThinBvhNode& node, ThinBvhNode* buffer, u32& nodeCount);
+	u32 allocate();
+
+	void subdivide(ThinBvhNode& node);
+	void partition(ThinBvhNode& node, u32 leftIndex);
 	AABB create_bounds(u32 first_index, u32 count);
+private:
 	Scene& _scene;
-	std::vector<FatBvhNode> _fatBuffer;
+
+	std::vector<FatBvhNode> _fatBuffer;// TODO
+
+	u32 _poolPtr;
 	std::vector<ThinBvhNode> _thinBuffer;
 };
 }

@@ -1,6 +1,7 @@
 #pragma once
 //#include "template/template.h"// Includes template/cl.hpp
 #include "template/includes.h"
+#include "bvh.h"
 #include <memory>
 
 namespace Tmpl8 {
@@ -19,7 +20,7 @@ public:
 	RayTracer(int width, int height);
 	~RayTracer();
 
-	void SetScene(const Scene& scene);
+	void SetScene(Scene& scene);
 	void SetTarget(GLuint glTexture);
 	void RayTrace(const Camera& camera);
 private:
@@ -28,6 +29,8 @@ private:
 	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
 private:
 	cl_uint _scr_width, _scr_height;
+
+	std::unique_ptr<Bvh> _bvh;
 
 	cl::Context _context;
 	std::vector<cl::Device> _devices;

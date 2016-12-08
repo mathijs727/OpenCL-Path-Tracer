@@ -150,7 +150,7 @@ void raytracer::RayTracer::InitBuffers()
 	checkClErr(err, "cl::Image2DArray");
 }
 
-void raytracer::RayTracer::SetScene(const Scene& scene)
+void raytracer::RayTracer::SetScene(Scene& scene)
 {
 	_num_spheres = scene.GetSpheres().size();
 	_num_planes = scene.GetPlanes().size();
@@ -277,6 +277,14 @@ void raytracer::RayTracer::SetScene(const Scene& scene)
 			scene.GetTriangleIndices().data());
 		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 	}
+
+
+
+	// Build BVH and move it to OpenCL
+	std::cout << "Building BVH" << std::endl;
+	_bvh = std::make_unique<Bvh>(scene);
+	_bvh->build();
+	std::cout << "Done building BVH" << std::endl;
 }
 
 void raytracer::RayTracer::SetTarget(GLuint glTexture)
