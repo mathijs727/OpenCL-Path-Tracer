@@ -5,6 +5,7 @@
 #include "material.h"
 #include "light.h"
 #include "mesh.h"
+#include "bvh.h"
 
 #define MAX_TRACE_DEPTH 6
 
@@ -14,8 +15,9 @@ struct MeshSceneData
 {
 	u32 start_triangle_index;
 	u32 triangle_count;
+	i32 thinBvhIndex;
 	bool is_empty() { return triangle_count == 0; }
-	MeshSceneData(u32 startIndex = 0, u32 count = 0) : start_triangle_index(startIndex), triangle_count(count) {}
+	MeshSceneData(u32 startIndex = 0, u32 count = 0) : start_triangle_index(startIndex), triangle_count(count), thinBvhIndex(-1) {}
 };
 
 struct SceneNode
