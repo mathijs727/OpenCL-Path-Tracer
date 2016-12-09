@@ -56,6 +56,9 @@ private:
 	cl_int _num_lights;
 	cl::Buffer _lights;
 
+	cl_int _num_thin_bvh_nodes;
+	cl::Buffer _thin_bvh;
+
 	cl::Image2DArray _material_textures;
 	cl::ImageGL _output_image;
 };

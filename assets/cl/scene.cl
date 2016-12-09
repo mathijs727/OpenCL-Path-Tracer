@@ -5,6 +5,11 @@
 #include "ray.cl"
 #include "light.cl"
 #include "stack.cl"
+#include "bvh.cl"
+
+#define USE_BVH_PRIMARY
+// Only test with primary rays for now
+//#define USE_BVH_LIGHT
 
 typedef struct
 {
@@ -17,6 +22,8 @@ typedef struct
 	const __global Material* planeMaterials;
 	const __global Material* meshMaterials;
 	const __global Light* lights;
+
+	const __global ThinBvhNodeSerialized* thinBvh;
 
 	float refractiveIndex;
 } Scene;
@@ -41,6 +48,7 @@ void loadScene(
 	const __global Material* materials,
 	int numLights,
 	const __global Light* lights,
+	const __global ThinBvhNodeSerialized* thinBvh,
 	Scene* scene) {
 	scene->refractiveIndex =  1.000277f;
 	
@@ -58,6 +66,8 @@ void loadScene(
 	scene->triangles = triangles;
 	scene->vertices = vertices;
 	scene->lights = lights;
+
+	scene->thinBvh = thinBvh;
 }
 
 bool checkRay(const Scene* scene, const Ray* ray)
@@ -87,6 +97,45 @@ bool checkRay(const Scene* scene, const Ray* ray)
 		}
 	}
 
+#ifdef USE_BVH_LIGHT
+	// check mesh intersection using BVH traversal
+	ThinBvhNode bvhStack[20];
+	loadThinBvhNode(&scene->thinBvh[0], &bvhStack[0]);
+	int bvhStackPtr = 1;
+
+	while (bvhStackPtr > 0)
+	{
+		ThinBvhNode node = bvhStack[--bvhStackPtr];
+
+		if (!intersectRayThinBvh(ray, &node))
+			continue;
+
+		if (node.triangleCount != 0)// isLeaf()
+		{
+			for (int i = 0; i < node.triangleCount; i++)
+			{
+				float t;
+				float3 n;
+				float2 tex_coords_tmp;
+
+				VertexData v[3];
+				TriangleData triangle = scene->triangles[node.firstTriangleIndex + i];
+				getVertices(v, triangle.indices, scene);
+				if (intersectRayTriangle(ray, v, &n, &tex_coords_tmp, &t))
+				{
+					return true;
+				}
+			}
+		} else {
+			loadThinBvhNode(
+				&scene->thinBvh[node.leftChildIndex + 0],
+				&bvhStack[bvhStackPtr++]);
+			loadThinBvhNode(
+				&scene->thinBvh[node.leftChildIndex + 1],
+				&bvhStack[bvhStackPtr++]);
+		}
+	}
+#else
 	// check triangles
 	for (int i = 0; i < scene->numTriangles; i++)
 	{
@@ -99,6 +148,7 @@ bool checkRay(const Scene* scene, const Ray* ray)
 			return true;
 		}
 	}
+#endif
 
 	return false;
 }
@@ -127,6 +177,47 @@ bool checkLine(const Scene* scene, const Line* line)
 		}
 	}
 
+#ifdef USE_BVH_LIGHT
+	// check mesh intersection using BVH traversal
+	ThinBvhNode bvhStack[20];
+	loadThinBvhNode(&scene->thinBvh[0], &bvhStack[0]);
+	int bvhStackPtr = 1;
+
+	Ray ray;
+	ray.origin = line->origin;
+	ray.direction = normalize(line->dest - line->origin);
+
+	while (bvhStackPtr > 0)
+	{
+		ThinBvhNode node = bvhStack[--bvhStackPtr];
+
+		// TODO: intersect with line instead of ray?
+		if (!intersectRayThinBvh(&ray, &node))
+			continue;
+
+		if (node.triangleCount != 0)// isLeaf()
+		{
+			for (int i = 0; i < node.triangleCount; i++)
+			{
+				float t;
+				VertexData vertices[3];
+				TriangleData triangle = scene->triangles[node.firstTriangleIndex + i];
+				getVertices(vertices, triangle.indices, scene);
+				if (intersectLineTriangle(line, vertices, &t))
+				{
+					return true;
+				}
+			}
+		} else {
+			loadThinBvhNode(
+				&scene->thinBvh[node.leftChildIndex + 0],
+				&bvhStack[bvhStackPtr++]);
+			loadThinBvhNode(
+				&scene->thinBvh[node.leftChildIndex + 1],
+				&bvhStack[bvhStackPtr++]);
+		}
+	}
+#else
 	// check triangles
 	for (int i = 0; i < scene->numTriangles; i++)
 	{
@@ -139,6 +230,7 @@ bool checkLine(const Scene* scene, const Line* line)
 			return true;
 		}
 	}
+#endif
 
 	return false;
 }
@@ -191,7 +283,57 @@ float3 traceRay(
 		}
 	}
 
-	// check mesh intersection
+	int boxIntersectionTests = 0;
+	int triangleIntersectionTests = 0;
+	
+#ifdef USE_BVH_PRIMARY
+	// check mesh intersection using BVH traversal
+	ThinBvhNode bvhStack[20];
+	loadThinBvhNode(&scene->thinBvh[0], &bvhStack[0]);
+	int bvhStackPtr = 1;
+
+
+	while (bvhStackPtr > 0)
+	{
+		boxIntersectionTests++;
+		ThinBvhNode node = bvhStack[--bvhStackPtr];
+
+		if (!intersectRayThinBvh(ray, &node))
+			continue;
+
+		if (node.triangleCount != 0)// isLeaf()
+		{
+			for (int i = 0; i < node.triangleCount; i++)
+			{
+				triangleIntersectionTests++;
+
+				float t;
+				float3 n;
+				float2 tex_coords_tmp;
+
+				VertexData v[3];
+				TriangleData triangle = scene->triangles[node.firstTriangleIndex + i];
+				getVertices(v, triangle.indices, scene);
+				if (intersectRayTriangle(ray, v, &n, &tex_coords_tmp, &t) && t < minT)
+				{
+					minT = t;
+					i_current_hit = node.firstTriangleIndex + i;
+					type = MeshType;
+					normal = n;
+					tex_coords = tex_coords_tmp;
+				}
+			}
+		} else {
+			loadThinBvhNode(
+				&scene->thinBvh[node.leftChildIndex + 0],
+				&bvhStack[bvhStackPtr++]);
+			loadThinBvhNode(
+				&scene->thinBvh[node.leftChildIndex + 1],
+				&bvhStack[bvhStackPtr++]);
+		}
+	}
+#else
+	// Old fashioned brute force
 	for (int i = 0; i < scene->numTriangles; ++i) {
 		float t;
 		float3 n;
@@ -212,6 +354,7 @@ float3 traceRay(
 			tex_coords = tex_coords_tmp;
 		}
 	}
+#endif
 
 	if (i_current_hit >= 0)
 	{
@@ -227,7 +370,7 @@ float3 traceRay(
 			material = scene->meshMaterials[scene->triangles[i_current_hit].mat_index];
 		}
 		//return (float3)(1.0f, 1.0f, 1.0f);
-		return whittedShading(
+		float3 outCol = whittedShading(
 			scene,
 			ray->direction,
 			intersection,
@@ -239,6 +382,10 @@ float3 traceRay(
 			textures,
 			multiplier,
 			stack);
+
+		int tests = boxIntersectionTests;// + triangleIntersectionTests;
+		outCol.y = tests / 400.0f;
+		return outCol;
 	}
 	return (float3)(0.0f, 0.0f, 0.0f);
 }

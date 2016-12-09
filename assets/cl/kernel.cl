@@ -5,6 +5,7 @@
 #include "light.cl"
 #include "stack.cl"
 #include "gamma.cl"
+#include "bvh.cl"
 
 #define MAX_ITERATIONS 4
 
@@ -30,7 +31,8 @@ __kernel void hello(
 	__global TriangleData* triangles,
 	__global Material* materials,
 	__read_only image2d_array_t textures,
-	__global Light* lights) {
+	__global Light* lights,
+	__global ThinBvhNodeSerialized* thinBvh) {
 	//__read_only image2d_array_t textures) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
@@ -50,6 +52,7 @@ __kernel void hello(
 			materials,
 			inputData->numLights,
 			lights,
+			thinBvh,
 			&scene);
 	}
 	//barrier(CLK_LOCAL_MEM_FENCE);

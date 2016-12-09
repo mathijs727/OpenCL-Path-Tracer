@@ -18,15 +18,16 @@ void Game::Init()
 {
 	_scene = std::make_unique<Scene>();
 	Transform camera_transform;
+	_camera_euler.y = -1.5f;
 	camera_transform.orientation = glm::quat(_camera_euler); // identity
-	camera_transform.location = glm::vec3(0, 0, 0);
+	camera_transform.location = glm::vec3(5, 1, 0);
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.f);
 	{
 		Sphere sphere(glm::vec3(0.f, 1.f, 7.f), 1.f);
 		//Material material = Material::Diffuse(glm::vec3(0.5f, 0.3f, 0.2f));
 		Material material = Material::Diffuse(
 			Texture("assets/images/glorious.png"));
-		_scene->add_primitive(sphere, material);
+		//_scene->add_primitive(sphere, material);
 	}
 
 	{
@@ -37,7 +38,7 @@ void Game::Init()
 		//Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.5f);
 		//Material material = Material::Diffuse(
 		//	Texture("assets/images/glorious.png"));
-		_scene->add_primitive(sphere, material);
+		//_scene->add_primitive(sphere, material);
 	}
 
 	{
@@ -48,7 +49,7 @@ void Game::Init()
 		//Material material = Material::Fresnel(glm::vec3(0.5f, 0.6f, 0.7f), 1.5f);
 		//Material material = Material::Diffuse(
 		//	Texture("assets/images/glorious.png"));
-		_scene->add_primitive(sphere, material);
+		//_scene->add_primitive(sphere, material);
 	}
 
 
@@ -73,11 +74,6 @@ void Game::Init()
 		_scene->add_light(light);
 	}
 
-	std::cout << "Size of sphere: " << sizeof(Sphere) << std::endl;
-	std::cout << "Size of plane: " << sizeof(Plane) << std::endl;
-	std::cout << "Size of light: " << sizeof(Light) << std::endl;
-	std::cout << "Size of material: " << sizeof(Material) << std::endl;
-
 	std::vector<Mesh> cornell_box;
 	Mesh::LoadFromFile(
 		cornell_box,
@@ -90,8 +86,9 @@ void Game::Init()
 	std::vector<Mesh> cube;
 	Mesh::LoadFromFile(cube, "assets/obj/cube.obj");
 
-	_scene->add_node(cornell_box, Transform(glm::vec3(0.f,-0.5f,0.f)));
+	//_scene->add_node(cornell_box, Transform(glm::vec3(0.f,-0.5f,0.f)));
 	//_scene->add_node(cube, Transform(glm::vec3(6.f, 0.f, 7.f)));
+	_scene->add_node(monkey);
 
 	/*Timer timer;
 	raytrace(*_camera, *_scene, *_screen);

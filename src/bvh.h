@@ -51,6 +51,8 @@ class Bvh
 public:
 	Bvh(Scene& scene) : _scene(scene), _poolPtr(0) {}
 	void build();
+
+	const std::vector<ThinBvhNode>& GetThinNodes() { return _thinBuffer; };
 private:
 	u32 allocate();
 

@@ -16,7 +16,7 @@ void raytracer::Bvh::build() {
 	while (!node_stack.empty()) {
 		SceneNode* current = node_stack.top(); node_stack.pop();
 		// Visit children
-		for (int i = 0; i < current->children.size(); i++)
+		for (uint i = 0; i < current->children.size(); i++)
 		{
 			node_stack.push(current->children[i].get());
 		}
@@ -147,9 +147,6 @@ void raytracer::Bvh::partition(ThinBvhNode& node, u32 leftIndex) {
 }
 
 AABB raytracer::Bvh::create_bounds(u32 first_index, u32 count) {
-	if (count == 0)
-		_asm nop;
-
 	u32 lastIndex = first_index + count;
 	glm::vec3 max(std::numeric_limits<float>::min());
 	glm::vec3 min(std::numeric_limits<float>::max());

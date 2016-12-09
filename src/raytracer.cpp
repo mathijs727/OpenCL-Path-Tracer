@@ -131,6 +131,12 @@ void raytracer::RayTracer::InitBuffers()
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
+	_thin_bvh = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1, _num_thin_bvh_nodes) * sizeof(ThinBvhNode),
+		NULL,
+		&err);
+
 	_kernel_data = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		sizeof(KernelData),
@@ -152,6 +158,12 @@ void raytracer::RayTracer::InitBuffers()
 
 void raytracer::RayTracer::SetScene(Scene& scene)
 {
+	// Build BVH and move it to OpenCL
+	std::cout << "Building BVH" << std::endl;
+	_bvh = std::make_unique<Bvh>(scene);
+	_bvh->build();
+	std::cout << "Done building BVH" << std::endl;
+
 	_num_spheres = scene.GetSpheres().size();
 	_num_planes = scene.GetPlanes().size();
 	_num_lights = scene.GetLights().size();
@@ -159,6 +171,7 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 	_num_triangles = scene.GetTriangleIndices().size();
 	_num_mesh_materials = scene.GetMeshMaterials().size();
 	_num_textures = Texture::getNumUniqueSurfaces();
+	_num_thin_bvh_nodes = _bvh->GetThinNodes().size();
 
 	InitBuffers();
 
@@ -167,14 +180,14 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 	auto& meshMaterials = scene.GetMeshMaterials();
 	std::vector<Material> materials;
 	materials.resize(sphereMaterials.size() + planeMaterials.size() + meshMaterials.size());
-	
+
 	Material* buffer = materials.data();
 	memcpy(buffer, sphereMaterials.data(), sphereMaterials.size() * sizeof(Material));
 	buffer += sphereMaterials.size();
 	memcpy(buffer, planeMaterials.data(), planeMaterials.size() * sizeof(Material));
 	buffer += planeMaterials.size();
 	memcpy(buffer, meshMaterials.data(), meshMaterials.size() * sizeof(Material));
-	
+
 	std::cout << "sphere materials: " << sphereMaterials.size() << std::endl;
 	std::cout << "plane materials: " << planeMaterials.size() << std::endl;
 	std::cout << "mesh materials: " << meshMaterials.size() << std::endl;
@@ -278,13 +291,16 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 	}
 
-
-
-	// Build BVH and move it to OpenCL
-	std::cout << "Building BVH" << std::endl;
-	_bvh = std::make_unique<Bvh>(scene);
-	_bvh->build();
-	std::cout << "Done building BVH" << std::endl;
+	if (_num_thin_bvh_nodes > 0)
+	{
+		err = _queue.enqueueWriteBuffer(
+			_thin_bvh,
+			CL_TRUE,
+			0,
+			_num_thin_bvh_nodes * sizeof(ThinBvhNode),
+			_bvh->GetThinNodes().data());
+		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	}
 }
 
 void raytracer::RayTracer::SetTarget(GLuint glTexture)
@@ -346,6 +362,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	_helloWorldKernel.setArg(6, _materials);
 	_helloWorldKernel.setArg(7, _material_textures);
 	_helloWorldKernel.setArg(8, _lights);
+	_helloWorldKernel.setArg(9, _thin_bvh);
 	//_helloWorldKernel.setArg(8, _material_textures);
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,
