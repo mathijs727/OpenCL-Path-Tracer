@@ -97,7 +97,7 @@ bool checkRay(const Scene* scene, const Ray* ray)
 
 #ifdef USE_BVH_LIGHT
 	// check mesh intersection using BVH traversal
-	ThinBvhNode bvhStack[20];
+	ThinBvhNode bvhStack[50];
 	loadThinBvhNode(&scene->thinBvh[0], &bvhStack[0]);
 	int bvhStackPtr = 1;
 
@@ -349,6 +349,7 @@ float3 traceRay(
 	}
 #endif
 
+	float3 outCol = (float3)(0.0f, 0.0f, 0.0f);
 	if (i_current_hit >= 0)
 	{
 		// Calculate the normal of the hit surface and retrieve the material
@@ -363,7 +364,7 @@ float3 traceRay(
 			material = scene->meshMaterials[scene->triangles[i_current_hit].mat_index];
 		}
 		//return (float3)(1.0f, 1.0f, 1.0f);
-		float3 outCol = whittedShading(
+		outCol = whittedShading(
 			scene,
 			ray->direction,
 			intersection,
@@ -375,12 +376,10 @@ float3 traceRay(
 			textures,
 			multiplier,
 			stack);
-
-		int tests = boxIntersectionTests;// + triangleIntersectionTests;
-		outCol.y = tests / 400.0f;
-		return outCol;
 	}
-	return (float3)(0.0f, 0.0f, 0.0f);
+	int tests = boxIntersectionTests;// + triangleIntersectionTests;
+	outCol.y = tests / 400.0f;
+	return outCol;
 }
 
 #endif// __SCENE_CL
