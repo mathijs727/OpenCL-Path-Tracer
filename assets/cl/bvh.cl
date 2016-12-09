@@ -71,4 +71,40 @@ bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node)
 	return tmax >= tmin;
 }
 
+bool intersectLineThinBvh(const Line* line, const ThinBvhNode* node)
+{
+	float tmin = -INFINITY, tmax = INFINITY;
+
+	float3 direction = normalize(line->dest - line->origin);
+	if (direction.x != 0.0f)
+	{
+		float tx1 = (node->min.x - line->origin.x) / direction.x;
+		float tx2 = (node->max.x - line->origin.x) / direction.x;
+
+		tmin = max(tmin, min(tx1, tx2));
+		tmax = min(tmax, max(tx1, tx2));
+	}
+
+	if (direction.y != 0.0f)
+	{
+		float ty1 = (node->min.y - line->origin.y) / direction.y;
+		float ty2 = (node->max.y - line->origin.y) / direction.y;
+
+		tmin = max(tmin, min(ty1, ty2));
+		tmax = min(tmax, max(ty1, ty2));
+	}
+
+	if (direction.z != 0.0f)
+	{
+		float tz1 = (node->min.z - line->origin.z) / direction.z;
+		float tz2 = (node->max.z - line->origin.z) / direction.z;
+
+		tmin = max(tmin, min(tz1, tz2));
+		tmax = min(tmax, max(tz1, tz2));
+	}
+
+	float3 path = line->dest - line->origin;
+	return (tmax >= tmin && tmin*tmin < dot(path, path));
+}
+
 #endif// __BVH_CL

@@ -62,16 +62,16 @@ void Game::Init()
 	}
 
 	{
-		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(0, 3, 3));
+		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(0, 5, 3));
 		_scene->add_light(light);
 	}
 	{
-		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(0,1.2f,0));
+		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(5, 1,0));
 		_scene->add_light(light);
 	}
 	{
 		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(-1, -1, 0));
-		_scene->add_light(light);
+		//_scene->add_light(light);
 	}
 
 	std::vector<Mesh> cornell_box;

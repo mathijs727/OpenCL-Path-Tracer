@@ -9,7 +9,7 @@
 
 #define USE_BVH_PRIMARY
 // Only test with primary rays for now
-//#define USE_BVH_LIGHT
+#define USE_BVH_LIGHT
 
 typedef struct
 {
@@ -34,8 +34,6 @@ void getVertices(VertexData* out_vertices, uint* indices, const Scene* scene) {
 	out_vertices[2] = scene->vertices[indices[2]];
 }
 
-// TODO: instead of using a for loop in the "main" thread. Let every thread copy
-//  a tiny bit of data (IE workgroups of 128).
 void loadScene(
 	int numSpheres,
 	const __global Sphere* spheres,
@@ -183,16 +181,11 @@ bool checkLine(const Scene* scene, const Line* line)
 	loadThinBvhNode(&scene->thinBvh[0], &bvhStack[0]);
 	int bvhStackPtr = 1;
 
-	Ray ray;
-	ray.origin = line->origin;
-	ray.direction = normalize(line->dest - line->origin);
-
 	while (bvhStackPtr > 0)
 	{
 		ThinBvhNode node = bvhStack[--bvhStackPtr];
 
-		// TODO: intersect with line instead of ray?
-		if (!intersectRayThinBvh(&ray, &node))
+		if (!intersectLineThinBvh(line, &node))
 			continue;
 
 		if (node.triangleCount != 0)// isLeaf()
