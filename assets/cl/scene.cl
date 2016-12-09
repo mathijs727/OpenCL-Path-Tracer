@@ -125,12 +125,26 @@ bool checkRay(const Scene* scene, const Ray* ray)
 				}
 			}
 		} else {
+			// Ordered traversal
+			ThinBvhNode left, right;
 			loadThinBvhNode(
 				&scene->thinBvh[node.leftChildIndex + 0],
-				&bvhStack[bvhStackPtr++]);
+				&left);
 			loadThinBvhNode(
 				&scene->thinBvh[node.leftChildIndex + 1],
-				&bvhStack[bvhStackPtr++]);
+				&right);
+
+			float3 leftVec = (left.min + left.max) / 2.0f - ray->origin;
+			float3 rightVec = (right.min + right.max) / 2.0f - ray->origin;
+
+			if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
+			{
+				bvhStack[bvhStackPtr++] = right;
+				bvhStack[bvhStackPtr++] = left;
+			} else {
+				bvhStack[bvhStackPtr++] = right;
+				bvhStack[bvhStackPtr++] = left;
+			}
 		}
 	}
 #else
@@ -202,12 +216,26 @@ bool checkLine(const Scene* scene, const Line* line)
 				}
 			}
 		} else {
+			// Ordered traversal
+			ThinBvhNode left, right;
 			loadThinBvhNode(
 				&scene->thinBvh[node.leftChildIndex + 0],
-				&bvhStack[bvhStackPtr++]);
+				&left);
 			loadThinBvhNode(
 				&scene->thinBvh[node.leftChildIndex + 1],
-				&bvhStack[bvhStackPtr++]);
+				&right);
+
+			float3 leftVec = (left.min + left.max) / 2.0f - line->origin;
+			float3 rightVec = (right.min + right.max) / 2.0f - line->origin;
+
+			if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
+			{
+				bvhStack[bvhStackPtr++] = right;
+				bvhStack[bvhStackPtr++] = left;
+			} else {
+				bvhStack[bvhStackPtr++] = right;
+				bvhStack[bvhStackPtr++] = left;
+			}
 		}
 	}
 #else
