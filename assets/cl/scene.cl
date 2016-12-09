@@ -105,7 +105,7 @@ bool checkRay(const Scene* scene, const Ray* ray)
 	{
 		ThinBvhNode node = bvhStack[--bvhStackPtr];
 
-		if (!intersectRayThinBvh(ray, &node))
+		if (!intersectRayThinBvh(ray, &node, INFINITY))
 			continue;
 
 		if (node.triangleCount != 0)// isLeaf()
@@ -291,7 +291,7 @@ float3 traceRay(
 		boxIntersectionTests++;
 		ThinBvhNode node = bvhStack[--bvhStackPtr];
 
-		if (!intersectRayThinBvh(ray, &node))
+		if (!intersectRayThinBvh(ray, &node, minT))
 			continue;
 
 		if (node.triangleCount != 0)// isLeaf()
@@ -317,12 +317,26 @@ float3 traceRay(
 				}
 			}
 		} else {
+			// Ordered traversal
+			ThinBvhNode left, right;
 			loadThinBvhNode(
 				&scene->thinBvh[node.leftChildIndex + 0],
-				&bvhStack[bvhStackPtr++]);
+				&left);
 			loadThinBvhNode(
 				&scene->thinBvh[node.leftChildIndex + 1],
-				&bvhStack[bvhStackPtr++]);
+				&right);
+
+			float3 leftVec = (left.min + left.max) / 2.0f - ray->origin;
+			float3 rightVec = (right.min + right.max) / 2.0f - ray->origin;
+
+			if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
+			{
+				bvhStack[bvhStackPtr++] = right;
+				bvhStack[bvhStackPtr++] = left;
+			} else {
+				bvhStack[bvhStackPtr++] = right;
+				bvhStack[bvhStackPtr++] = left;
+			}
 		}
 	}
 #else

@@ -37,7 +37,7 @@ void loadThinBvhNode(const __global ThinBvhNodeSerialized* serialized, ThinBvhNo
 }
 
 // https://tavianator.com/fast-branchless-raybounding-box-intersections/
-bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node)
+bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node, float nearestT)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
 
@@ -71,7 +71,7 @@ bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node)
 	// tmax >= 0: prevent boxes before the starting position from being hit
 	// See the comment section at:
 	//  https://tavianator.com/fast-branchless-raybounding-box-intersections/
-	return tmax >= tmin && tmax >= 0;
+	return tmax >= tmin && tmax >= 0 && tmin < nearestT;
 }
 
 bool intersectLineThinBvh(const Line* line, const ThinBvhNode* node)
