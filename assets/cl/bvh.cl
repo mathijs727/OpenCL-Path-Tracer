@@ -68,7 +68,10 @@ bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node)
 		tmax = min(tmax, max(tz1, tz2));
 	}
 
-	return tmax >= tmin;
+	// tmax >= 0: prevent boxes before the starting position from being hit
+	// See the comment section at:
+	//  https://tavianator.com/fast-branchless-raybounding-box-intersections/
+	return tmax >= tmin && tmax >= 0;
 }
 
 bool intersectLineThinBvh(const Line* line, const ThinBvhNode* node)
@@ -103,8 +106,17 @@ bool intersectLineThinBvh(const Line* line, const ThinBvhNode* node)
 		tmax = min(tmax, max(tz1, tz2));
 	}
 
+	// tmax >= 0: prevent boxes before the starting position from being hit
+	// See the comment section at:
+	//  https://tavianator.com/fast-branchless-raybounding-box-intersections/
+	// Additionally, if tmin < 0:
+	//  - line starts inside of box, return true
+	// Otherwise (tmin >= 0):
+	//  - line starts outside of the box
+	//  - check if the line reaches tmin (where it enters the box)
 	float3 path = line->dest - line->origin;
-	return (tmax >= tmin && tmin*tmin < dot(path, path));
+	float pathLen = dot(path, path);
+	return ( tmax >= tmin && tmax >= 0 && (tmin < 0 || tmin*tmin < pathLen) );
 }
 
-#endif// __BVH_CL
+#endif// __BVH_CL 
