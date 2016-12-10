@@ -4,20 +4,8 @@
 
 typedef struct
 {
-	float centre[4];
-	float extents[4];
-	union
-	{
-		unsigned int leftChildIndex;
-		unsigned int firstTriangleIndex;
-	};
-	unsigned int triangleCount;
-} ThinBvhNodeSerialized;
-
-typedef struct
-{
-	float3 min;
-	float3 max;
+	float3 centre;
+	float3 extents;
 	union
 	{
 		unsigned int leftChildIndex;
@@ -44,16 +32,6 @@ typedef struct
 	};
 	unsigned int isLeaf;
 } FatBvhNode;
-
-void loadThinBvhNode(const __global ThinBvhNodeSerialized* serialized, ThinBvhNode* out)
-{
-	float3 centre = vload3(0, serialized->centre);
-	float3 extents = vload3(0, serialized->extents);
-	out->min = centre - extents;
-	out->max = centre + extents;
-	out->leftChildIndex = serialized->leftChildIndex;
-	out->triangleCount = serialized->triangleCount;
-}
 
 bool intersectRayFatBvh(const Ray* ray, const FatBvhNode* node)
 {
@@ -145,11 +123,13 @@ bool intersectLineFatBvh(const Line* line, const FatBvhNode* node)
 bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node, float nearestT)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
+	float3 aabbMin = node->centre - node->extents;
+	float3 aabbMax = node->centre + node->extents;
 
 	if (ray->direction.x != 0.0f)
 	{
-		float tx1 = (node->min.x - ray->origin.x) / ray->direction.x;
-		float tx2 = (node->max.x - ray->origin.x) / ray->direction.x;
+		float tx1 = (aabbMin.x - ray->origin.x) / ray->direction.x;
+		float tx2 = (aabbMax.x - ray->origin.x) / ray->direction.x;
 
 		tmin = max(tmin, min(tx1, tx2));
 		tmax = min(tmax, max(tx1, tx2));
@@ -157,8 +137,8 @@ bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node, float nearestT
 
 	if (ray->direction.y != 0.0f)
 	{
-		float ty1 = (node->min.y - ray->origin.y) / ray->direction.y;
-		float ty2 = (node->max.y - ray->origin.y) / ray->direction.y;
+		float ty1 = (aabbMin.y - ray->origin.y) / ray->direction.y;
+		float ty2 = (aabbMax.y - ray->origin.y) / ray->direction.y;
 
 		tmin = max(tmin, min(ty1, ty2));
 		tmax = min(tmax, max(ty1, ty2));
@@ -166,8 +146,8 @@ bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node, float nearestT
 
 	if (ray->direction.z != 0.0f)
 	{
-		float tz1 = (node->min.z - ray->origin.z) / ray->direction.z;
-		float tz2 = (node->max.z - ray->origin.z) / ray->direction.z;
+		float tz1 = (aabbMin.z - ray->origin.z) / ray->direction.z;
+		float tz2 = (aabbMax.z - ray->origin.z) / ray->direction.z;
 
 		tmin = max(tmin, min(tz1, tz2));
 		tmax = min(tmax, max(tz1, tz2));
@@ -182,12 +162,14 @@ bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node, float nearestT
 bool intersectLineThinBvh(const Line* line, const ThinBvhNode* node)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
+	float3 aabbMin = node->centre - node->extents;
+	float3 aabbMax = node->centre + node->extents;
 
 	float3 direction = normalize(line->dest - line->origin);
 	if (direction.x != 0.0f)
 	{
-		float tx1 = (node->min.x - line->origin.x) / direction.x;
-		float tx2 = (node->max.x - line->origin.x) / direction.x;
+		float tx1 = (aabbMin.x - line->origin.x) / direction.x;
+		float tx2 = (aabbMax.x - line->origin.x) / direction.x;
 
 		tmin = max(tmin, min(tx1, tx2));
 		tmax = min(tmax, max(tx1, tx2));
@@ -195,8 +177,8 @@ bool intersectLineThinBvh(const Line* line, const ThinBvhNode* node)
 
 	if (direction.y != 0.0f)
 	{
-		float ty1 = (node->min.y - line->origin.y) / direction.y;
-		float ty2 = (node->max.y - line->origin.y) / direction.y;
+		float ty1 = (aabbMin.y - line->origin.y) / direction.y;
+		float ty2 = (aabbMax.y - line->origin.y) / direction.y;
 
 		tmin = max(tmin, min(ty1, ty2));
 		tmax = min(tmax, max(ty1, ty2));
@@ -204,8 +186,8 @@ bool intersectLineThinBvh(const Line* line, const ThinBvhNode* node)
 
 	if (direction.z != 0.0f)
 	{
-		float tz1 = (node->min.z - line->origin.z) / direction.z;
-		float tz2 = (node->max.z - line->origin.z) / direction.z;
+		float tz1 = (aabbMin.z - line->origin.z) / direction.z;
+		float tz2 = (aabbMax.z - line->origin.z) / direction.z;
 
 		tmin = max(tmin, min(tz1, tz2));
 		tmax = min(tmax, max(tz1, tz2));

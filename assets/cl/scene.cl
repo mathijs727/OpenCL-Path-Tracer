@@ -23,7 +23,7 @@ typedef struct
 	const __global Material* meshMaterials;
 	const __global Light* lights;
 
-	const __global ThinBvhNodeSerialized* thinBvh;
+	const __global ThinBvhNode* thinBvh;
 	const __global FatBvhNode* topLevelBvh;
 	int topLevelBvhRoot;
 
@@ -48,7 +48,7 @@ void loadScene(
 	const __global Material* materials,
 	int numLights,
 	const __global Light* lights,
-	const __global ThinBvhNodeSerialized* thinBvh,
+	const __global ThinBvhNode* thinBvh,
 	int topLevelBvhRoot,
 	const __global FatBvhNode* topLevelBvh,
 	Scene* scene) {
@@ -117,9 +117,7 @@ bool checkRay(const Scene* scene, const Ray* ray)
 
 		if (node.isLeaf)
 		{
-			loadThinBvhNode(
-				&scene->thinBvh[node.thinBvh],
-				&thinBvhStack[thinBvhStackPtr++]);
+			thinBvhStack[thinBvhStackPtr++] = scene->thinBvh[node.thinBvh];
 		} else {
 			topLevelBvhStack[topLevelBvhStackPtr++] = node.leftChildIndex;
 			topLevelBvhStack[topLevelBvhStackPtr++] = node.rightChildIndex;
@@ -146,21 +144,17 @@ bool checkRay(const Scene* scene, const Ray* ray)
 				getVertices(v, triangle.indices, scene);
 				if (intersectRayTriangle(ray, v, &n, &tex_coords_tmp, &t))
 				{
-					true;
+					return true;
 				}
 			}
 		} else {
 			// Ordered traversal
 			ThinBvhNode left, right;
-			loadThinBvhNode(
-				&scene->thinBvh[node.leftChildIndex + 0],
-				&left);
-			loadThinBvhNode(
-				&scene->thinBvh[node.leftChildIndex + 1],
-				&right);
+			left = scene->thinBvh[node.leftChildIndex + 0];
+			right = scene->thinBvh[node.leftChildIndex + 1];
 
-			float3 leftVec = (left.min + left.max) / 2.0f - ray->origin;
-			float3 rightVec = (right.min + right.max) / 2.0f - ray->origin;
+			float3 leftVec = left.centre - ray->origin;
+			float3 rightVec = right.centre - ray->origin;
 
 			if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
 			{
@@ -230,9 +224,7 @@ bool checkLine(const Scene* scene, const Line* line)
 
 		if (node.isLeaf)
 		{
-			loadThinBvhNode(
-				&scene->thinBvh[node.thinBvh],
-				&thinBvhStack[thinBvhStackPtr++]);
+			thinBvhStack[thinBvhStackPtr++] = scene->thinBvh[node.thinBvh];
 		} else {
 			topLevelBvhStack[topLevelBvhStackPtr++] = node.leftChildIndex;
 			topLevelBvhStack[topLevelBvhStackPtr++] = node.rightChildIndex;
@@ -256,21 +248,17 @@ bool checkLine(const Scene* scene, const Line* line)
 				getVertices(vertices, triangle.indices, scene);
 				if (intersectLineTriangle(line, vertices, &t))
 				{
-					true;
+					return true;
 				}
 			}
 		} else {
 			// Ordered traversal
 			ThinBvhNode left, right;
-			loadThinBvhNode(
-				&scene->thinBvh[node.leftChildIndex + 0],
-				&left);
-			loadThinBvhNode(
-				&scene->thinBvh[node.leftChildIndex + 1],
-				&right);
+			left = scene->thinBvh[node.leftChildIndex + 0];
+			right = scene->thinBvh[node.leftChildIndex + 1];
 
-			float3 leftVec = (left.min + left.max) / 2.0f - line->origin;
-			float3 rightVec = (right.min + right.max) / 2.0f - line->origin;
+			float3 leftVec = left.centre - line->origin;
+			float3 rightVec = right.centre - line->origin;
 
 			if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
 			{
@@ -367,9 +355,7 @@ float3 traceRay(
 
 		if (node.isLeaf)
 		{
-			loadThinBvhNode(
-				&scene->thinBvh[node.thinBvh],
-				&thinBvhStack[thinBvhStackPtr++]);
+			thinBvhStack[thinBvhStackPtr++] = scene->thinBvh[node.thinBvh];
 		} else {
 			topLevelBvhStack[topLevelBvhStackPtr++] = node.leftChildIndex;
 			topLevelBvhStack[topLevelBvhStackPtr++] = node.rightChildIndex;
@@ -409,15 +395,11 @@ float3 traceRay(
 		} else {
 			// Ordered traversal
 			ThinBvhNode left, right;
-			loadThinBvhNode(
-				&scene->thinBvh[node.leftChildIndex + 0],
-				&left);
-			loadThinBvhNode(
-				&scene->thinBvh[node.leftChildIndex + 1],
-				&right);
+			left = scene->thinBvh[node.leftChildIndex + 0];
+			right = scene->thinBvh[node.leftChildIndex + 1];
 
-			float3 leftVec = (left.min + left.max) / 2.0f - ray->origin;
-			float3 rightVec = (right.min + right.max) / 2.0f - ray->origin;
+			float3 leftVec = left.centre - ray->origin;
+			float3 rightVec = right.centre - ray->origin;
 
 			if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
 			{

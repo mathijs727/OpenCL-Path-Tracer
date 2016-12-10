@@ -66,6 +66,7 @@ struct ThinBvhNode
 		u32 firstTriangleIndex;
 	};
 	u32 triangleCount;
+	u32 __padding_cl[2];
 
 	ThinBvhNode()
 	{

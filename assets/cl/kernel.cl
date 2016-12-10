@@ -34,7 +34,7 @@ __kernel void hello(
 	__global Material* materials,
 	__read_only image2d_array_t textures,
 	__global Light* lights,
-	__global ThinBvhNodeSerialized* thinBvh,
+	__global ThinBvhNode* thinBvh,
 	__global FatBvhNode* topLevelBvh) {
 	//__read_only image2d_array_t textures) {
 	int x = get_global_id(0);
