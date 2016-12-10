@@ -26,6 +26,8 @@ struct SceneNode
 	std::vector<std::unique_ptr<SceneNode>> children;
 	Transform transform;
 	MeshSceneData meshData;
+
+	u32 bvhRoot;
 };
 
 class Scene

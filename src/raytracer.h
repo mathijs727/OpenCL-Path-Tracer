@@ -26,6 +26,8 @@ public:
 private:
 	void InitOpenCL();
 	void InitBuffers();
+
+	void UpdateTopLevelBVH();
 	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
 private:
 	cl_uint _scr_width, _scr_height;
@@ -55,6 +57,9 @@ private:
 	
 	cl_int _num_lights;
 	cl::Buffer _lights;
+
+	cl_int _num_fat_bvh_nodes;
+	cl::Buffer _fat_bvh;
 
 	cl_int _num_thin_bvh_nodes;
 	cl::Buffer _thin_bvh;

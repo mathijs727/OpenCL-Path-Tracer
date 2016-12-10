@@ -137,6 +137,12 @@ void raytracer::RayTracer::InitBuffers()
 		NULL,
 		&err);
 
+	_fat_bvh = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		256 * sizeof(FatBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
+		NULL,
+		&err);
+
 	_kernel_data = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		sizeof(KernelData),
@@ -161,7 +167,7 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 	// Build BVH and move it to OpenCL
 	std::cout << "Building BVH" << std::endl;
 	_bvh = std::make_unique<Bvh>(scene);
-	_bvh->build();
+	_bvh->buildThinBvhs();
 	std::cout << "Done building BVH" << std::endl;
 
 	_num_spheres = scene.GetSpheres().size();
@@ -363,7 +369,9 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	_helloWorldKernel.setArg(7, _material_textures);
 	_helloWorldKernel.setArg(8, _lights);
 	_helloWorldKernel.setArg(9, _thin_bvh);
-	//_helloWorldKernel.setArg(8, _material_textures);
+	_helloWorldKernel.setArg(10, _fat_bvh);
+	_helloWorldKernel.setArg(11, _num_fat_bvh_nodes - 1);
+
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,
 		cl::NullRange,
@@ -498,6 +506,23 @@ void raytracer::RayTracer::InitOpenCL()
 	_devices.push_back(cl::Device(lDeviceId));
 	_queue = clCreateCommandQueue(lContext, lDeviceId, 0, &lError);
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
+}
+
+void raytracer::RayTracer::UpdateTopLevelBVH()
+{
+	_bvh->updateTopLevelBvh();
+
+	_num_fat_bvh_nodes = _bvh->GetFatNodes().size();
+	if (_num_fat_bvh_nodes > 0)
+	{
+		cl_int err = _queue.enqueueWriteBuffer(
+			_fat_bvh,
+			CL_TRUE,
+			0,
+			_num_fat_bvh_nodes * sizeof(FatBvhNode),
+			_bvh->GetFatNodes().data());
+		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+	}
 }
 
 cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* funcName)

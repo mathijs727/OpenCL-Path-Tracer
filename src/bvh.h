@@ -7,6 +7,7 @@
 namespace raytracer {
 
 class Scene;
+struct SceneNode;
 
 struct AABB
 {
@@ -23,10 +24,14 @@ struct FatBvhNode
 	glm::mat4 invTransform;
 	union
 	{
-		int leftChildIndex;
-		int thinBvhRoot;
+		struct
+		{
+			u32 leftChildIndex;
+			u32 rightChildIndex;
+		};
+		u32 thinBvh;
 	};
-	int count;
+	u32 isLeaf;
 };
 
 struct ThinBvhNode
@@ -49,12 +54,20 @@ struct ThinBvhNode
 class Bvh
 {
 public:
-	Bvh(Scene& scene) : _scene(scene), _poolPtr(0) {}
-	void build();
+	Bvh(Scene& scene) : _scene(scene), _thinPoolPtr(0) {}
 
+	void buildThinBvhs();
+	void updateTopLevelBvh();
+
+	const std::vector<FatBvhNode>& GetFatNodes() { return _fatBuffer; };
 	const std::vector<ThinBvhNode>& GetThinNodes() { return _thinBuffer; };
 private:
-	u32 allocate();
+	u32 allocateThinNode();
+
+	u32 findBestMatch(const std::vector<u32>& list, u32 nodeId);
+	FatBvhNode createFatNode(const SceneNode* node, const glm::mat4 transform);
+	FatBvhNode mergeFatNodes(u32 nodeId1, u32 nodeId2);
+	AABB calcCombinedBounds(const AABB& bounds1, const AABB& bounds2);
 
 	void subdivide(ThinBvhNode& node);
 	void partition(ThinBvhNode& node, u32 leftIndex);
@@ -62,9 +75,10 @@ private:
 private:
 	Scene& _scene;
 
-	std::vector<FatBvhNode> _fatBuffer;// TODO
+	u32 _fatPoolPtr;
+	std::vector<FatBvhNode> _fatBuffer;
 
-	u32 _poolPtr;
+	u32 _thinPoolPtr;
 	std::vector<ThinBvhNode> _thinBuffer;
 };
 }

@@ -7,12 +7,14 @@
 
 using namespace raytracer;
 
-void raytracer::Bvh::build() {
+void raytracer::Bvh::buildThinBvhs() {
+	_thinBuffer.clear();
+	_thinPoolPtr = 0;
+
 	SceneNode& current_node = _scene.get_root_node();
 
 	std::stack<SceneNode*> node_stack;
 	node_stack.push(&current_node);
-
 	while (!node_stack.empty()) {
 		SceneNode* current = node_stack.top(); node_stack.pop();
 		// Visit children
@@ -26,31 +28,156 @@ void raytracer::Bvh::build() {
 
 		_thinBuffer.reserve(_thinBuffer.size() + n*2);
 
-		u32 rootIndex = allocate();
+		current->bvhRoot = _thinPoolPtr;
+
+		u32 rootIndex = allocateThinNode();
 		auto& root = _thinBuffer[rootIndex];
 		root.firstTriangleIndex = current->meshData.start_triangle_index;
 		root.triangleCount = n;
 		root.bounds = create_bounds(root.firstTriangleIndex, root.triangleCount);
 
 		// Add a dummy node so that every pair of children nodes is cache line aligned.
-		allocate();
+		allocateThinNode();
 
 		subdivide(root);
 	}
 }
 
-u32 raytracer::Bvh::allocate()
+void raytracer::Bvh::updateTopLevelBvh()
+{
+	// Clear the top-level BVH buffer
+	_fatBuffer.clear();
+	_fatPoolPtr = 0;
+
+	// Add the scene graph nodes to teh top-level BVH buffer
+	std::vector<u32> list;
+	std::stack<std::pair<SceneNode*, glm::mat4>> nodeStack;
+	nodeStack.push(std::make_pair(&_scene.get_root_node(), glm::mat4()));
+	while (!nodeStack.empty())
+	{
+		std::pair<SceneNode*, glm::mat4> currentPair = nodeStack.top(); nodeStack.pop();
+		SceneNode* sceneNode = currentPair.first;
+		glm::mat4 transform = currentPair.second * sceneNode->transform.matrix();
+
+		// Visit children
+		for (uint i = 0; i < sceneNode->children.size(); i++)
+		{
+			nodeStack.push(std::make_pair(sceneNode->children[i].get(), transform));
+		}
+
+		_fatBuffer.push_back(createFatNode(sceneNode, transform));
+		list.push_back(_fatPoolPtr++);
+	}
+
+
+	// Slide 50: http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2004%20-%20real-time%20ray%20tracing.pdf
+	// Fast Agglomerative Clustering for Rendering (Walter et al, 2008)
+	u32 nodeA = list.back(); list.pop_back();
+	u32 nodeB = findBestMatch(list, nodeA);
+	while (list.size() > 1)
+	{
+		u32 nodeC = findBestMatch(list, nodeB);
+		if (nodeA == nodeC)
+		{
+			// http://stackoverflow.com/questions/39912/how-do-i-remove-an-item-from-a-stl-vector-with-a-certain-value
+			auto newEndA = std::remove(list.begin(), list.end(), nodeA);
+			list.erase(newEndA);
+			auto newEndB = std::remove(list.begin(), list.end(), nodeB);
+			list.erase(newEndB);
+			
+			// A = new Node(A, B);
+			_fatBuffer.push_back(mergeFatNodes(nodeA, nodeB));
+			nodeA = _fatPoolPtr++;
+
+			list.push_back(nodeA);
+			nodeB = findBestMatch(list, nodeA);
+		}
+		else {
+			nodeA = nodeB;
+			nodeB = nodeC;
+		}
+	}
+}
+
+u32 raytracer::Bvh::allocateThinNode()
 {
 	_thinBuffer.emplace_back();
-	return _poolPtr++;
+	return _thinPoolPtr++;
+}
+
+u32 raytracer::Bvh::findBestMatch(const std::vector<u32>& list, u32 nodeId)
+{
+	FatBvhNode& node = _fatBuffer[nodeId];
+	float curMinArea = std::numeric_limits<float>::min();
+	u32 curMin = -1;
+	for (u32 otherNodeId : list)
+	{
+		FatBvhNode& otherNode = _fatBuffer[otherNodeId];
+		AABB bounds = calcCombinedBounds(node.bounds, otherNode.bounds);
+		float leftArea = bounds.extents.z * bounds.extents.y;
+		float topArea = bounds.extents.x * bounds.extents.y;
+		float backArea = bounds.extents.x * bounds.extents.z;
+		float totalArea = 2 * leftArea + topArea + backArea;
+
+		if (totalArea < curMinArea)
+		{
+			curMin = otherNodeId;
+			curMinArea = totalArea;
+		}
+	}
+
+	return curMin;
+}
+
+FatBvhNode raytracer::Bvh::createFatNode(const SceneNode* sceneGraphNode, const glm::mat4 transform)
+{
+	FatBvhNode node;
+	node.thinBvh = sceneGraphNode->bvhRoot;
+	node.bounds = _thinBuffer[node.thinBvh].bounds;
+	node.transform = transform;
+	node.invTransform = glm::inverse(transform);
+	node.isLeaf = true;
+	return node;
+}
+
+FatBvhNode raytracer::Bvh::mergeFatNodes(u32 nodeId1, u32 nodeId2)
+{
+	const FatBvhNode& node1 = _fatBuffer[nodeId1];
+	const FatBvhNode& node2 = _fatBuffer[nodeId2];
+
+	FatBvhNode node;
+	node.bounds = calcCombinedBounds(node1.bounds, node2.bounds);
+	node.transform = glm::mat4();// Identity
+	node.invTransform = glm::mat4();// Identity
+	node.leftChildIndex = nodeId1;
+	node.rightChildIndex = nodeId2;
+	node.isLeaf = false;
+	return node;
+}
+
+AABB raytracer::Bvh::calcCombinedBounds(const AABB& bounds1, const AABB& bounds2)
+{
+	glm::vec3 min1 = bounds1.centre - bounds1.extents;
+	glm::vec3 min2 = bounds2.centre - bounds2.extents;
+
+	glm::vec3 max1 = bounds1.centre + bounds1.extents;
+	glm::vec3 max2 = bounds2.centre + bounds2.extents;
+
+	glm::vec3 min = glm::min(min1, min2);
+	glm::vec3 max = glm::max(max1, max2);
+
+	AABB result;
+	result.centre = (min + max) / 2.0f;
+	result.extents = (max - min) / 2.0f;
+	return result;
 }
 
 void  raytracer::Bvh::subdivide(ThinBvhNode& node) {
 	if (node.triangleCount < 4)
 		return;
 
-	u32 leftChildIndex = allocate();
-	u32 rightChildIndex = allocate();
+	u32 leftChildIndex = allocateThinNode();
+	u32 rightChildIndex = allocateThinNode();
 	partition(node, leftChildIndex);// Divides our triangles over our children and calculates their bounds
 	subdivide(_thinBuffer[leftChildIndex]);
 	subdivide(_thinBuffer[rightChildIndex]);
