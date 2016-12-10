@@ -9,7 +9,7 @@
 
 #define USE_BVH_PRIMARY
 // Only test with primary rays for now
-//#define USE_BVH_LIGHT
+#define USE_BVH_LIGHT
 
 typedef struct
 {
@@ -102,16 +102,35 @@ bool checkRay(const Scene* scene, const Ray* ray)
 	}
 
 #ifdef USE_BVH_LIGHT
-	// check mesh intersection using BVH traversal
-	ThinBvhNode bvhStack[50];
-	loadThinBvhNode(&scene->thinBvh[0], &bvhStack[0]);
-	int bvhStackPtr = 1;
+	// Check mesh intersection using BVH traversal
+	ThinBvhNode thinBvhStack[30];
+	int thinBvhStackPtr = 0;
 
-	while (bvhStackPtr > 0)
+	unsigned int topLevelBvhStack[10];
+	unsigned int topLevelBvhStackPtr = 0;
+	topLevelBvhStack[topLevelBvhStackPtr++] = scene->topLevelBvhRoot;
+	while (topLevelBvhStackPtr > 0)
 	{
-		ThinBvhNode node = bvhStack[--bvhStackPtr];
+		FatBvhNode node = scene->topLevelBvh[topLevelBvhStack[--topLevelBvhStackPtr]];
+		if (!intersectRayFatBvh(ray, &node))
+			continue;
 
-		if (!intersectRayThinBvh(ray, &node, INFINITY))
+		if (node.isLeaf)
+		{
+			loadThinBvhNode(
+				&scene->thinBvh[node.thinBvh],
+				&thinBvhStack[thinBvhStackPtr++]);
+		} else {
+			topLevelBvhStack[topLevelBvhStackPtr++] = node.leftChildIndex;
+			topLevelBvhStack[topLevelBvhStackPtr++] = node.rightChildIndex;
+		}
+	}
+
+	while (thinBvhStackPtr > 0)
+	{
+		ThinBvhNode node = thinBvhStack[--thinBvhStackPtr];
+
+		if (!intersectRayThinBvh(ray, &node, 0))
 			continue;
 
 		if (node.triangleCount != 0)// isLeaf()
@@ -127,7 +146,7 @@ bool checkRay(const Scene* scene, const Ray* ray)
 				getVertices(v, triangle.indices, scene);
 				if (intersectRayTriangle(ray, v, &n, &tex_coords_tmp, &t))
 				{
-					return true;
+					true;
 				}
 			}
 		} else {
@@ -145,11 +164,11 @@ bool checkRay(const Scene* scene, const Ray* ray)
 
 			if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
 			{
-				bvhStack[bvhStackPtr++] = right;
-				bvhStack[bvhStackPtr++] = left;
+				thinBvhStack[thinBvhStackPtr++] = right;
+				thinBvhStack[thinBvhStackPtr++] = left;
 			} else {
-				bvhStack[bvhStackPtr++] = right;
-				bvhStack[bvhStackPtr++] = left;
+				thinBvhStack[thinBvhStackPtr++] = right;
+				thinBvhStack[thinBvhStackPtr++] = left;
 			}
 		}
 	}
@@ -196,14 +215,33 @@ bool checkLine(const Scene* scene, const Line* line)
 	}
 
 #ifdef USE_BVH_LIGHT
-	// check mesh intersection using BVH traversal
-	ThinBvhNode bvhStack[20];
-	loadThinBvhNode(&scene->thinBvh[0], &bvhStack[0]);
-	int bvhStackPtr = 1;
+	// Check mesh intersection using BVH traversal
+	ThinBvhNode thinBvhStack[30];
+	int thinBvhStackPtr = 0;
 
-	while (bvhStackPtr > 0)
+	unsigned int topLevelBvhStack[10];
+	unsigned int topLevelBvhStackPtr = 0;
+	topLevelBvhStack[topLevelBvhStackPtr++] = scene->topLevelBvhRoot;
+	while (topLevelBvhStackPtr > 0)
 	{
-		ThinBvhNode node = bvhStack[--bvhStackPtr];
+		FatBvhNode node = scene->topLevelBvh[topLevelBvhStack[--topLevelBvhStackPtr]];
+		if (!intersectLineFatBvh(line, &node))
+			continue;
+
+		if (node.isLeaf)
+		{
+			loadThinBvhNode(
+				&scene->thinBvh[node.thinBvh],
+				&thinBvhStack[thinBvhStackPtr++]);
+		} else {
+			topLevelBvhStack[topLevelBvhStackPtr++] = node.leftChildIndex;
+			topLevelBvhStack[topLevelBvhStackPtr++] = node.rightChildIndex;
+		}
+	}
+
+	while (thinBvhStackPtr > 0)
+	{
+		ThinBvhNode node = thinBvhStack[--thinBvhStackPtr];
 
 		if (!intersectLineThinBvh(line, &node))
 			continue;
@@ -218,7 +256,7 @@ bool checkLine(const Scene* scene, const Line* line)
 				getVertices(vertices, triangle.indices, scene);
 				if (intersectLineTriangle(line, vertices, &t))
 				{
-					return true;
+					true;
 				}
 			}
 		} else {
@@ -236,11 +274,11 @@ bool checkLine(const Scene* scene, const Line* line)
 
 			if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
 			{
-				bvhStack[bvhStackPtr++] = right;
-				bvhStack[bvhStackPtr++] = left;
+				thinBvhStack[thinBvhStackPtr++] = right;
+				thinBvhStack[thinBvhStackPtr++] = left;
 			} else {
-				bvhStack[bvhStackPtr++] = right;
-				bvhStack[bvhStackPtr++] = left;
+				thinBvhStack[thinBvhStackPtr++] = right;
+				thinBvhStack[thinBvhStackPtr++] = left;
 			}
 		}
 	}
