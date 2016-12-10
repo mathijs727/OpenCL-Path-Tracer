@@ -128,7 +128,7 @@ bool checkRay(const Scene* scene, const Ray* ray)
 	{
 		ThinBvhNode node = thinBvhStack[--thinBvhStackPtr];
 
-		if (!intersectRayThinBvh(ray, &node, 0))
+		if (!intersectRayThinBvh(ray, &node, INFINITY))
 			continue;
 
 		if (node.triangleCount != 0)// isLeaf()
