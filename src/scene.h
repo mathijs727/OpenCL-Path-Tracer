@@ -15,9 +15,9 @@ struct MeshSceneData
 {
 	u32 start_triangle_index;
 	u32 triangle_count;
-	i32 thinBvhIndex;
+	u32 thinBvhIndex;
 	bool is_empty() { return triangle_count == 0; }
-	MeshSceneData(u32 startIndex = 0, u32 count = 0) : start_triangle_index(startIndex), triangle_count(count), thinBvhIndex(-1) {}
+	MeshSceneData(u32 startIndex = 0, u32 count = 0) : start_triangle_index(startIndex), triangle_count(count), thinBvhIndex(-2) {}
 };
 
 struct SceneNode
@@ -26,8 +26,6 @@ struct SceneNode
 	std::vector<std::unique_ptr<SceneNode>> children;
 	Transform transform;
 	MeshSceneData meshData;
-
-	u32 bvhRoot;
 };
 
 class Scene

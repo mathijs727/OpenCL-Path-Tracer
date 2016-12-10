@@ -9,7 +9,7 @@
 
 #define USE_BVH_PRIMARY
 // Only test with primary rays for now
-#define USE_BVH_LIGHT
+//#define USE_BVH_LIGHT
 
 typedef struct
 {
@@ -24,6 +24,8 @@ typedef struct
 	const __global Light* lights;
 
 	const __global ThinBvhNodeSerialized* thinBvh;
+	const __global FatBvhNode* topLevelBvh;
+	int topLevelBvhRoot;
 
 	float refractiveIndex;
 } Scene;
@@ -47,6 +49,8 @@ void loadScene(
 	int numLights,
 	const __global Light* lights,
 	const __global ThinBvhNodeSerialized* thinBvh,
+	int topLevelBvhRoot,
+	const __global FatBvhNode* topLevelBvh,
 	Scene* scene) {
 	scene->refractiveIndex =  1.000277f;
 	
@@ -66,6 +70,8 @@ void loadScene(
 	scene->lights = lights;
 
 	scene->thinBvh = thinBvh;
+	scene->topLevelBvh = topLevelBvh;
+	scene->topLevelBvhRoot = topLevelBvhRoot;
 }
 
 bool checkRay(const Scene* scene, const Ray* ray)
@@ -308,16 +314,40 @@ float3 traceRay(
 	int triangleIntersectionTests = 0;
 	
 #ifdef USE_BVH_PRIMARY
-	// check mesh intersection using BVH traversal
-	ThinBvhNode bvhStack[20];
-	loadThinBvhNode(&scene->thinBvh[0], &bvhStack[0]);
-	int bvhStackPtr = 1;
+	// Check mesh intersection using BVH traversal
+	ThinBvhNode thinBvhStack[30];
+	int thinBvhStackPtr = 0;
 
+	unsigned int topLevelBvhStack[10];
+	unsigned int topLevelBvhStackPtr = 0;
+	topLevelBvhStack[topLevelBvhStackPtr++] = scene->topLevelBvhRoot;
+	while (topLevelBvhStackPtr > 0)
+	{
+		FatBvhNode node = scene->topLevelBvh[topLevelBvhStack[--topLevelBvhStackPtr]];
+		//if (!intersectRayFatBvh(ray, &node))
+		//	continue;
 
-	while (bvhStackPtr > 0)
+		if (node.isLeaf)
+		{
+			loadThinBvhNode(
+				&scene->thinBvh[node.thinBvh],
+				&thinBvhStack[thinBvhStackPtr++]);
+		} else {
+			topLevelBvhStack[topLevelBvhStackPtr++] = node.leftChildIndex;
+			topLevelBvhStack[topLevelBvhStackPtr++] = node.rightChildIndex;
+		}
+	}
+	/*loadThinBvhNode(
+		&scene->thinBvh[0],
+		&thinBvhStack[thinBvhStackPtr++]);
+	loadThinBvhNode(
+		&scene->thinBvh[432],
+		&thinBvhStack[thinBvhStackPtr++]);*/
+
+	while (thinBvhStackPtr > 0)
 	{
 		boxIntersectionTests++;
-		ThinBvhNode node = bvhStack[--bvhStackPtr];
+		ThinBvhNode node = thinBvhStack[--thinBvhStackPtr];
 
 		if (!intersectRayThinBvh(ray, &node, minT))
 			continue;
@@ -359,11 +389,11 @@ float3 traceRay(
 
 			if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
 			{
-				bvhStack[bvhStackPtr++] = right;
-				bvhStack[bvhStackPtr++] = left;
+				thinBvhStack[thinBvhStackPtr++] = right;
+				thinBvhStack[thinBvhStackPtr++] = left;
 			} else {
-				bvhStack[bvhStackPtr++] = right;
-				bvhStack[bvhStackPtr++] = left;
+				thinBvhStack[thinBvhStackPtr++] = right;
+				thinBvhStack[thinBvhStackPtr++] = left;
 			}
 		}
 	}

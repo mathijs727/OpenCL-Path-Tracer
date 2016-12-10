@@ -20,6 +20,8 @@ typedef struct
 
 	// Scene
 	int numSpheres, numPlanes, numVertices, numTriangles, numLights;
+
+	int topLevelBvhRoot;
 } KernelData;
 
 __kernel void hello(
@@ -32,7 +34,8 @@ __kernel void hello(
 	__global Material* materials,
 	__read_only image2d_array_t textures,
 	__global Light* lights,
-	__global ThinBvhNodeSerialized* thinBvh) {
+	__global ThinBvhNodeSerialized* thinBvh,
+	__global FatBvhNode* topLevelBvh) {
 	//__read_only image2d_array_t textures) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
@@ -53,6 +56,8 @@ __kernel void hello(
 			inputData->numLights,
 			lights,
 			thinBvh,
+			inputData->topLevelBvhRoot,
+			topLevelBvh,
 			&scene);
 	}
 	//barrier(CLK_LOCAL_MEM_FENCE);

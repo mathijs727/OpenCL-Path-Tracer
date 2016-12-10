@@ -28,7 +28,7 @@ void raytracer::Bvh::buildThinBvhs() {
 
 		_thinBuffer.reserve(_thinBuffer.size() + n*2);
 
-		current->bvhRoot = _thinPoolPtr;
+		current->meshData.thinBvhIndex = _thinPoolPtr;
 
 		u32 rootIndex = allocateThinNode();
 		auto& root = _thinBuffer[rootIndex];
@@ -65,14 +65,17 @@ void raytracer::Bvh::updateTopLevelBvh()
 			nodeStack.push(std::make_pair(sceneNode->children[i].get(), transform));
 		}
 
-		_fatBuffer.push_back(createFatNode(sceneNode, transform));
-		list.push_back(_fatPoolPtr++);
+		if (sceneNode->meshData.triangle_count > 0)
+		{
+			_fatBuffer.push_back(createFatNode(sceneNode, transform));
+			list.push_back(_fatPoolPtr++);
+		}
 	}
 
 
 	// Slide 50: http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2004%20-%20real-time%20ray%20tracing.pdf
 	// Fast Agglomerative Clustering for Rendering (Walter et al, 2008)
-	u32 nodeA = list.back(); list.pop_back();
+	u32 nodeA = list.back();// list.pop_back();
 	u32 nodeB = findBestMatch(list, nodeA);
 	while (list.size() > 1)
 	{
@@ -97,6 +100,15 @@ void raytracer::Bvh::updateTopLevelBvh()
 			nodeB = nodeC;
 		}
 	}
+
+	/*std::cout << std::endl;
+	for (FatBvhNode& node : _fatBuffer)
+	{
+		if (!node.isLeaf)
+			std::cout << "Top level node children: " << node.leftChildIndex << " and " << node.rightChildIndex << std::endl;
+		else
+			std::cout << "Top level leaf sub-bvh root: " << node.thinBvh << std::endl;
+	}*/
 }
 
 u32 raytracer::Bvh::allocateThinNode()
@@ -108,7 +120,7 @@ u32 raytracer::Bvh::allocateThinNode()
 u32 raytracer::Bvh::findBestMatch(const std::vector<u32>& list, u32 nodeId)
 {
 	FatBvhNode& node = _fatBuffer[nodeId];
-	float curMinArea = std::numeric_limits<float>::min();
+	float curMinArea = std::numeric_limits<float>::max();
 	u32 curMin = -1;
 	for (u32 otherNodeId : list)
 	{
@@ -119,7 +131,7 @@ u32 raytracer::Bvh::findBestMatch(const std::vector<u32>& list, u32 nodeId)
 		float backArea = bounds.extents.x * bounds.extents.z;
 		float totalArea = 2 * leftArea + topArea + backArea;
 
-		if (totalArea < curMinArea)
+		if (totalArea < curMinArea && otherNodeId != nodeId)
 		{
 			curMin = otherNodeId;
 			curMinArea = totalArea;
@@ -132,7 +144,7 @@ u32 raytracer::Bvh::findBestMatch(const std::vector<u32>& list, u32 nodeId)
 FatBvhNode raytracer::Bvh::createFatNode(const SceneNode* sceneGraphNode, const glm::mat4 transform)
 {
 	FatBvhNode node;
-	node.thinBvh = sceneGraphNode->bvhRoot;
+	node.thinBvh = sceneGraphNode->meshData.thinBvhIndex;
 	node.bounds = _thinBuffer[node.thinBvh].bounds;
 	node.transform = transform;
 	node.invTransform = glm::inverse(transform);

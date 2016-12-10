@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include "types.h"
+#include "template\includes.h"
 
 namespace raytracer {
 
@@ -11,10 +12,31 @@ struct SceneNode;
 
 struct AABB
 {
-	glm::vec3 centre;
-	glm::vec3 extents;
+	union
+	{
+		glm::vec3 centre;
+		cl_float3 __centre_cl;
+	};
+	union
+	{
+		glm::vec3 extents;
+		cl_float3 __extents_cl;
+	};
+	//glm::vec3 centre;
+	//glm::vec3 extents;
 	glm::vec3 min() { return centre - extents; }
 	glm::vec3 max() { return centre + extents; }
+
+	AABB() { };
+	AABB(const AABB& other)
+	{
+		memcpy(this, &other, sizeof(AABB));
+	}
+	AABB& operator=(const AABB& other)
+	{
+		memcpy(this, &other, sizeof(AABB));
+		return *this;
+	}
 };
 
 struct FatBvhNode
@@ -32,6 +54,7 @@ struct FatBvhNode
 		u32 thinBvh;
 	};
 	u32 isLeaf;
+	u32 __padding;// Make the FatBvhNode 16 byte aligned
 };
 
 struct ThinBvhNode

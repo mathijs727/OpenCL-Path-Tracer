@@ -28,6 +28,8 @@ struct KernelData
 
 	// Scene
 	int numSpheres, numPlanes, numVertices, numTriangles, numLights;
+
+	int topLevelBvhRoot;
 };
 
 
@@ -194,11 +196,6 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 	buffer += planeMaterials.size();
 	memcpy(buffer, meshMaterials.data(), meshMaterials.size() * sizeof(Material));
 
-	std::cout << "sphere materials: " << sphereMaterials.size() << std::endl;
-	std::cout << "plane materials: " << planeMaterials.size() << std::endl;
-	std::cout << "mesh materials: " << meshMaterials.size() << std::endl;
-	std::cout << "total number of materials: " << materials.size() << std::endl;
-
 	cl_int err;
 
 	// Copy textures to the GPU
@@ -318,6 +315,9 @@ void raytracer::RayTracer::SetTarget(GLuint glTexture)
 
 void raytracer::RayTracer::RayTrace(const Camera& camera)
 {
+	UpdateTopLevelBVH();
+	//_num_fat_bvh_nodes = 5;
+
 	glm::vec3 eye;
 	glm::vec3 scr_base_origin;
 	glm::vec3 scr_base_u;
@@ -345,6 +345,8 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		data.numTriangles = _num_triangles;
 		data.numLights = _num_lights;
 
+		data.topLevelBvhRoot = _num_fat_bvh_nodes - 1;
+
 		cl_int err = _queue.enqueueWriteBuffer(
 			_kernel_data,
 			CL_TRUE,
@@ -370,7 +372,6 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	_helloWorldKernel.setArg(8, _lights);
 	_helloWorldKernel.setArg(9, _thin_bvh);
 	_helloWorldKernel.setArg(10, _fat_bvh);
-	_helloWorldKernel.setArg(11, _num_fat_bvh_nodes - 1);
 
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,

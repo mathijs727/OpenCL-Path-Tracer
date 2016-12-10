@@ -4,8 +4,8 @@
 
 typedef struct
 {
-	float centre[3];
-	float extents[3];
+	float centre[4];
+	float extents[4];
 	union
 	{
 		unsigned int leftChildIndex;
@@ -26,6 +26,29 @@ typedef struct
 	unsigned int triangleCount;
 } ThinBvhNode;
 
+typedef struct
+{
+	float3 centre;
+	float3 extents;
+
+	float transform[16];
+	float invTransform[16];
+	union
+	{
+		struct
+		{
+			unsigned int leftChildIndex;
+			unsigned int rightChildIndex;
+		};
+		unsigned int thinBvh;
+	};
+	unsigned int isLeaf;
+	/*unsigned int leftChildIndex;
+	unsigned int rightChildIndex;
+	unsigned int thinBvh;
+	unsigned int isLeaf;*/
+} FatBvhNode;
+
 void loadThinBvhNode(const __global ThinBvhNodeSerialized* serialized, ThinBvhNode* out)
 {
 	float3 centre = vload3(0, serialized->centre);
@@ -34,6 +57,45 @@ void loadThinBvhNode(const __global ThinBvhNodeSerialized* serialized, ThinBvhNo
 	out->max = centre + extents;
 	out->leftChildIndex = serialized->leftChildIndex;
 	out->triangleCount = serialized->triangleCount;
+}
+
+bool intersectRayFatBvh(const Ray* ray, const FatBvhNode* node)
+{
+	float tmin = -INFINITY, tmax = INFINITY;
+	float3 aabbMin = node->centre - node->extents;
+	float3 aabbMax = node->centre + node->extents;
+
+	if (ray->direction.x != 0.0f)
+	{
+		float tx1 = (aabbMin.x - ray->origin.x) / ray->direction.x;
+		float tx2 = (aabbMax.x - ray->origin.x) / ray->direction.x;
+
+		tmin = max(tmin, min(tx1, tx2));
+		tmax = min(tmax, max(tx1, tx2));
+	}
+
+	if (ray->direction.y != 0.0f)
+	{
+		float ty1 = (aabbMin.y - ray->origin.y) / ray->direction.y;
+		float ty2 = (aabbMax.y - ray->origin.y) / ray->direction.y;
+
+		tmin = max(tmin, min(ty1, ty2));
+		tmax = min(tmax, max(ty1, ty2));
+	}
+
+	if (ray->direction.z != 0.0f)
+	{
+		float tz1 = (aabbMin.z - ray->origin.z) / ray->direction.z;
+		float tz2 = (aabbMax.z - ray->origin.z) / ray->direction.z;
+
+		tmin = max(tmin, min(tz1, tz2));
+		tmax = min(tmax, max(tz1, tz2));
+	}
+
+	// tmax >= 0: prevent boxes before the starting position from being hit
+	// See the comment section at:
+	//  https://tavianator.com/fast-branchless-raybounding-box-intersections/
+	return tmax >= tmin && tmax >= 0;
 }
 
 // https://tavianator.com/fast-branchless-raybounding-box-intersections/

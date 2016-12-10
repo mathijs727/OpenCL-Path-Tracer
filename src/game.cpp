@@ -84,10 +84,10 @@ void Game::Init()
 	Mesh::LoadFromFile(monkey, "assets/obj/monkey.obj");
 
 	std::vector<Mesh> cube;
-	Mesh::LoadFromFile(cube, "assets/obj/cube.obj");
+	Mesh::LoadFromFile(cube, "assets/obj/cube.obj", Transform(glm::vec3(6.f, 0.f, 7.f)));
 
 	//_scene->add_node(cornell_box, Transform(glm::vec3(0.f,-0.5f,0.f)));
-	//_scene->add_node(cube, Transform(glm::vec3(6.f, 0.f, 7.f)));
+	_scene->add_node(cube);// , Transform(glm::vec3(6.f, 0.f, 7.f)));
 	_scene->add_node(monkey);
 
 	/*Timer timer;
