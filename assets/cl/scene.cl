@@ -324,8 +324,8 @@ float3 traceRay(
 	while (topLevelBvhStackPtr > 0)
 	{
 		FatBvhNode node = scene->topLevelBvh[topLevelBvhStack[--topLevelBvhStackPtr]];
-		//if (!intersectRayFatBvh(ray, &node))
-		//	continue;
+		if (!intersectRayFatBvh(ray, &node))
+			continue;
 
 		if (node.isLeaf)
 		{
@@ -337,12 +337,6 @@ float3 traceRay(
 			topLevelBvhStack[topLevelBvhStackPtr++] = node.rightChildIndex;
 		}
 	}
-	/*loadThinBvhNode(
-		&scene->thinBvh[0],
-		&thinBvhStack[thinBvhStackPtr++]);
-	loadThinBvhNode(
-		&scene->thinBvh[432],
-		&thinBvhStack[thinBvhStackPtr++]);*/
 
 	while (thinBvhStackPtr > 0)
 	{
