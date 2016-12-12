@@ -3,8 +3,9 @@
 #include "light.cl"
 #include "material.cl"
 #include "stack.cl"
+#include "scene.cl"
 
-#define RAYTRACER_EPSILON 0.00001f
+#define RAYTRACER_EPSILON 0.0001f
 
 __constant sampler_t sampler =
 	CLK_NORMALIZED_COORDS_TRUE |
@@ -25,6 +26,7 @@ float3 diffuseShade(
 		if (isLightCulled(&light, intersection))
 			continue;
 		
+		// TODO: pls make this not burn my eyes (probably just completely eliminate lines)
 		// Shadow test
 		bool lightVisible = false;
 		Line line;
@@ -33,10 +35,19 @@ float3 diffuseShade(
 		if (rayOrLine == 1)
 		{
 			line.origin += normal * RAYTRACER_EPSILON;
-			lightVisible = !checkLine(scene, &line);
+
+			int triangleIndex;
+			float hitT;
+			float2 uv;
+
+			float3 direction = line.dest - line.origin;
+			ray.origin = line.origin;
+			ray.direction = normalize(direction);
+			float maxT = dot(direction, direction);
+			lightVisible = !traceRay(scene, &ray, true, maxT, NULL, NULL, NULL);
 		} else {
 			ray.origin += normal * RAYTRACER_EPSILON;
-			lightVisible = !checkRay(scene, &ray);
+			lightVisible = !traceRay(scene, &ray, true, INFINITY, NULL, NULL, NULL);
 		}
 
 		if (lightVisible)
@@ -86,17 +97,28 @@ bool calcRefractiveRay(
 
 float3 whittedShading(
 	const Scene* scene,
-	float3 rayDirection,
+	int triangleIndex,
 	float3 intersection,
-	float3 normal,
-	float2 tex_coords,
-	ShapeType type,
-	const uint shape_index,
-	const Material* material,
+	float3 rayDirection,
+	float2 uv,
 	image2d_array_t textures,
 	float3 multiplier,
 	Stack* stack)
 {
+	// Retrieve the material and calculate the texture coords and normal
+	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
+	VertexData vertices[3];
+	TriangleData triangle = scene->triangles[triangleIndex];
+	getVertices(vertices, triangle.indices, scene);
+	float2 t0 = vertices[0].texCoord;
+	float2 t1 = vertices[1].texCoord;
+	float2 t2 = vertices[2].texCoord;
+	float2 tex_coords = t0 + (t1-t0) * uv.x + (t2-t0) * uv.y;
+	float3 n0 = vertices[0].normal;
+	float3 n1 = vertices[1].normal;
+	float3 n2 = vertices[2].normal;
+	float3 normal = normalize( n0 + (n1-n0) * uv.x + (n2-n0) * uv.y );
+
 	if (material->type == Diffuse) {
 		float3 matColour;
 		if (material->diffuse.tex_id == -1)
@@ -139,7 +161,7 @@ float3 whittedShading(
 			
 			float3 intersect_inside_normal;
 			float intersect_inside_distance;
-			if (type == SphereType)
+			/*if (type == SphereType)
 			{
 				Sphere sphere = scene->spheres[shape_index];
 				intersect_inside_distance = intersectInsideSphere(&refractive_ray, &sphere, &intersect_inside_normal);
@@ -148,7 +170,9 @@ float3 whittedShading(
 				intersect_inside_distance = intersectInsidePlane(&refractive_ray, &plane, &intersect_inside_normal);
 			} else {
 				return (float3)(0.0f, 0.0f, 0.0f);
-			}
+			}*/
+			// TODO: implement fresnel for triangle meshes
+			return (float3)(0.0f, 0.0f, 0.0f);
 			float3 inside_refraction_point = refractive_ray.origin + refractive_ray.direction * intersect_inside_distance;
 
 			Ray second_refractive_ray;

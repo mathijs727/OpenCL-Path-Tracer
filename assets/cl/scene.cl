@@ -1,7 +1,6 @@
 #ifndef __SCENE_CL
 #define __SCENE_CL
 #include "shapes.cl"
-#include "rawshapes.cl"
 #include "ray.cl"
 #include "light.cl"
 #include "stack.cl"
@@ -10,6 +9,9 @@
 #define USE_BVH_PRIMARY
 // Only test with primary rays for now
 #define USE_BVH_LIGHT
+
+// At least on AMD, this is not defined
+#define NULL 0
 
 typedef struct
 {
@@ -74,267 +76,18 @@ void loadScene(
 	scene->topLevelBvhRoot = topLevelBvhRoot;
 }
 
-bool checkRay(const Scene* scene, const Ray* ray)
-{
-	float3 n;
-	float2 texCoords;
-
-	// Check sphere intersections
-	for (int i = 0; i < scene->numSpheres; i++)
-	{
-		float t;
-		Sphere sphere = scene->spheres[i];
-		if (intersectRaySphere(ray, &sphere, &n, &texCoords, &t))
-		{
-			return true;
-		}
-	}
-
-	// Check plane intersection
-	for (int i = 0; i < scene->numPlanes; i++)
-	{
-		float t;
-		Plane plane = scene->planes[i];
-		if (intersectRayPlane(ray, &plane, &n, &texCoords, &t))
-		{
-			return true;
-		}
-	}
-
-#ifdef USE_BVH_LIGHT
-	// Check mesh intersection using BVH traversal
-	ThinBvhNode thinBvhStack[30];
-	int thinBvhStackPtr = 0;
-
-	unsigned int topLevelBvhStack[10];
-	unsigned int topLevelBvhStackPtr = 0;
-	topLevelBvhStack[topLevelBvhStackPtr++] = scene->topLevelBvhRoot;
-	while (topLevelBvhStackPtr > 0)
-	{
-		FatBvhNode node = scene->topLevelBvh[topLevelBvhStack[--topLevelBvhStackPtr]];
-		if (!intersectRayFatBvh(ray, &node))
-			continue;
-
-		if (node.isLeaf)
-		{
-			thinBvhStack[thinBvhStackPtr++] = scene->thinBvh[node.thinBvh];
-		} else {
-			topLevelBvhStack[topLevelBvhStackPtr++] = node.leftChildIndex;
-			topLevelBvhStack[topLevelBvhStackPtr++] = node.rightChildIndex;
-		}
-	}
-
-	while (thinBvhStackPtr > 0)
-	{
-		ThinBvhNode node = thinBvhStack[--thinBvhStackPtr];
-
-		if (!intersectRayThinBvh(ray, &node, INFINITY))
-			continue;
-
-		if (node.triangleCount != 0)// isLeaf()
-		{
-			for (int i = 0; i < node.triangleCount; i++)
-			{
-				float t;
-				float3 n;
-				float2 tex_coords_tmp;
-
-				VertexData v[3];
-				TriangleData triangle = scene->triangles[node.firstTriangleIndex + i];
-				getVertices(v, triangle.indices, scene);
-				if (intersectRayTriangle(ray, v, &n, &tex_coords_tmp, &t))
-				{
-					return true;
-				}
-			}
-		} else {
-			// Ordered traversal
-			ThinBvhNode left, right;
-			left = scene->thinBvh[node.leftChildIndex + 0];
-			right = scene->thinBvh[node.leftChildIndex + 1];
-
-			float3 leftVec = left.centre - ray->origin;
-			float3 rightVec = right.centre - ray->origin;
-
-			if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
-			{
-				thinBvhStack[thinBvhStackPtr++] = right;
-				thinBvhStack[thinBvhStackPtr++] = left;
-			} else {
-				thinBvhStack[thinBvhStackPtr++] = right;
-				thinBvhStack[thinBvhStackPtr++] = left;
-			}
-		}
-	}
-#else
-	// check triangles
-	for (int i = 0; i < scene->numTriangles; i++)
-	{
-		float t;
-		TriangleData triang = scene->triangles[i];
-		VertexData vertices[3];
-		getVertices(vertices, triang.indices, scene);
-		if (intersectRayTriangle(ray, vertices, &n, &texCoords, &t))
-		{
-			return true;
-		}
-	}
-#endif
-
-	return false;
-}
-
-bool checkLine(const Scene* scene, const Line* line)
-{
-	// Check sphere intersections
-	for (int i = 0; i < scene->numSpheres; i++)
-	{
-		float t;
-		Sphere sphere = scene->spheres[i];
-		if (intersectLineSphere(line, &sphere, &t))
-		{
-			return true;
-		}
-	}
-
-	// Check plane intersection
-	for (int i = 0; i < scene->numPlanes; i++)
-	{
-		float t;
-		Plane plane = scene->planes[i];
-		if (intersectLinePlane(line, &plane, &t))
-		{
-			return true;
-		}
-	}
-
-#ifdef USE_BVH_LIGHT
-	// Check mesh intersection using BVH traversal
-	ThinBvhNode thinBvhStack[30];
-	int thinBvhStackPtr = 0;
-
-	unsigned int topLevelBvhStack[10];
-	unsigned int topLevelBvhStackPtr = 0;
-	topLevelBvhStack[topLevelBvhStackPtr++] = scene->topLevelBvhRoot;
-	while (topLevelBvhStackPtr > 0)
-	{
-		FatBvhNode node = scene->topLevelBvh[topLevelBvhStack[--topLevelBvhStackPtr]];
-		if (!intersectLineFatBvh(line, &node))
-			continue;
-
-		if (node.isLeaf)
-		{
-			thinBvhStack[thinBvhStackPtr++] = scene->thinBvh[node.thinBvh];
-		} else {
-			topLevelBvhStack[topLevelBvhStackPtr++] = node.leftChildIndex;
-			topLevelBvhStack[topLevelBvhStackPtr++] = node.rightChildIndex;
-		}
-	}
-
-	while (thinBvhStackPtr > 0)
-	{
-		ThinBvhNode node = thinBvhStack[--thinBvhStackPtr];
-
-		if (!intersectLineThinBvh(line, &node))
-			continue;
-
-		if (node.triangleCount != 0)// isLeaf()
-		{
-			for (int i = 0; i < node.triangleCount; i++)
-			{
-				float t;
-				VertexData vertices[3];
-				TriangleData triangle = scene->triangles[node.firstTriangleIndex + i];
-				getVertices(vertices, triangle.indices, scene);
-				if (intersectLineTriangle(line, vertices, &t))
-				{
-					return true;
-				}
-			}
-		} else {
-			// Ordered traversal
-			ThinBvhNode left, right;
-			left = scene->thinBvh[node.leftChildIndex + 0];
-			right = scene->thinBvh[node.leftChildIndex + 1];
-
-			float3 leftVec = left.centre - line->origin;
-			float3 rightVec = right.centre - line->origin;
-
-			if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
-			{
-				thinBvhStack[thinBvhStackPtr++] = right;
-				thinBvhStack[thinBvhStackPtr++] = left;
-			} else {
-				thinBvhStack[thinBvhStackPtr++] = right;
-				thinBvhStack[thinBvhStackPtr++] = left;
-			}
-		}
-	}
-#else
-	// check triangles
-	for (int i = 0; i < scene->numTriangles; i++)
-	{
-		float t;
-		TriangleData triang = scene->triangles[i];
-		VertexData vertices[3];
-		getVertices(vertices, triang.indices, scene);
-		if (intersectLineTriangle(line, vertices, &t))
-		{
-			return true;
-		}
-	}
-#endif
-
-	return false;
-}
-
-#include "shading.cl"
-float3 traceRay(
+bool traceRay(
 	const Scene* scene,
 	const Ray* ray,
-	float3 multiplier,
-	Stack* stack,
-	image2d_array_t textures)
+	bool hitAny,
+	float maxT,
+	int* outTriangleIndex,
+	float* outT,
+	float2* outUV)
 {
-	float minT = 100000.0f;
-	int i_current_hit = -1;
-	ShapeType type;
-	float3 normal;
-	float2 tex_coords;
-	
-	// Check sphere intersections
-	for (int i = 0; i < scene->numSpheres; i++)
-	{
-		float t;
-		float3 n;
-		float2 tex_coords_tmp;
-		Sphere s = scene->spheres[i];
-		if (intersectRaySphere(ray, &s, &n, &tex_coords_tmp, &t) && t < minT)
-		{
-			minT = t;
-			i_current_hit = i;
-			type = SphereType;
-			normal = n;
-			tex_coords = tex_coords_tmp;
-		}
-	}
-
-	// Check plane intersection
-	for (int i = 0; i < scene->numPlanes; i++)
-	{
-		float t;
-		float3 n;
-		float2 tex_coords_tmp;
-		Plane p = scene->planes[i];
-		if (intersectRayPlane(ray, &p, &n, &tex_coords_tmp, &t) && t < minT)
-		{
-			minT = t;
-			i_current_hit = i;
-			type = PlaneType;
-			normal = n;
-			tex_coords = tex_coords_tmp;
-		}
-	}
+	int triangleIndex;
+	float closestT = maxT;
+	float2 closestUV;
 
 	int boxIntersectionTests = 0;
 	int triangleIntersectionTests = 0;
@@ -344,6 +97,7 @@ float3 traceRay(
 	ThinBvhNode thinBvhStack[30];
 	int thinBvhStackPtr = 0;
 
+	// Traverse top level BVH and add relevant sub-BVH's to the "thin BVH" stacks
 	unsigned int topLevelBvhStack[10];
 	unsigned int topLevelBvhStackPtr = 0;
 	topLevelBvhStack[topLevelBvhStackPtr++] = scene->topLevelBvhRoot;
@@ -362,12 +116,13 @@ float3 traceRay(
 		}
 	}
 
+
 	while (thinBvhStackPtr > 0)
 	{
 		boxIntersectionTests++;
 		ThinBvhNode node = thinBvhStack[--thinBvhStackPtr];
 
-		if (!intersectRayThinBvh(ray, &node, minT))
+		if (!intersectRayThinBvh(ray, &node, closestT))
 			continue;
 
 		if (node.triangleCount != 0)// isLeaf()
@@ -377,19 +132,19 @@ float3 traceRay(
 				triangleIntersectionTests++;
 
 				float t;
-				float3 n;
-				float2 tex_coords_tmp;
+				float2 uv;
 
-				VertexData v[3];
+				VertexData vertices[3];
 				TriangleData triangle = scene->triangles[node.firstTriangleIndex + i];
-				getVertices(v, triangle.indices, scene);
-				if (intersectRayTriangle(ray, v, &n, &tex_coords_tmp, &t) && t < minT)
+				getVertices(vertices, triangle.indices, scene);
+				if (intersectRayTriangle(ray, vertices, &t, &uv) && t < closestT)
 				{
-					minT = t;
-					i_current_hit = node.firstTriangleIndex + i;
-					type = MeshType;
-					normal = n;
-					tex_coords = tex_coords_tmp;
+					if (hitAny)
+						return true;
+
+					triangleIndex = node.firstTriangleIndex + i;
+					closestT = t;
+					closestUV = uv;
 				}
 			}
 		} else {
@@ -410,6 +165,16 @@ float3 traceRay(
 				thinBvhStack[thinBvhStackPtr++] = left;
 			}
 		}
+	}
+
+	if (closestT != maxT)// We did not hit anything
+	{
+		*outTriangleIndex = triangleIndex;
+		*outT = closestT;
+		*outUV = closestUV;
+		return true;
+	} else {// We did not intersect with any triangle
+		return false;
 	}
 #else
 	// Old fashioned brute force
@@ -424,7 +189,7 @@ float3 traceRay(
 		float3 edge1 = v[1].vertex - v[0].vertex;
 		float3 edge2 = v[2].vertex - v[0].vertex;
 		bool backface = dot(ray->direction, cross(edge2, edge1)) < 0;
-		if (!backface && intersectRayTriangle(ray, v, &n, &tex_coords_tmp, &t) && t < minT)
+		if (!backface && intersectRayTriangle(ray, &outT, &outUv) && t < minT)
 		{
 			minT = t;
 			i_current_hit = i;
@@ -435,7 +200,9 @@ float3 traceRay(
 	}
 #endif
 
-	float3 outCol = (float3)(0.0f, 0.0f, 0.0f);
+
+
+	/*float3 outCol = (float3)(0.0f, 0.0f, 0.0f);
 	if (i_current_hit >= 0)
 	{
 		// Calculate the normal of the hit surface and retrieve the material
@@ -465,7 +232,7 @@ float3 traceRay(
 	}
 	int tests = boxIntersectionTests;// + triangleIntersectionTests;
 	outCol.y = tests / 400.0f;
-	return outCol;
+	return outCol;*/
 }
 
 #endif// __SCENE_CL

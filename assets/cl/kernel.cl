@@ -1,11 +1,11 @@
 #include "shapes.cl"
-#include "rawshapes.cl"
 #include "material.cl"
 #include "scene.cl"
 #include "light.cl"
 #include "stack.cl"
 #include "gamma.cl"
 #include "bvh.cl"
+#include "shading.cl"
 
 #define MAX_ITERATIONS 4
 
@@ -79,7 +79,27 @@ __kernel void hello(
 	{
 		StackItem item;
 		StackPop(&stack, &item);
-		outColor += traceRay(&scene, &item.ray, item.multiplier, &stack, textures);
+
+		int triangleIndex;
+		float t;
+		float2 uv;
+		bool hit = traceRay(&scene, &item.ray, false, INFINITY, &triangleIndex, &t, &uv);
+		
+		if (hit)
+		{
+			float3 direction = item.ray.direction;
+			float3 intersection = t * item.ray.direction + item.ray.origin;
+
+			outColor = whittedShading(
+				&scene,
+				triangleIndex,
+				intersection,
+				direction,
+				uv,
+				textures,
+				item.multiplier,
+				&stack);
+		}
 
 		if (++iterCount >= MAX_ITERATIONS)
 		{
