@@ -33,7 +33,7 @@ class Scene
 public:
 	friend class Bvh;
 
-	Scene();
+	Scene() { };
 
 	struct TriangleSceneData
 	{
@@ -49,16 +49,6 @@ public:
 		byte __padding[8];
 	}; 
 
-	void add_primitive(const Sphere& primitive, const Material& material) {
-		_spheres.push_back(primitive);
-		_sphere_materials.push_back(material);
-	}
-
-	void add_primitive(const Plane& primitive, const Material& material) {
-		_planes.push_back(primitive);
-		_planes_materials.push_back(material);
-	}
-
 	SceneNode& add_node(const Mesh& primitive, const Transform& transform = Transform(), SceneNode* parent = nullptr);
 	SceneNode& add_node(const std::vector<Mesh>& primitive, const Transform& transform = Transform(), SceneNode* parent = nullptr);
 
@@ -68,11 +58,6 @@ public:
 	}
 
 	SceneNode& get_root_node() { return _root_node; }
-	const std::vector<Sphere>& GetSpheres() const { return _spheres; };
-	const std::vector<Material>& GetSphereMaterials() const { return _sphere_materials; };
-
-	const std::vector<Plane>& GetPlanes() const { return _planes; };
-	const std::vector<Material>& GetPlaneMaterials() const { return _planes_materials; };
 
 	const std::vector<Light>& GetLights() const { return _lights; };
 	const std::vector<VertexSceneData>& GetVertices() const { return _vertices; }
@@ -96,12 +81,6 @@ public:
 	float refractive_index = 1.000277f;
 private:
 	SceneNode _root_node;
-
-	std::vector<Sphere> _spheres;
-	std::vector<Material> _sphere_materials;
-
-	std::vector<Plane> _planes;
-	std::vector<Material> _planes_materials;
 
 	std::vector<VertexSceneData> _vertices;
 	std::vector<TriangleSceneData> _triangle_indices;

@@ -27,7 +27,7 @@ struct KernelData
 	uint width;// Render target width
 
 	// Scene
-	int numSpheres, numPlanes, numVertices, numTriangles, numLights;
+	int numVertices, numTriangles, numLights;
 
 	int topLevelBvhRoot;
 };
@@ -88,26 +88,10 @@ raytracer::RayTracer::~RayTracer()
 void raytracer::RayTracer::InitBuffers()
 {
 	cl_int err;
-	
-	// Create buffers even if we're not gonna used them.
-	// OpenCL requires us to pass in a buffer to each function argument, even when unused.
-	_spheres = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1, _num_spheres) * sizeof(Sphere),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-
-	_planes = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1, _num_planes) * sizeof(Plane),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
 
 	_materials = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		std::max(_num_mesh_materials + _num_spheres + _num_planes, 1) * sizeof(Material),
+		std::max(_num_mesh_materials, 1) * sizeof(Material),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
@@ -172,8 +156,6 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 	_bvh->buildThinBvhs();
 	std::cout << "Done building BVH" << std::endl;
 
-	_num_spheres = scene.GetSpheres().size();
-	_num_planes = scene.GetPlanes().size();
 	_num_lights = scene.GetLights().size();
 	_num_vertices = scene.GetVertices().size();
 	_num_triangles = scene.GetTriangleIndices().size();
@@ -183,21 +165,7 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 
 	InitBuffers();
 
-	auto& sphereMaterials = scene.GetSphereMaterials();
-	auto& planeMaterials = scene.GetPlaneMaterials();
-	auto& meshMaterials = scene.GetMeshMaterials();
-	std::vector<Material> materials;
-	materials.resize(sphereMaterials.size() + planeMaterials.size() + meshMaterials.size());
-
-	Material* buffer = materials.data();
-	memcpy(buffer, sphereMaterials.data(), sphereMaterials.size() * sizeof(Material));
-	buffer += sphereMaterials.size();
-	memcpy(buffer, planeMaterials.data(), planeMaterials.size() * sizeof(Material));
-	buffer += planeMaterials.size();
-	memcpy(buffer, meshMaterials.data(), meshMaterials.size() * sizeof(Material));
-
 	cl_int err;
-
 	// Copy textures to the GPU
 	for (uint texId = 0; texId < _num_textures; texId++)
 	{
@@ -221,36 +189,14 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 		checkClErr(err, "CommandQueue::enqueueWriteImage");
 	}
 
-	if (_num_spheres > 0)
-	{
-		err = _queue.enqueueWriteBuffer(
-			_spheres,
-			CL_TRUE,
-			0,
-			_num_spheres * sizeof(Sphere),
-			scene.GetSpheres().data());
-		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-	}
-
-	if (_num_planes > 0)
-	{
-		err = _queue.enqueueWriteBuffer(
-			_planes,
-			CL_TRUE,
-			0,
-			_num_planes * sizeof(Plane),
-			scene.GetPlanes().data());
-		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-	}
-
-	if (materials.size() > 0)
+	if (scene.GetMeshMaterials().size() > 0)
 	{
 		err = _queue.enqueueWriteBuffer(
 			_materials,
 			CL_TRUE,
 			0,
-			materials.size() * sizeof(Material),
-			materials.data());
+			scene.GetMeshMaterials().size() * sizeof(Material),
+			scene.GetMeshMaterials().data());
 		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 	}
 
@@ -339,8 +285,6 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		data.v_step = glmToCl(v_step);
 		data.width = _scr_width;
 
-		data.numSpheres = _num_spheres;
-		data.numPlanes = _num_planes;
 		data.numVertices = _num_vertices;
 		data.numTriangles = _num_triangles;
 		data.numLights = _num_lights;
@@ -363,15 +307,13 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	cl::Event event;
 	_helloWorldKernel.setArg(0, _output_image);
 	_helloWorldKernel.setArg(1, _kernel_data);
-	_helloWorldKernel.setArg(2, _spheres);
-	_helloWorldKernel.setArg(3, _planes);
-	_helloWorldKernel.setArg(4, _vertices);
-	_helloWorldKernel.setArg(5, _triangles);
-	_helloWorldKernel.setArg(6, _materials);
-	_helloWorldKernel.setArg(7, _material_textures);
-	_helloWorldKernel.setArg(8, _lights);
-	_helloWorldKernel.setArg(9, _thin_bvh);
-	_helloWorldKernel.setArg(10, _fat_bvh);
+	_helloWorldKernel.setArg(2, _vertices);
+	_helloWorldKernel.setArg(3, _triangles);
+	_helloWorldKernel.setArg(4, _materials);
+	_helloWorldKernel.setArg(5, _material_textures);
+	_helloWorldKernel.setArg(6, _lights);
+	_helloWorldKernel.setArg(7, _thin_bvh);
+	_helloWorldKernel.setArg(8, _fat_bvh);
 
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,

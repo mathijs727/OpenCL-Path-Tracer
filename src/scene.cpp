@@ -4,11 +4,6 @@
 
 using namespace raytracer;
 
-raytracer::Scene::Scene() {
-	_spheres.reserve(256);
-	_sphere_materials.reserve(256);
-}
-
 raytracer::SceneNode& raytracer::Scene::add_node(const Mesh& primitive, const Transform& transform, SceneNode* parent /*= nullptr*/) {
 	return add_node(std::vector<Mesh>{ primitive }, transform, parent );
 }

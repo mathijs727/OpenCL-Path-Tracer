@@ -19,7 +19,7 @@ typedef struct
 	uint width;// Render target width
 
 	// Scene
-	int numSpheres, numPlanes, numVertices, numTriangles, numLights;
+	int numVertices, numTriangles, numLights;
 
 	int topLevelBvhRoot;
 } KernelData;
@@ -27,8 +27,6 @@ typedef struct
 __kernel void hello(
 	__write_only image2d_t output,
 	__global KernelData* inputData,
-	__global Sphere* spheres,
-	__global Plane* planes,
 	__global VertexData* vertices,
 	__global TriangleData* triangles,
 	__global Material* materials,
@@ -41,26 +39,18 @@ __kernel void hello(
 	int y = get_global_id(1);
 
 	Scene scene;
-	//if (get_local_id(0) == 0 && get_local_id(1) == 0)
-	{
-		loadScene(
-			inputData->numSpheres,
-			spheres,
-			inputData->numPlanes,
-			planes,
-			inputData->numVertices,
-			vertices,
-			inputData->numTriangles,
-			triangles,
-			materials,
-			inputData->numLights,
-			lights,
-			thinBvh,
-			inputData->topLevelBvhRoot,
-			topLevelBvh,
-			&scene);
-	}
-	//barrier(CLK_LOCAL_MEM_FENCE);
+	loadScene(
+		inputData->numVertices,
+		vertices,
+		inputData->numTriangles,
+		triangles,
+		materials,
+		inputData->numLights,
+		lights,
+		thinBvh,
+		inputData->topLevelBvhRoot,
+		topLevelBvh,
+		&scene);
 	
 	float3 screenPoint = inputData->screen + \
 		inputData->u_step * (float)x + inputData->v_step * (float)y;	

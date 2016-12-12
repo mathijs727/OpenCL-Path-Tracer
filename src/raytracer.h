@@ -42,10 +42,6 @@ private:
 
 	cl::Buffer _kernel_data;
 
-	cl_int _num_spheres;
-	cl::Buffer _spheres;
-	cl_int _num_planes;
-	cl::Buffer _planes;
 	cl_int _num_vertices;
 	cl::Buffer _vertices;
 	cl_int _num_triangles;

@@ -15,13 +15,9 @@
 
 typedef struct
 {
-	int numSpheres, numPlanes, numLights, numVertices, numTriangles;
-	const __global Sphere* spheres;
-	const __global Plane* planes;
+	int numLights, numVertices, numTriangles;
 	const __global VertexData* vertices;
 	const __global TriangleData* triangles;
-	const __global Material* sphereMaterials;
-	const __global Material* planeMaterials;
 	const __global Material* meshMaterials;
 	const __global Light* lights;
 
@@ -39,10 +35,6 @@ void getVertices(VertexData* out_vertices, uint* indices, const Scene* scene) {
 }
 
 void loadScene(
-	int numSpheres,
-	const __global Sphere* spheres,
-	int numPlanes,
-	const __global Plane* planes,
 	int numVertices,
 	const __global VertexData* vertices,
 	int numTriangles,
@@ -56,17 +48,11 @@ void loadScene(
 	Scene* scene) {
 	scene->refractiveIndex =  1.000277f;
 	
-	scene->numSpheres = numSpheres;
-	scene->numPlanes = numPlanes;
 	scene->numLights = numLights;
 	scene->numVertices = numVertices;
 	scene->numTriangles = numTriangles;
 
-	scene->spheres = spheres;
-	scene->planes = planes;
-	scene->sphereMaterials = materials;
-	scene->planeMaterials = &materials[numSpheres];
-	scene->meshMaterials = &materials[numSpheres + numPlanes];
+	scene->meshMaterials = materials;
 	scene->triangles = triangles;
 	scene->vertices = vertices;
 	scene->lights = lights;
@@ -199,40 +185,6 @@ bool traceRay(
 		}
 	}
 #endif
-
-
-
-	/*float3 outCol = (float3)(0.0f, 0.0f, 0.0f);
-	if (i_current_hit >= 0)
-	{
-		// Calculate the normal of the hit surface and retrieve the material
-		float3 direction = ray->direction;
-		float3 intersection = minT * direction + ray->origin;
-		Material material;
-		if (type == SphereType) {
-			material = scene->sphereMaterials[i_current_hit];
-		} else if (type == PlaneType) {
-			material = scene->planeMaterials[i_current_hit];
-		} else if (type == MeshType) {
-			material = scene->meshMaterials[scene->triangles[i_current_hit].mat_index];
-		}
-		//return (float3)(1.0f, 1.0f, 1.0f);
-		outCol = whittedShading(
-			scene,
-			ray->direction,
-			intersection,
-			normal,
-			tex_coords,
-			type,
-			i_current_hit,
-			&material,
-			textures,
-			multiplier,
-			stack);
-	}
-	int tests = boxIntersectionTests;// + triangleIntersectionTests;
-	outCol.y = tests / 400.0f;
-	return outCol;*/
 }
 
 #endif// __SCENE_CL
