@@ -145,7 +145,7 @@ FatBvhNode raytracer::Bvh::createFatNode(const SceneNode* sceneGraphNode, const 
 {
 	FatBvhNode node;
 	node.thinBvh = sceneGraphNode->meshData.thinBvhIndex;
-	node.bounds = _thinBuffer[node.thinBvh].bounds;
+	node.bounds = calcTransformedAABB(_thinBuffer[node.thinBvh].bounds, transform);
 	node.transform = transform;
 	node.invTransform = glm::inverse(transform);
 	node.isLeaf = true;
@@ -181,6 +181,35 @@ AABB raytracer::Bvh::calcCombinedBounds(const AABB& bounds1, const AABB& bounds2
 	AABB result;
 	result.centre = (min + max) / 2.0f;
 	result.extents = (max - min) / 2.0f;
+	return result;
+}
+
+AABB raytracer::Bvh::calcTransformedAABB(const AABB& bounds, glm::mat4 transform)
+{
+	glm::vec3 min = bounds.centre - bounds.extents;
+	glm::vec3 max = bounds.centre + bounds.extents;
+
+	glm::vec3 corners[8];
+	corners[0] = glm::vec3(transform * glm::vec4(max.x, max.y, max.z, 1.0f));
+	corners[1] = glm::vec3(transform * glm::vec4(max.x, max.y, min.z, 1.0f));
+	corners[2] = glm::vec3(transform * glm::vec4(max.x, min.y, max.z, 1.0f));
+	corners[3] = glm::vec3(transform * glm::vec4(max.x, min.y, min.z, 1.0f));
+	corners[4] = glm::vec3(transform * glm::vec4(min.x, min.y, min.z, 1.0f));
+	corners[5] = glm::vec3(transform * glm::vec4(min.x, min.y, max.z, 1.0f));
+	corners[6] = glm::vec3(transform * glm::vec4(min.x, max.y, min.z, 1.0f));
+	corners[7] = glm::vec3(transform * glm::vec4(min.x, max.y, max.z, 1.0f));
+
+	glm::vec3 newMin = corners[0];
+	glm::vec3 newMax = corners[0];
+	for (int i = 1; i < 8; i++)
+	{
+		newMin = glm::min(corners[i], newMin);
+		newMax = glm::max(corners[i], newMax);
+	}
+	
+	AABB result;
+	result.centre = (newMin + newMax) / 2.0f;
+	result.extents = (newMax - newMin) / 2.0f;
 	return result;
 }
 

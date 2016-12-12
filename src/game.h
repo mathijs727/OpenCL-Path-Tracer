@@ -38,10 +38,11 @@ private:
 	std::unordered_map<int, float> _input_axes;
 	glm::vec3 _camera_euler;
 
-#ifdef OPENCL
+	float t = 0.0f;
+	raytracer::SceneNode* _monkey_scene_node;
+
 	std::unique_ptr<raytracer::RayTracer> _ray_tracer;
 	GLOutput _out;
-#endif
 };
 
 }; // namespace Tmpl8

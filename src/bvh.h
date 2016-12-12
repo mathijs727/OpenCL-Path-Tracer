@@ -92,6 +92,7 @@ private:
 	FatBvhNode createFatNode(const SceneNode* node, const glm::mat4 transform);
 	FatBvhNode mergeFatNodes(u32 nodeId1, u32 nodeId2);
 	AABB calcCombinedBounds(const AABB& bounds1, const AABB& bounds2);
+	AABB calcTransformedAABB(const AABB& bounds, glm::mat4 transform);
 
 	void subdivide(ThinBvhNode& node);
 	void partition(ThinBvhNode& node, u32 leftIndex);

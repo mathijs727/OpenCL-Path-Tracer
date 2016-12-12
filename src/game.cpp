@@ -25,11 +25,11 @@ void Game::Init()
 
 	{
 		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(0, 5, 3));
-		_scene->add_light(light);
+		//_scene->add_light(light);
 	}
 	{
 		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(5, 1,0));
-		_scene->add_light(light);
+		//_scene->add_light(light);
 	}
 	{
 		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(-1, -1, 0));
@@ -48,9 +48,13 @@ void Game::Init()
 	std::vector<Mesh> cube;
 	Mesh::LoadFromFile(cube, "assets/obj/cube.obj", Transform(glm::vec3(6.f, 0.f, 7.f)));
 
+	std::vector<Mesh> plane;
+	Mesh::LoadFromFile(plane, "assets/obj/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
+
 	//_scene->add_node(cornell_box, Transform(glm::vec3(0.f,-0.5f,0.f)));
-	_scene->add_node(cube);// , Transform(glm::vec3(6.f, 0.f, 7.f)));
-	_scene->add_node(monkey);
+	_scene->add_node(plane);
+	//_scene->add_node(cube);// , Transform(glm::vec3(6.f, 0.f, 7.f)));
+	_monkey_scene_node = &_scene->add_node(monkey, Transform(glm::vec3(1.0f, 0.0f, 0.0f)));
 
 	/*Timer timer;
 	raytrace(*_camera, *_scene, *_screen);
@@ -87,16 +91,12 @@ void Game::HandleInput( float dt )
 void Game::Tick( float dt )
 {
 	HandleInput(dt);
-	//raytrace(*_camera, *_scene, *_screen);
-	//_screen->Clear( 0 );
-	//_screen->Print( "hello world", 2, 2, 0xffffff );
-	//_screen->Line( 2, 10, 50, 10, 0xff0000 );
-#ifdef OPENCL
+
+	t += dt;
+	_monkey_scene_node->transform.location.z = cos(t);
+
 	_ray_tracer->RayTrace(*_camera);
 	_out.Render();
-#else
-	raytrace(*_camera, *_scene, *_screen);
-#endif
 }
 
 void Tmpl8::Game::AxisEvent(int axis, float value) {
