@@ -10,6 +10,9 @@ std::unordered_map<const char*, int> raytracer::Texture::s_texturesMap =
 std::vector<std::unique_ptr<Tmpl8::Surface>> raytracer::Texture::s_textures =
 	std::vector<std::unique_ptr<Tmpl8::Surface>>();
 
+const uint raytracer::Texture::TEXTURE_WIDTH;// = 1024;
+const uint raytracer::Texture::TEXTURE_HEIGHT;// = 1024;
+
 raytracer::Texture::Texture(const char* fileName)
 {
 	int texId;

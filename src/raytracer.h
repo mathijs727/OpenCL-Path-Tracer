@@ -48,7 +48,7 @@ private:
 	cl::Buffer _triangles;
 
 	cl_int _num_mesh_materials;
-	size_t _num_textures;
+	cl_int _num_textures;
 	cl::Buffer _materials;
 	
 	cl_int _num_lights;

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include <glm.hpp>
 #include <vector>
 #include "types.h"
-#include "template\includes.h"
+#include "template/includes.h"
 
 namespace raytracer {
 

@@ -93,6 +93,9 @@ void Game::Tick( float dt )
 	HandleInput(dt);
 
 	t += dt;
+	if (t > 2 * PI)
+		t -= 2 * PI;
+
 	_monkey_scene_node->transform.location.z = cos(t);
 
 	_ray_tracer->RayTrace(*_camera);

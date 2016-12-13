@@ -96,14 +96,14 @@ bool traceRay(
 	{
 		unsigned int index = topLevelBvhStack[--topLevelBvhStackPtr];
 		FatBvhNode node = scene->topLevelBvh[index];
-		//if (!intersectRayFatBvh(ray, &node))
-		//	continue;
+		if (!intersectRayFatBvh(ray, &node))
+			continue;
 
 		if (node.isLeaf)
 		{
 			Ray transformedRay;
-			transformedRay.origin = matrixMultiply(node.transform, (float4)(ray->origin, 1.0f)).xyz;
-			transformedRay.direction = matrixMultiply(node.transform, (float4)(ray->direction, 0.0f)).xyz;
+			transformedRay.origin = matrixMultiply(node.invTransform, (float4)(ray->origin, 1.0f)).xyz;
+			transformedRay.direction = normalize(matrixMultiply(node.invTransform, (float4)(ray->direction, 0.0f)).xyz);
 
 			thinBvhStack[thinBvhStackPtr].nodeIndex = node.thinBvh;
 			thinBvhStack[thinBvhStackPtr].fatNodeIndex = index;

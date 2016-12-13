@@ -140,7 +140,7 @@ void raytracer::RayTracer::InitBuffers()
 	_material_textures = cl::Image2DArray(_context,
 		CL_MEM_READ_ONLY,
 		cl::ImageFormat(CL_BGRA, CL_UNORM_INT8),
-		std::max(1u, _num_textures),
+		std::max(1, _num_textures),
 		Texture::TEXTURE_WIDTH,
 		Texture::TEXTURE_HEIGHT,
 		0, 0, NULL,// Unused host_ptr

@@ -1,5 +1,6 @@
 #pragma once
 #include <glm.hpp>
+#include <cstring>// memcpy
 #include "ray.h"
 #include "types.h"
 
