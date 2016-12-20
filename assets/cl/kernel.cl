@@ -80,7 +80,7 @@ __kernel void hello(
 			float3 direction = item.ray.direction;
 			float3 intersection = t * item.ray.direction + item.ray.origin;
 
-			outColor = whittedShading(
+			outColor += whittedShading(
 				&scene,
 				triangleIndex,
 				intersection,

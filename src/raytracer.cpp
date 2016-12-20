@@ -123,12 +123,23 @@ void raytracer::RayTracer::InitBuffers()
 		std::max(1, _num_thin_bvh_nodes) * sizeof(ThinBvhNode),
 		NULL,
 		&err);
+	checkClErr(err, "Buffer::Buffer()");
 
-	_fat_bvh = cl::Buffer(_context,
+	_num_fat_bvh_nodes[0] = 0;
+	_fat_bvh[0] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		256 * sizeof(FatBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
 		NULL,
 		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
+	_num_fat_bvh_nodes[1] = 0;
+	_fat_bvh[1] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		256 * sizeof(FatBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
 
 	_kernel_data = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
@@ -251,8 +262,6 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 			_bvh->GetThinNodes().data());
 		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 	}
-
-	UpdateTopLevelBVH();
 }
 
 void raytracer::RayTracer::SetTarget(GLuint glTexture)
@@ -264,14 +273,6 @@ void raytracer::RayTracer::SetTarget(GLuint glTexture)
 
 void raytracer::RayTracer::RayTrace(const Camera& camera)
 {
-	/*using namespace std::chrono;
-	auto t1 = high_resolution_clock::now();
-	std::this_thread::sleep_for(10ms);
-	UpdateTopLevelBVH();
-	auto t2 = high_resolution_clock::now();
-	auto t = duration_cast<duration<double>>(t2 - t1);*/
-	//std::cout << "Top level BVH building cost: " << t.count() * 1000.0f << "ms" << std::endl;
-
 	glm::vec3 eye;
 	glm::vec3 scr_base_origin;
 	glm::vec3 scr_base_u;
@@ -283,7 +284,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 
 	// We must make sure that OpenGL is done with the textures, so we ask to sync.
 	glFinish();
-	
+
 	{
 		// Copy camera (and scene) data to the device using a struct so we dont use 20 kernel arguments
 		KernelData data = {};
@@ -297,7 +298,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		data.numTriangles = _num_triangles;
 		data.numLights = _num_lights;
 
-		data.topLevelBvhRoot = _num_fat_bvh_nodes - 1;
+		data.topLevelBvhRoot = _num_fat_bvh_nodes[_active_fat_bvh] - 1;
 
 		cl_int err = _queue.enqueueWriteBuffer(
 			_kernel_data,
@@ -321,7 +322,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	_helloWorldKernel.setArg(5, _material_textures);
 	_helloWorldKernel.setArg(6, _lights);
 	_helloWorldKernel.setArg(7, _thin_bvh);
-	_helloWorldKernel.setArg(8, _fat_bvh);
+	_helloWorldKernel.setArg(8, _fat_bvh[_active_fat_bvh]);
 
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,
@@ -331,13 +332,46 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		NULL,
 		&event);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+	
+	{
+		// Manually flush the queue
+		// At least on AMD, the queue is flushed after the enqueueWriteBuffer (probably because it thinks
+		//  one kernel launch is not enough reason to flush). So it would be executed at _queue.finish(), which
+		//  is called after the top lvl bvh construction (which is expensive) has completed. Instead we manually
+		//  flush and than calculate the top lvl bvh.
+		_queue.flush();
+
+		// Update the top level BVH and copy it to the GPU on a seperate copy queue
+		_bvh->updateTopLevelBvh();
+		int copyBvh = (_active_fat_bvh + 1) % 2;
+		_num_fat_bvh_nodes[copyBvh] = _bvh->GetFatNodes().size();
+		if (_num_fat_bvh_nodes[copyBvh] > 0)
+		{
+			cl::Event copyEvent;
+			cl_int err = _copyQueue.enqueueWriteBuffer(
+				_fat_bvh[copyBvh],
+				CL_FALSE,
+				0,
+				_num_fat_bvh_nodes[copyBvh] * sizeof(FatBvhNode),
+				_bvh->GetFatNodes().data(),
+				nullptr,
+				&copyEvent);
+			checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+
+			std::vector<cl::Event> waitEvents;
+			waitEvents.push_back(copyEvent);
+			err = _queue.enqueueBarrierWithWaitList(&waitEvents);
+			checkClErr(err, "CommandQueue::enqueueBarrierWithWaitList");
+		}
+	}
 
 	// Before returning the objects to OpenGL, we sync to make sure OpenCL is done.
 	err = _queue.finish();
 	checkClErr(err, "CommandQueue::finish");
 
 	_queue.enqueueReleaseGLObjects(&images);
-	//floatToPixel(_outHost.get(), target_surface.GetBuffer(), _scr_width * _scr_height);
+
+	_active_fat_bvh = (_active_fat_bvh + 1) % 2;
 }
 
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/
@@ -457,23 +491,8 @@ void raytracer::RayTracer::InitOpenCL()
 	_devices.push_back(cl::Device(lDeviceId));
 	_queue = clCreateCommandQueue(lContext, lDeviceId, 0, &lError);
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
-}
-
-void raytracer::RayTracer::UpdateTopLevelBVH()
-{
-	_bvh->updateTopLevelBvh();
-
-	_num_fat_bvh_nodes = _bvh->GetFatNodes().size();
-	if (_num_fat_bvh_nodes > 0)
-	{
-		cl_int err = _queue.enqueueWriteBuffer(
-			_fat_bvh,
-			CL_TRUE,
-			0,
-			_num_fat_bvh_nodes * sizeof(FatBvhNode),
-			_bvh->GetFatNodes().data());
-		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-	}
+	_copyQueue = clCreateCommandQueue(lContext, lDeviceId, 0, &lError);
+	checkClErr(lError, "Unable to create an OpenCL command queue.");
 }
 
 cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* funcName)
