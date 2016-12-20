@@ -94,8 +94,8 @@ private:
 	AABB calcCombinedBounds(const AABB& bounds1, const AABB& bounds2);
 	AABB calcTransformedAABB(const AABB& bounds, glm::mat4 transform);
 
-	void subdivide(ThinBvhNode& node);
-	void partition(ThinBvhNode& node, u32 leftIndex);
+	void subdivide(ThinBvhNode& node, std::vector<u32>& secondaryTriangleIndexBuffer);
+	void partition(ThinBvhNode& node, u32 leftIndex, std::vector<u32>& secondaryTriangleIndexBuffer);
 	AABB create_bounds(u32* indices, u32 count);
 private:
 	Scene& _scene;
@@ -105,8 +105,6 @@ private:
 
 	u32 _thinPoolPtr;
 	std::vector<ThinBvhNode> _thinBuffer;
-
-	std::vector<u32> _triangleIndexBuffer;
 };
 }
 
