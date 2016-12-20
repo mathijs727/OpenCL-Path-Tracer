@@ -11,6 +11,14 @@ void raytracer::Bvh::buildThinBvhs() {
 	_thinBuffer.clear();
 	_thinPoolPtr = 0;
 
+	std::vector<u32> secondaryTriangleIndexBuffer;
+	secondaryTriangleIndexBuffer.reserve(_scene._triangle_indices.size());
+
+	// fill the triangle index buffer for this bvh
+	for (u32 i = 0; i < _scene._triangle_indices.size(); ++i) {
+		secondaryTriangleIndexBuffer.push_back(i);
+	}
+
 	std::stack<SceneNode*> node_stack;
 	node_stack.push(&_scene.get_root_node());
 	while (!node_stack.empty()) {
@@ -29,19 +37,11 @@ void raytracer::Bvh::buildThinBvhs() {
 		std::cout << "Starting bvh build for object with " <<triangleCount << "triangles."<<std::endl;
 
 		_thinBuffer.reserve(_thinBuffer.size() + triangleCount*2);
-		
-		std::vector<u32> secondaryTriangleIndexBuffer;
-		secondaryTriangleIndexBuffer.reserve(triangleCount);
-
-		// fill the triangle index buffer for this bvh
-		for (u32 i = startTriangleIndex; i < startTriangleIndex + triangleCount; ++i) {
-			secondaryTriangleIndexBuffer.push_back(i);
-		}
 
 		u32 rootIndex = allocateThinNode();
 		current.meshData.thinBvhIndex = rootIndex;
 		auto& root = _thinBuffer[rootIndex];
-		root.firstTriangleIndex = 0;
+		root.firstTriangleIndex = startTriangleIndex;
 		root.triangleCount = triangleCount;
 		root.bounds = create_bounds(secondaryTriangleIndexBuffer.data(), triangleCount);
 
@@ -49,23 +49,16 @@ void raytracer::Bvh::buildThinBvhs() {
 		allocateThinNode();
 
 		subdivide(root, secondaryTriangleIndexBuffer);
-
-		// reorder the triangles to match the index buffer
-		std::vector<Scene::TriangleSceneData> reorderedTriangles;
-		reorderedTriangles.reserve(triangleCount);
-		for (u32 triangle_index : secondaryTriangleIndexBuffer) {
-			reorderedTriangles.push_back(_scene._triangle_indices[triangle_index]);
-		}
-
-		std::copy(reorderedTriangles.begin(), reorderedTriangles.end(), _scene._triangle_indices.begin() + startTriangleIndex);
-
-		std::cout << "reordered "<< triangleCount <<" triangles..." << std::endl;
-
-		// adjust starting triangle indices to point at actual triangles and not at the secondary index buffer
-		for (auto i = rootIndex; i < _thinPoolPtr; ++i) {
-			_thinBuffer[i].firstTriangleIndex += startTriangleIndex; 
-		}
 	}
+
+	// reorder the triangles to match the index buffer
+	std::vector<Scene::TriangleSceneData> reorderedTriangles;
+	reorderedTriangles.reserve(secondaryTriangleIndexBuffer.size());
+	for (u32 triangle_index : secondaryTriangleIndexBuffer) {
+		reorderedTriangles.push_back(_scene._triangle_indices[triangle_index]);
+	}
+
+	_scene._triangle_indices = std::move(reorderedTriangles);
 }
 
 void raytracer::Bvh::updateTopLevelBvh()
