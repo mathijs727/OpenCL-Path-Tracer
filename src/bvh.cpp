@@ -5,6 +5,8 @@
 #include <array>
 #include <algorithm>
 
+#define BVH_SPLITS 8
+
 using namespace raytracer;
 
 void raytracer::Bvh::buildThinBvhs() {
@@ -339,25 +341,15 @@ void raytracer::Bvh::partition(ThinBvhNode& node, u32 leftIndex, std::vector<u32
 		};
 		sort(node.triangleCount, compareFn, swapFn);
 
-		// calculate bins
-		u32 size = triSecIndxBuf.size();
-		u32 halfSize = triSecIndxBuf.size() / 2;
-		u32 quarterSize = halfSize / 2;
-		u32 eighthSize = quarterSize / 2;
-		u32 possibleSplits[7] = {
-			eighthSize,
-			quarterSize,
-			quarterSize + eighthSize,
-			halfSize,
-			halfSize + eighthSize,
-			halfSize + quarterSize,
-			halfSize + quarterSize + eighthSize
-		};
+		u32 possibleSplits[BVH_SPLITS-1];
+		for (int splitn = 1; splitn < BVH_SPLITS; ++splitn) {
+			possibleSplits[splitn-1] = node.triangleCount * splitn / BVH_SPLITS;
+		}
 
 		// test bins for the SAH statistic
 		float best_sah_axis = std::numeric_limits<float>::max();
 		uint best_split_index = 0;
-		for (uint i = 0; i < 7; ++i) {
+		for (uint i = 0; i < BVH_SPLITS-1; ++i) {
 			uint nFirst = possibleSplits[i];
 			uint nSecond = triSecIndxBuf.size() - possibleSplits[i];
 			AABB firstBound = create_bounds(triSecIndxBuf.data(), nFirst);
