@@ -62,8 +62,8 @@ void raytracer::Bvh::buildThinBvhs() {
 		std::cout << "reordered "<< triangleCount <<" triangles..." << std::endl;
 
 		// adjust starting triangle indices to point at actual triangles and not at the secondary index buffer
-		for (auto cur = &root; cur < &_thinBuffer[_thinPoolPtr]; ++cur) {
-			cur->firstTriangleIndex += startTriangleIndex; 
+		for (auto i = rootIndex; i < _thinPoolPtr; ++i) {
+			_thinBuffer[i].firstTriangleIndex += startTriangleIndex; 
 		}
 	}
 }
