@@ -249,7 +249,47 @@ void  raytracer::Bvh::subdivide(ThinBvhNode& node, std::vector<u32>& secondaryTr
 	subdivide(_thinBuffer[rightChildIndex], secondaryTriangleIndexBuffer);
 }
 
+int sort_partition(u32* secondaryIndexBuffer, glm::vec3* centres, u32 count, u32 axis) {
+	auto pivot = centres[count-1][axis];
+	int i = -1;
+	for (int j = 0; j < count - 1; ++j) {
+		if (centres[j][axis] < pivot) {
+			std::swap(secondaryIndexBuffer[i], secondaryIndexBuffer[j]);
+			std::swap(centres[i], centres[j]);
+			++i;
+		}
+	}
+	std::swap(secondaryIndexBuffer[i], secondaryIndexBuffer[count - 1]);
+	std::swap(centres[i], centres[count - 1]);
+	return i;
+}
 
+void quicksort_by_axis(u32* secondaryIndexBuffer, glm::vec3* centres, int first, int last, u32 axis) 	{
+	if (first < last) {
+		int pivot = first;
+		int i = first;
+		int j = last;
+		while (i < j) {
+			while (centres[i][axis] <= centres[pivot][axis]) {
+				++i;
+			}
+			while (centres[j][axis] > centres[pivot][axis]) {
+				--j;
+			}
+			if (i < j) {
+				std::swap(secondaryIndexBuffer[i], secondaryIndexBuffer[j]);
+				std::swap(centres[i], centres[j]);
+			}
+		}
+		std::swap(secondaryIndexBuffer[pivot], secondaryIndexBuffer[j]);
+		std::swap(centres[pivot], centres[j]);
+		quicksort_by_axis(secondaryIndexBuffer, centres, first, j-1, axis);
+		quicksort_by_axis(secondaryIndexBuffer, centres, j+1, last, axis);
+	}
+}
+void sort_by_axis(u32* secondaryIndexBuffer, glm::vec3* centres, u32 count, u32 axis) {
+	quicksort_by_axis(secondaryIndexBuffer, centres, 0, count - 1, axis);
+}
 
 void raytracer::Bvh::partition(ThinBvhNode& node, u32 leftIndex, std::vector<u32>& secondaryTriangleIndexBuffer) {
 	std::cout << "starting to partition..." << std::endl;
@@ -289,14 +329,7 @@ void raytracer::Bvh::partition(ThinBvhNode& node, u32 leftIndex, std::vector<u32
 		std::copy(centres.begin(), centres.end(), curTempCentres.begin());
 
 		// order the triangle buffer by axis, TODO: use quicksort
-		for (u32 i = 0; i < triSecIndxBuf.size(); i++) {
-			for (u32 j = i; j < triSecIndxBuf.size(); j++) {
-				if (curTempCentres[i][axis] < curTempCentres[j][axis]) {
-					std::swap(triSecIndxBuf[i], triSecIndxBuf[j]);
-					std::swap(curTempCentres[i], curTempCentres[j]); // no real reason for this line, probably removable
-				}
-			}
-		}
+		sort_by_axis(triSecIndxBuf.data(), curTempCentres.data(), node.triangleCount, axis);
 
 		// calculate bins
 		u32 size = triSecIndxBuf.size();
