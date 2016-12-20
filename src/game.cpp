@@ -103,7 +103,7 @@ void Game::Tick( float dt )
 	if (t > 2 * PI)
 		t -= 2 * PI;
 
-	_monkey_scene_node->transform.orientation.y = cos(t);
+	_monkey_scene_node->transform.orientation = glm::angleAxis(cos(t), glm::vec3(0.f, 1.f, 0.f));
 
 	_ray_tracer->RayTrace(*_camera);
 	_out.Render();

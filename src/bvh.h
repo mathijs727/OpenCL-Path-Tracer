@@ -93,9 +93,9 @@ private:
 	AABB calcCombinedBounds(const AABB& bounds1, const AABB& bounds2);
 	AABB calcTransformedAABB(const AABB& bounds, glm::mat4 transform);
 
-	void subdivide(ThinBvhNode& node);
-	void partition(ThinBvhNode& node, u32 leftIndex);
-	AABB create_bounds(u32 first_index, u32 count);
+	void subdivide(ThinBvhNode& node, std::vector<u32>& secondaryTriangleIndexBuffer);
+	void partition(ThinBvhNode& node, u32 leftIndex, std::vector<u32>& secondaryTriangleIndexBuffer);
+	AABB create_bounds(u32* indices, u32 count);
 private:
 	Scene& _scene;
 
