@@ -7,9 +7,7 @@
 #include "bvh.cl"
 #include "math.cl"
 
-#define USE_BVH_PRIMARY
-// Only test with primary rays for now
-#define USE_BVH_LIGHT
+#define USE_BVH
 
 // At least on AMD, this is not defined
 #define NULL 0
@@ -77,14 +75,22 @@ bool traceRay(
 	int* outTriangleIndex,
 	float* outT,
 	float2* outUV,
+#ifdef COUNT_TRAVERSAL
+	__global const float** outInvTransform,
+	int* count)
+#else
 	__global const float** outInvTransform)
+#endif
 {
 	int triangleIndex;
 	float closestT = maxT;
 	float2 closestUV;
 	const __global float* closestMatrix;
 
-#ifdef USE_BVH_PRIMARY
+#ifdef USE_BVH
+#ifdef COUNT_TRAVERSAL
+	if (count) *count = 0;
+#endif
 	// Check mesh intersection using BVH traversal
 	ThinBvhStackItem thinBvhStack[64];
 	int thinBvhStackPtr = 0;
@@ -101,6 +107,9 @@ bool traceRay(
 
 		while (topLevelBvhStackPtr > 0)
 		{
+#ifdef COUNT_TRAVERSAL
+			if (count) *count = *count + 1;
+#endif
 			const __global FatBvhNode* node = &scene->topLevelBvh[topLevelBvhStack[--topLevelBvhStackPtr]];
 			if (!intersectRayFatBvh(ray, node, closestT))
 				continue;
@@ -138,7 +147,10 @@ bool traceRay(
 			Ray transformedRay;
 			transformedRay.origin = matrixMultiply(item.invTransform, (float4)(ray->origin, 1.0f)).xyz;
 			transformedRay.direction = normalize(matrixMultiply(item.invTransform, (float4)(ray->direction, 0.0f)).xyz);
-			//Ray transformedRay = item->transformedRay;
+
+#ifdef COUNT_TRAVERSAL
+			if (count) *count = *count + 1;
+#endif
 
 			if (!intersectRayThinBvh(&transformedRay, &node, closestT))
 				continue;

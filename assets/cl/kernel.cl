@@ -1,3 +1,5 @@
+#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
+
 #include "shapes.cl"
 #include "material.cl"
 #include "scene.cl"
@@ -74,7 +76,12 @@ __kernel void hello(
 		float t;
 		float2 uv;
 		const __global float* invTransform;
+#ifdef COUNT_TRAVERSAL
+		int bvhCount;
+		bool hit = traceRay(&scene, &item.ray, false, INFINITY, &triangleIndex, &t, &uv, &invTransform, &bvhCount);
+#else
 		bool hit = traceRay(&scene, &item.ray, false, INFINITY, &triangleIndex, &t, &uv, &invTransform);
+#endif
 		
 		if (hit)
 		{
@@ -92,6 +99,10 @@ __kernel void hello(
 				item.multiplier,
 				&stack);
 		}
+
+#ifdef COUNT_TRAVERSAL
+		outColor += bvhCount * (float3)(0.f, 0.001f, 0.f);
+#endif
 
 		if (++iterCount >= MAX_ITERATIONS)
 		{
