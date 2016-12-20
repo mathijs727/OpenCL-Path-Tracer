@@ -116,25 +116,34 @@ bool traceRay(
 
 	while (thinBvhStackPtr > 0)
 	{
-		ThinBvhNode node;
-		Ray transformedRay;
-		bool found = false; 
+		ThinBvhStackItem* item = &thinBvhStack[--thinBvhStackPtr];
+		ThinBvhNode node = scene->thinBvh[item->nodeIndex];
+		Ray transformedRay = item->transformedRay;
 
-		while (true)
+		if (!intersectRayThinBvh(&transformedRay, &node, closestT))
+			continue;
+
+		if (node.triangleCount != 0)// isLeaf()
 		{
-			ThinBvhStackItem* item = &thinBvhStack[--thinBvhStackPtr];
-			node = scene->thinBvh[item->nodeIndex];
-			transformedRay = item->transformedRay;
-
-			if (!intersectRayThinBvh(&transformedRay, &node, closestT))
-				continue;
-
-			if (node.triangleCount != 0)
+			for (int i = 0; i < node.triangleCount; i++)
 			{
-				found = true;
-				break;
-			}
+				float t;
+				float2 uv;
 
+				VertexData vertices[3];
+				TriangleData triangle = scene->triangles[node.firstTriangleIndex + i];
+				getVertices(vertices, triangle.indices, scene);
+				if (intersectRayTriangle(&transformedRay, vertices, &t, &uv) && t < closestT)
+				{
+					if (hitAny)
+						return true;
+
+					triangleIndex = node.firstTriangleIndex + i;
+					closestT = t;
+					closestUV = uv;
+				}
+			}
+		} else {
 			// Ordered traversal
 			ThinBvhNode left, right;
 			left = scene->thinBvh[node.leftChildIndex + 0];
@@ -164,28 +173,6 @@ bool traceRay(
 				thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 1;
 				thinBvhStack[thinBvhStackPtr].transformedRay = transformedRay;
 				thinBvhStackPtr++;
-			}
-		}
-
-		if (found)
-		{
-			for (int i = 0; i < node.triangleCount; i++)
-			{
-				float t;
-				float2 uv;
-
-				VertexData vertices[3];
-				TriangleData triangle = scene->triangles[node.firstTriangleIndex + i];
-				getVertices(vertices, triangle.indices, scene);
-				if (intersectRayTriangle(&transformedRay, vertices, &t, &uv) && t < closestT)
-				{
-					if (hitAny)
-						return true;
-
-					triangleIndex = node.firstTriangleIndex + i;
-					closestT = t;
-					closestUV = uv;
-				}
 			}
 		}
 	}
