@@ -14,6 +14,7 @@
 #include <utility>
 #include <thread>
 #include <stdlib.h>
+#include <chrono>
 //#include <OpenGL/wglew.h>
 #include "template/includes.h"
 
@@ -250,6 +251,8 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 			_bvh->GetThinNodes().data());
 		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 	}
+
+	UpdateTopLevelBVH();
 }
 
 void raytracer::RayTracer::SetTarget(GLuint glTexture)
@@ -261,8 +264,13 @@ void raytracer::RayTracer::SetTarget(GLuint glTexture)
 
 void raytracer::RayTracer::RayTrace(const Camera& camera)
 {
+	/*using namespace std::chrono;
+	auto t1 = high_resolution_clock::now();
+	std::this_thread::sleep_for(10ms);
 	UpdateTopLevelBVH();
-	//_num_fat_bvh_nodes = 5;
+	auto t2 = high_resolution_clock::now();
+	auto t = duration_cast<duration<double>>(t2 - t1);*/
+	//std::cout << "Top level BVH building cost: " << t.count() * 1000.0f << "ms" << std::endl;
 
 	glm::vec3 eye;
 	glm::vec3 scr_base_origin;

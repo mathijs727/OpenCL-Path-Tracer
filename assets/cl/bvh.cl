@@ -32,7 +32,7 @@ typedef struct
 	unsigned int isLeaf;
 } FatBvhNode;
 
-bool intersectRayFatBvh(const Ray* ray, const FatBvhNode* node)
+bool intersectRayFatBvh(const Ray* ray, const FatBvhNode* node, float nearestT)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
 	float3 aabbMin = node->centre - node->extents;
@@ -68,7 +68,7 @@ bool intersectRayFatBvh(const Ray* ray, const FatBvhNode* node)
 	// tmax >= 0: prevent boxes before the starting position from being hit
 	// See the comment section at:
 	//  https://tavianator.com/fast-branchless-raybounding-box-intersections/
-	return tmax >= tmin && tmax >= 0;
+	return tmax >= tmin && tmax >= 0 && tmin < nearestT;
 }
 
 bool intersectLineFatBvh(const Line* line, const FatBvhNode* node)
@@ -114,8 +114,8 @@ bool intersectLineFatBvh(const Line* line, const FatBvhNode* node)
 	//  - line starts outside of the box
 	//  - check if the line reaches tmin (where it enters the box)
 	float3 path = line->dest - line->origin;
-	float pathLen = dot(path, path);
-	return ( tmax >= tmin && tmax >= 0 && (tmin < 0 || tmin*tmin < pathLen) );
+	float pathLen2 = dot(path, path);
+	return ( tmax >= tmin && tmax >= 0 && (tmin < 0 || tmin*tmin < pathLen2) );
 }
 
 // https://tavianator.com/fast-branchless-raybounding-box-intersections/
@@ -201,8 +201,8 @@ bool intersectLineThinBvh(const Line* line, const ThinBvhNode* node)
 	//  - line starts outside of the box
 	//  - check if the line reaches tmin (where it enters the box)
 	float3 path = line->dest - line->origin;
-	float pathLen = dot(path, path);
-	return ( tmax >= tmin && tmax >= 0 && (tmin < 0 || tmin*tmin < pathLen) );
+	float pathLen2 = dot(path, path);
+	return ( tmax >= tmin && tmax >= 0 && (tmin < 0 || tmin*tmin < pathLen2) );
 }
 
 #endif// __BVH_CL 

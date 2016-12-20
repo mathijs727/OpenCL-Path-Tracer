@@ -129,7 +129,7 @@ u32 raytracer::Bvh::findBestMatch(const std::vector<u32>& list, u32 nodeId)
 		float leftArea = bounds.extents.z * bounds.extents.y;
 		float topArea = bounds.extents.x * bounds.extents.y;
 		float backArea = bounds.extents.x * bounds.extents.z;
-		float totalArea = 2 * leftArea + topArea + backArea;
+		float totalArea = leftArea + topArea + backArea;
 
 		if (totalArea < curMinArea && otherNodeId != nodeId)
 		{
