@@ -96,7 +96,7 @@ private:
 
 	void subdivide(ThinBvhNode& node);
 	void partition(ThinBvhNode& node, u32 leftIndex);
-	AABB create_bounds(u32 first_index, u32 count);
+	AABB create_bounds(u32* indices, u32 count);
 private:
 	Scene& _scene;
 
@@ -105,6 +105,8 @@ private:
 
 	u32 _thinPoolPtr;
 	std::vector<ThinBvhNode> _thinBuffer;
+
+	std::vector<u32> _triangleIndexBuffer;
 };
 }
 

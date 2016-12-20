@@ -44,10 +44,10 @@ float3 diffuseShade(
 			ray.origin = line.origin;
 			ray.direction = normalize(direction);
 			float maxT = dot(direction, direction);
-			lightVisible = !traceRay(scene, &ray, true, maxT, NULL, NULL, NULL);
+			lightVisible = !traceRay(scene, &ray, true, maxT, NULL, NULL, NULL, NULL);
 		} else {
 			ray.origin += normal * RAYTRACER_EPSILON;
-			lightVisible = !traceRay(scene, &ray, true, INFINITY, NULL, NULL, NULL);
+			lightVisible = !traceRay(scene, &ray, true, INFINITY, NULL, NULL, NULL, NULL);
 		}
 
 		if (lightVisible)

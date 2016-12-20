@@ -77,13 +77,15 @@ bool traceRay(
 	float maxT,
 	int* outTriangleIndex,
 	float* outT,
-	float2* outUV)
+	float2* outUV,
+	int* count)
 {
 	int triangleIndex;
 	float closestT = maxT;
 	float2 closestUV;
-
+	
 #ifdef USE_BVH_PRIMARY
+	if (count) *count = 0;
 	// Check mesh intersection using BVH traversal
 	ThinBvhStackItem thinBvhStack[48];
 	int thinBvhStackPtr = 0;
@@ -122,6 +124,8 @@ bool traceRay(
 		ThinBvhNode node = scene->thinBvh[item->nodeIndex];
 		unsigned int fatNodeIndex = item->fatNodeIndex;
 		Ray transformedRay = item->transformedRay;
+
+		if (count) *count = *count + 1;
 
 		if (!intersectRayThinBvh(&transformedRay, &node, closestT))
 			continue;

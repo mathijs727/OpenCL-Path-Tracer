@@ -73,7 +73,8 @@ __kernel void hello(
 		int triangleIndex;
 		float t;
 		float2 uv;
-		bool hit = traceRay(&scene, &item.ray, false, INFINITY, &triangleIndex, &t, &uv);
+		int bvh_count = 0;
+		bool hit = traceRay(&scene, &item.ray, false, INFINITY, &triangleIndex, &t, &uv, &bvh_count);
 		
 		if (hit)
 		{
@@ -90,6 +91,8 @@ __kernel void hello(
 				item.multiplier,
 				&stack);
 		}
+
+		outColor += bvh_count * (float3)(0.f, 0.001f, 0.f);
 
 		if (++iterCount >= MAX_ITERATIONS)
 		{

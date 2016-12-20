@@ -22,24 +22,46 @@ void raytracer::Bvh::buildThinBvhs() {
 		{
 			node_stack.push(current->children[i].get());
 		}
-		u32 n = current->meshData.triangle_count;
-		if (n < 1)
+		u32 triangleCount = current->meshData.triangle_count;
+		if (triangleCount < 1)
 			continue;
 
-		_thinBuffer.reserve(_thinBuffer.size() + n*2);
+		_thinBuffer.reserve(_thinBuffer.size() + triangleCount*2);
+		_triangleIndexBuffer.reserve(triangleCount);
+
+		// fill the triangle index buffer for this bvh
+		for (u32 i = 0; i < triangleCount; ++i) {
+			_triangleIndexBuffer.push_back(i + current->meshData.start_triangle_index);
+		}
 
 		current->meshData.thinBvhIndex = _thinPoolPtr;
 
 		u32 rootIndex = allocateThinNode();
 		auto& root = _thinBuffer[rootIndex];
-		root.firstTriangleIndex = current->meshData.start_triangle_index;
-		root.triangleCount = n;
-		root.bounds = create_bounds(root.firstTriangleIndex, root.triangleCount);
+		root.firstTriangleIndex = 0;
+		root.triangleCount = triangleCount;
+		root.bounds = create_bounds(_triangleIndexBuffer.data() + root.firstTriangleIndex, root.triangleCount);
 
 		// Add a dummy node so that every pair of children nodes is cache line aligned.
 		allocateThinNode();
 
 		subdivide(root);
+
+		// reorder the triangles to match the index buffer
+		std::vector<Scene::TriangleSceneData> reorderedTriangles;
+		reorderedTriangles.reserve(triangleCount);
+		for (u32 triangle_index : _triangleIndexBuffer) {
+			reorderedTriangles.push_back(_scene._triangle_indices[triangle_index]);
+		}
+
+		memcpy(_scene._triangle_indices.data() + current_node.meshData.start_triangle_index, reorderedTriangles.data(), triangleCount * sizeof(Scene::TriangleSceneData));
+
+		std::cout << "reordered "<< triangleCount <<" triangles..." << std::endl;
+
+		// adjust starting triangle indices to point at actual triangles and not at the secondary index buffer
+		for (int i = 0; i < triangleCount * 2; ++i) {
+			_thinBuffer[rootIndex + i].firstTriangleIndex += current_node.meshData.start_triangle_index; 
+		}
 	}
 }
 
@@ -129,7 +151,7 @@ u32 raytracer::Bvh::findBestMatch(const std::vector<u32>& list, u32 nodeId)
 		float leftArea = bounds.extents.z * bounds.extents.y;
 		float topArea = bounds.extents.x * bounds.extents.y;
 		float backArea = bounds.extents.x * bounds.extents.z;
-		float totalArea = 2 * leftArea + topArea + backArea;
+		float totalArea = leftArea + topArea + backArea;
 
 		if (totalArea < curMinArea && otherNodeId != nodeId)
 		{
@@ -214,25 +236,35 @@ AABB raytracer::Bvh::calcTransformedAABB(const AABB& bounds, glm::mat4 transform
 }
 
 void  raytracer::Bvh::subdivide(ThinBvhNode& node) {
-	if (node.triangleCount < 4)
+	std::cout << "starting to subdivide..." << std::endl;
+	if (node.triangleCount < 4) {
+		std::cout << "returning because too few triangles in the node..." << std::endl;
 		return;
+	}
 
+	std::cout << "allocating child nodes..." << std::endl;
 	u32 leftChildIndex = allocateThinNode();
 	u32 rightChildIndex = allocateThinNode();
 	partition(node, leftChildIndex);// Divides our triangles over our children and calculates their bounds
+	std::cout << "subdividing left child..." << std::endl;
 	subdivide(_thinBuffer[leftChildIndex]);
+	std::cout << "subdividing right child..." << std::endl;
 	subdivide(_thinBuffer[rightChildIndex]);
 }
 
+
+
 void raytracer::Bvh::partition(ThinBvhNode& node, u32 leftIndex) {
+	std::cout << "starting to partition..." << std::endl;
+
 	u32 rightIndex = leftIndex + 1;
 
-	auto* triangles = _scene._triangle_indices.data() + node.firstTriangleIndex;
+	auto* triangles = _scene._triangle_indices.data();
 
-	// calculate barycenters
+	// calculate centroids
 	std::vector<glm::vec3> centres(node.triangleCount);
 	for (uint i = 0; i < node.triangleCount; ++i) {
-		auto& triang = triangles[i];
+		auto& triang = triangles[_triangleIndexBuffer[node.firstTriangleIndex + i]];
 		std::array<glm::vec3, 3> vertices;
 		vertices[0] = (glm::vec3) _scene.GetVertices()[triang.indices[0]].vertex;
 		vertices[1] = (glm::vec3) _scene.GetVertices()[triang.indices[1]].vertex;
@@ -240,86 +272,104 @@ void raytracer::Bvh::partition(ThinBvhNode& node, u32 leftIndex) {
 		centres[i] = std::accumulate(std::begin(vertices), std::end(vertices), glm::vec3()) / 3.f;
 	}
 
-	// TODO: better and more efficient splitting than this
-	// find out which axis to split 
-	uint split_axis;
-	float max_extent = std::numeric_limits<float>::min();
-	for (uint i = 0; i < 3; ++i) {
-		if (node.bounds.extents[i] > max_extent) {
-			max_extent = node.bounds.extents[i];
-			split_axis = i;
-		}
-	}
+	static std::vector<u32> tempBuffer[3];
+	static std::vector<glm::vec3> tempCentres[3];
 
-	for (u32 i = 0; i < node.triangleCount; i++)
-	{
-		for (u32 j = i; j < node.triangleCount; j++)
-		{
-			if (centres[i][split_axis] < centres[j][split_axis])
-			{
-				std::swap(centres[i], centres[j]);
-				std::swap(triangles[i], triangles[j]);
-			}
-		}
-	}
-	u32 left_count = node.triangleCount / 2;
-	/*// decide the separating line
-	float separator = 0.0f;
-	for (uint i = 0; i < node.triangleCount; ++i)
-	{
-		u32 left = 0;
-		for (uint j = 0; j < node.triangleCount; ++j)
-		{
-			if (centres[i][split_axis] <= centres[j][split_axis])
-				left++;
-		}
+	float best_sah = std::numeric_limits<float>::max();
+	u32 best_axis = 0;
+	u32 best_split = 0;
 
-		if (left == node.triangleCount / 2)
-		{
-			separator = centres[i][split_axis];
-			break;
-		}
-	}
+	//we have to find the best axis to subdivide on
+	for (uint axis = 0; axis < 3; ++axis) {
+		// fill the temporary triangle buffer
+		auto& triSecIndxBuf = tempBuffer[axis];
+		triSecIndxBuf.resize(node.triangleCount);
+		memcpy(triSecIndxBuf.data(), _triangleIndexBuffer.data() + node.firstTriangleIndex, node.triangleCount * sizeof(u32));
 
-	// count the amount of triangles in the left node
-	uint left_count = node.triangleCount / 2;
+		// fill the centres buffer
+		auto& curTempCentres = tempCentres[axis];
+		curTempCentres.resize(node.triangleCount);
+		memcpy(curTempCentres.data(), centres.data(), centres.size() * sizeof(glm::vec3));
 
-	// swap the triangles so the the first left_count triangles are left of the separating line
-	uint j = left_count;
-	for (uint i = 0; i < left_count; ++i) {
-		if (centres[i][split_axis] > separator) {
-			for (;;++j) {
-				if (centres[j][split_axis] <= separator) {
-					std::swap(centres[i], centres[j]);
-					std::swap(triangles[i], triangles[j]);
-					break;
+		// order the triangle buffer by axis, TODO: use quicksort
+		for (u32 i = 0; i < triSecIndxBuf.size(); i++) {
+			for (u32 j = i; j < triSecIndxBuf.size(); j++) {
+				if (curTempCentres[i][axis] < curTempCentres[j][axis]) {
+					std::swap(triSecIndxBuf[i], triSecIndxBuf[j]);
+					std::swap(curTempCentres[i], curTempCentres[j]); // no real reason for this line, probably removable
 				}
 			}
 		}
-	}*/
+
+		// calculate bins
+		u32 size = triSecIndxBuf.size();
+		u32 halfSize = triSecIndxBuf.size() / 2;
+		u32 quarterSize = halfSize / 2;
+		u32 eighthSize = quarterSize / 2;
+		u32 possibleSplits[7] = {
+			eighthSize,
+			quarterSize,
+			quarterSize + eighthSize,
+			halfSize,
+			halfSize + eighthSize,
+			halfSize + quarterSize,
+			halfSize + quarterSize + eighthSize
+		};
+
+		// test bins for the SAH statistic
+		float best_sah_axis = std::numeric_limits<float>::max();
+		uint best_split_index = 0;
+		for (uint i = 0; i < 7; ++i) {
+			uint nFirst = possibleSplits[i];
+			uint nSecond = triSecIndxBuf.size() - possibleSplits[i];
+			AABB firstBound = create_bounds(triSecIndxBuf.data(), nFirst);
+			AABB secondBound = create_bounds(triSecIndxBuf.data() + nFirst, nSecond);
+
+			// calculate sah statistic
+			auto sides1 = firstBound.extents * 2.f;
+			auto sides2 = firstBound.extents * 2.f;
+			float area1 = sides1.x * sides1.y + sides1.y * sides1.z + sides1.z * sides1.x;
+			float area2 = sides2.x * sides2.y + sides2.y * sides2.z + sides2.z * sides2.x;
+			float sah = nFirst * area1 + nSecond + area2;
+			if (sah < best_sah_axis) {
+				best_sah_axis = sah;
+				best_split_index = i;
+			}
+		}
+
+		if (best_sah_axis < best_sah) {
+			best_sah = best_sah_axis;
+			best_axis = axis;
+			best_split = possibleSplits[best_split_index];
+		}
+	}
+
+	// copy the indices reordered by the best axis
+	memcpy(_triangleIndexBuffer.data() + node.firstTriangleIndex, tempBuffer[best_axis].data(), node.triangleCount * sizeof(u32));
+	u32 left_count = best_split;
 
 	// initialize child nodes
 	auto& lNode = _thinBuffer[leftIndex];
 	lNode.triangleCount = left_count;
 	lNode.firstTriangleIndex = node.firstTriangleIndex;
-	lNode.bounds = create_bounds(lNode.firstTriangleIndex, lNode.triangleCount);
+	lNode.bounds = create_bounds(_triangleIndexBuffer.data() + lNode.firstTriangleIndex, lNode.triangleCount);
 
 	auto& rNode = _thinBuffer[rightIndex];
 	rNode.triangleCount = node.triangleCount - left_count;
 	rNode.firstTriangleIndex = node.firstTriangleIndex + left_count;
-	rNode.bounds = create_bounds(rNode.firstTriangleIndex, rNode.triangleCount);
+	rNode.bounds = create_bounds(_triangleIndexBuffer.data() + rNode.firstTriangleIndex, rNode.triangleCount);
 
 	// set this node as not a leaf anymore
 	node.triangleCount = 0;
 	node.leftChildIndex = leftIndex;
 }
 
-AABB raytracer::Bvh::create_bounds(u32 first_index, u32 count) {
-	u32 lastIndex = first_index + count;
+AABB raytracer::Bvh::create_bounds(u32* indices, u32 count) {
+	u32* lastIndex = indices + count;
 	glm::vec3 max(std::numeric_limits<float>::min());
 	glm::vec3 min(std::numeric_limits<float>::max());
-	for (uint i = first_index; i < lastIndex; ++i) {
-		auto& triang = _scene.GetTriangleIndices()[i];
+	for (u32* curIndex = indices; curIndex < lastIndex; ++curIndex) {
+		auto& triang = _scene.GetTriangleIndices()[*curIndex];
 		glm::vec3 vertices[3];
 		vertices[0] = (glm::vec3) _scene.GetVertices()[triang.indices[0]].vertex;
 		vertices[1] = (glm::vec3) _scene.GetVertices()[triang.indices[1]].vertex;
