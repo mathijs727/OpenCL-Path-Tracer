@@ -264,31 +264,32 @@ int sort_partition(u32* secondaryIndexBuffer, glm::vec3* centres, u32 count, u32
 	return i;
 }
 
-void quicksort_by_axis(u32* secondaryIndexBuffer, glm::vec3* centres, int first, int last, u32 axis) 	{
+template<typename MoreThanFn, typename SwapFn>
+void quicksort(int first, int last, MoreThanFn compareFn, SwapFn swapFn) {
 	if (first < last) {
 		int pivot = first;
 		int i = first;
 		int j = last;
 		while (i < j) {
-			while (centres[i][axis] <= centres[pivot][axis]) {
+			while (!compareFn(i, pivot)) {
 				++i;
 			}
-			while (centres[j][axis] > centres[pivot][axis]) {
+			while (compareFn(j, pivot)) {
 				--j;
 			}
 			if (i < j) {
-				std::swap(secondaryIndexBuffer[i], secondaryIndexBuffer[j]);
-				std::swap(centres[i], centres[j]);
+				swapFn(i, j);
 			}
 		}
-		std::swap(secondaryIndexBuffer[pivot], secondaryIndexBuffer[j]);
-		std::swap(centres[pivot], centres[j]);
-		quicksort_by_axis(secondaryIndexBuffer, centres, first, j-1, axis);
-		quicksort_by_axis(secondaryIndexBuffer, centres, j+1, last, axis);
+		swapFn(pivot, j);
+		quicksort(first, j - 1, compareFn, swapFn);
+		quicksort(j + 1, last, compareFn, swapFn);
 	}
 }
-void sort_by_axis(u32* secondaryIndexBuffer, glm::vec3* centres, u32 count, u32 axis) {
-	quicksort_by_axis(secondaryIndexBuffer, centres, 0, count - 1, axis);
+
+template<typename MoreThanFn, typename SwapFn>
+void sort(int count, MoreThanFn compareFn, SwapFn swapFn) {
+	quicksort(0, count - 1, compareFn, swapFn);
 }
 
 void raytracer::Bvh::partition(ThinBvhNode& node, u32 leftIndex, std::vector<u32>& secondaryTriangleIndexBuffer) {
@@ -328,8 +329,15 @@ void raytracer::Bvh::partition(ThinBvhNode& node, u32 leftIndex, std::vector<u32
 		curTempCentres.resize(node.triangleCount);
 		std::copy(centres.begin(), centres.end(), curTempCentres.begin());
 
-		// order the triangle buffer by axis, TODO: use quicksort
-		sort_by_axis(triSecIndxBuf.data(), curTempCentres.data(), node.triangleCount, axis);
+		// order the triangle buffer by axis
+		auto compareFn = [&](int a, int b) {
+			return curTempCentres[a][axis] > curTempCentres[b][axis];
+		};
+		auto swapFn = [&](int a, int b) {
+			std::swap(curTempCentres[a], curTempCentres[b]);
+			std::swap(triSecIndxBuf[a], triSecIndxBuf[b]);
+		};
+		sort(node.triangleCount, compareFn, swapFn);
 
 		// calculate bins
 		u32 size = triSecIndxBuf.size();
