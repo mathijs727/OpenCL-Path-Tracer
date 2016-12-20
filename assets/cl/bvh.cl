@@ -19,7 +19,6 @@ typedef struct
 	float3 centre;
 	float3 extents;
 
-	float transform[16];
 	float invTransform[16];
 	union
 	{

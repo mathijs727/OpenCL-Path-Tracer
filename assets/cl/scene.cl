@@ -66,7 +66,6 @@ void loadScene(
 typedef struct
 {
 	unsigned int nodeIndex;
-	unsigned int fatNodeIndex;// Index of the top level BVH node to retrieve inverse matrix
 	Ray transformedRay;
 } ThinBvhStackItem;
 
@@ -106,7 +105,6 @@ bool traceRay(
 			transformedRay.direction = normalize(matrixMultiply(node.invTransform, (float4)(ray->direction, 0.0f)).xyz);
 
 			thinBvhStack[thinBvhStackPtr].nodeIndex = node.thinBvh;
-			thinBvhStack[thinBvhStackPtr].fatNodeIndex = index;
 			thinBvhStack[thinBvhStackPtr].transformedRay = transformedRay;
 			thinBvhStackPtr++;
 		} else {
@@ -120,7 +118,6 @@ bool traceRay(
 	{
 		ThinBvhStackItem* item = &thinBvhStack[--thinBvhStackPtr];
 		ThinBvhNode node = scene->thinBvh[item->nodeIndex];
-		unsigned int fatNodeIndex = item->fatNodeIndex;
 		Ray transformedRay = item->transformedRay;
 
 		if (!intersectRayThinBvh(&transformedRay, &node, closestT))
@@ -159,25 +156,21 @@ bool traceRay(
 			{
 				// Right child;
 				thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 1;
-				thinBvhStack[thinBvhStackPtr].fatNodeIndex = fatNodeIndex;
 				thinBvhStack[thinBvhStackPtr].transformedRay = transformedRay;
 				thinBvhStackPtr++;
 
 				// Left child
 				thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 0;
-				thinBvhStack[thinBvhStackPtr].fatNodeIndex = fatNodeIndex;
 				thinBvhStack[thinBvhStackPtr].transformedRay = transformedRay;
 				thinBvhStackPtr++;
 			} else {
 				// Left child
 				thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 0;
-				thinBvhStack[thinBvhStackPtr].fatNodeIndex = fatNodeIndex;
 				thinBvhStack[thinBvhStackPtr].transformedRay = transformedRay;
 				thinBvhStackPtr++;
 
 				// Right child;
 				thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 1;
-				thinBvhStack[thinBvhStackPtr].fatNodeIndex = fatNodeIndex;
 				thinBvhStack[thinBvhStackPtr].transformedRay = transformedRay;
 				thinBvhStackPtr++;
 			}

@@ -146,7 +146,6 @@ FatBvhNode raytracer::Bvh::createFatNode(const SceneNode* sceneGraphNode, const 
 	FatBvhNode node;
 	node.thinBvh = sceneGraphNode->meshData.thinBvhIndex;
 	node.bounds = calcTransformedAABB(_thinBuffer[node.thinBvh].bounds, transform);
-	node.transform = transform;
 	node.invTransform = glm::inverse(transform);
 	node.isLeaf = true;
 	return node;
@@ -159,8 +158,7 @@ FatBvhNode raytracer::Bvh::mergeFatNodes(u32 nodeId1, u32 nodeId2)
 
 	FatBvhNode node;
 	node.bounds = calcCombinedBounds(node1.bounds, node2.bounds);
-	node.transform = glm::mat4();// Identity
-	node.invTransform = glm::mat4();// Identity
+ 	node.invTransform = glm::mat4();// Identity
 	node.leftChildIndex = nodeId1;
 	node.rightChildIndex = nodeId2;
 	node.isLeaf = false;

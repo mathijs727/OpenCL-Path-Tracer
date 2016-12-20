@@ -42,7 +42,6 @@ struct AABB
 struct FatBvhNode
 {
 	AABB bounds;
-	glm::mat4 transform;
 	glm::mat4 invTransform;
 	union
 	{
