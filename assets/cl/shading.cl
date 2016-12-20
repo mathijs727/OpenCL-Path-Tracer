@@ -44,10 +44,10 @@ float3 diffuseShade(
 			ray.origin = line.origin;
 			ray.direction = normalize(direction);
 			float maxT = dot(direction, direction);
-			lightVisible = !traceRay(scene, &ray, true, maxT, NULL, NULL, NULL);
+			lightVisible = !traceRay(scene, &ray, true, maxT, NULL, NULL, NULL, NULL);
 		} else {
 			ray.origin += normal * RAYTRACER_EPSILON;
-			lightVisible = !traceRay(scene, &ray, true, INFINITY, NULL, NULL, NULL);
+			lightVisible = !traceRay(scene, &ray, true, INFINITY, NULL, NULL, NULL, NULL);
 		}
 
 		if (lightVisible)
@@ -99,6 +99,7 @@ float3 whittedShading(
 	const Scene* scene,
 	int triangleIndex,
 	float3 intersection,
+	const __global float* invTransform,
 	float3 rayDirection,
 	float2 uv,
 	image2d_array_t textures,
@@ -119,17 +120,21 @@ float3 whittedShading(
 	float3 n2 = vertices[2].normal;
 	float3 normal = normalize( n0 + (n1-n0) * uv.x + (n2-n0) * uv.y );
 
+	float normalTransform[16];
+	matrixTranspose(invTransform, normalTransform);
+	normal = normalize(matrixMultiplyLocal(normalTransform, (float4)(normal, 0.0f)).xyz);
+
 	if (material->type == Diffuse) {
 		float3 matColour;
 		if (material->diffuse.tex_id == -1)
 		{
 			matColour = material->colour;
 		} else {
-			float4 tex_coords3d = (float4)(tex_coords.x, tex_coords.y, material->diffuse.tex_id, 0.0f);
+			float4 texCoords3d = (float4)(tex_coords.x, tex_coords.y, material->diffuse.tex_id, 0.0f);
 			float4 colourWithAlpha = read_imagef(
 				textures,
 				sampler,
-				tex_coords3d);
+				texCoords3d);
 			matColour = colourWithAlpha.xyz;
 		}
 		return multiplier * diffuseShade(rayDirection, intersection, normal, scene, matColour);

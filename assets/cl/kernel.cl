@@ -73,7 +73,8 @@ __kernel void hello(
 		int triangleIndex;
 		float t;
 		float2 uv;
-		bool hit = traceRay(&scene, &item.ray, false, INFINITY, &triangleIndex, &t, &uv);
+		const __global float* invTransform;
+		bool hit = traceRay(&scene, &item.ray, false, INFINITY, &triangleIndex, &t, &uv, &invTransform);
 		
 		if (hit)
 		{
@@ -84,6 +85,7 @@ __kernel void hello(
 				&scene,
 				triangleIndex,
 				intersection,
+				invTransform,
 				direction,
 				uv,
 				textures,

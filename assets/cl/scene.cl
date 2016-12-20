@@ -66,7 +66,7 @@ void loadScene(
 typedef struct
 {
 	unsigned int nodeIndex;
-	Ray transformedRay;
+	const __global float* invTransform;
 } ThinBvhStackItem;
 
 bool traceRay(
@@ -76,11 +76,13 @@ bool traceRay(
 	float maxT,
 	int* outTriangleIndex,
 	float* outT,
-	float2* outUV)
+	float2* outUV,
+	__global const float** outInvTransform)
 {
 	int triangleIndex;
 	float closestT = maxT;
 	float2 closestUV;
+	const __global float* closestMatrix;
 
 #ifdef USE_BVH_PRIMARY
 	// Check mesh intersection using BVH traversal
@@ -99,40 +101,44 @@ bool traceRay(
 
 		while (topLevelBvhStackPtr > 0)
 		{
-			FatBvhNode node = scene->topLevelBvh[topLevelBvhStack[--topLevelBvhStackPtr]];
-			if (!intersectRayFatBvh(ray, &node, closestT))
+			const __global FatBvhNode* node = &scene->topLevelBvh[topLevelBvhStack[--topLevelBvhStackPtr]];
+			if (!intersectRayFatBvh(ray, node, closestT))
 				continue;
 
-			if (node.isLeaf)
+			if (node->isLeaf)
 			{
-				Ray transformedRay;
+				/*Ray transformedRay;
 				transformedRay.origin = matrixMultiply(node.invTransform, (float4)(ray->origin, 1.0f)).xyz;
-				transformedRay.direction = normalize(matrixMultiply(node.invTransform, (float4)(ray->direction, 0.0f)).xyz);
+				transformedRay.direction = normalize(matrixMultiply(node.invTransform, (float4)(ray->direction, 0.0f)).xyz);*/
 
-				thinBvhStack[thinBvhStackPtr].nodeIndex = node.thinBvh;
-				thinBvhStack[thinBvhStackPtr].transformedRay = transformedRay;
+				thinBvhStack[thinBvhStackPtr].nodeIndex = node->thinBvh;
+				thinBvhStack[thinBvhStackPtr].invTransform = node->invTransform;
 				thinBvhStackPtr++;
 				break;// Stop top lvl traversal and check out this thin bvh
 			} else {
-				float3 leftVec = scene->topLevelBvh[node.leftChildIndex].centre - ray->origin;
-				float3 rightVec = scene->topLevelBvh[node.rightChildIndex].centre - ray->origin;
+				float3 leftVec = scene->topLevelBvh[node->leftChildIndex].centre - ray->origin;
+				float3 rightVec = scene->topLevelBvh[node->rightChildIndex].centre - ray->origin;
 
 				if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
 				{
-					topLevelBvhStack[topLevelBvhStackPtr++] = node.rightChildIndex;
-					topLevelBvhStack[topLevelBvhStackPtr++] = node.leftChildIndex;
+					topLevelBvhStack[topLevelBvhStackPtr++] = node->rightChildIndex;
+					topLevelBvhStack[topLevelBvhStackPtr++] = node->leftChildIndex;
 				} else {
-					topLevelBvhStack[topLevelBvhStackPtr++] = node.leftChildIndex;
-					topLevelBvhStack[topLevelBvhStackPtr++] = node.rightChildIndex;
+					topLevelBvhStack[topLevelBvhStackPtr++] = node->leftChildIndex;
+					topLevelBvhStack[topLevelBvhStackPtr++] = node->rightChildIndex;
 				}
 			}
 		}
 
 		while (thinBvhStackPtr > 0)
 		{
-			ThinBvhStackItem* item = &thinBvhStack[--thinBvhStackPtr];
-			ThinBvhNode node = scene->thinBvh[item->nodeIndex];
-			Ray transformedRay = item->transformedRay;
+			ThinBvhStackItem item = thinBvhStack[--thinBvhStackPtr];
+			ThinBvhNode node = scene->thinBvh[item.nodeIndex];
+
+			Ray transformedRay;
+			transformedRay.origin = matrixMultiply(item.invTransform, (float4)(ray->origin, 1.0f)).xyz;
+			transformedRay.direction = normalize(matrixMultiply(item.invTransform, (float4)(ray->direction, 0.0f)).xyz);
+			//Ray transformedRay = item->transformedRay;
 
 			if (!intersectRayThinBvh(&transformedRay, &node, closestT))
 				continue;
@@ -155,6 +161,7 @@ bool traceRay(
 						triangleIndex = node.firstTriangleIndex + i;
 						closestT = t;
 						closestUV = uv;
+						closestMatrix = item.invTransform;
 					}
 				}
 			} else {
@@ -170,22 +177,22 @@ bool traceRay(
 				{
 					// Right child;
 					thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 1;
-					thinBvhStack[thinBvhStackPtr].transformedRay = transformedRay;
+					thinBvhStack[thinBvhStackPtr].invTransform = item.invTransform;
 					thinBvhStackPtr++;
 
 					// Left child
 					thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 0;
-					thinBvhStack[thinBvhStackPtr].transformedRay = transformedRay;
+					thinBvhStack[thinBvhStackPtr].invTransform = item.invTransform;
 					thinBvhStackPtr++;
 				} else {
 					// Left child
 					thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 0;
-					thinBvhStack[thinBvhStackPtr].transformedRay = transformedRay;
+					thinBvhStack[thinBvhStackPtr].invTransform = item.invTransform;
 					thinBvhStackPtr++;
 
 					// Right child;
 					thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 1;
-					thinBvhStack[thinBvhStackPtr].transformedRay = transformedRay;
+					thinBvhStack[thinBvhStackPtr].invTransform = item.invTransform;
 					thinBvhStackPtr++;
 				}// Ordered of traversal
 			}// If/else node contains triangles
@@ -197,6 +204,7 @@ bool traceRay(
 		*outTriangleIndex = triangleIndex;
 		*outT = closestT;
 		*outUV = closestUV;
+		*outInvTransform = closestMatrix;
 		return true;
 	} else {// We did not intersect with any triangle
 		return false;

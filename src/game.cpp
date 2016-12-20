@@ -20,7 +20,7 @@ void Game::Init()
 	Transform camera_transform;
 	_camera_euler.y = -1.5f;
 	camera_transform.orientation = glm::quat(_camera_euler); // identity
-	camera_transform.location = glm::vec3(5, 1, 0);
+	camera_transform.location = glm::vec3(8, 1, 0);
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.f);
 
 	{
@@ -46,14 +46,14 @@ void Game::Init()
 	Mesh::LoadFromFile(monkey, "assets/obj/monkey.obj");
 
 	std::vector<Mesh> cube;
-	Mesh::LoadFromFile(cube, "assets/obj/cube.obj", Transform(glm::vec3(6.f, 0.f, 7.f)));
+	Mesh::LoadFromFile(cube, "assets/obj/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
 
 	std::vector<Mesh> plane;
 	Mesh::LoadFromFile(plane, "assets/obj/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
 
 	//_scene->add_node(cornell_box, Transform(glm::vec3(0.f,-0.5f,0.f)));
 	_scene->add_node(plane);
-	_monkey_scene_node = &_scene->add_node(monkey, Transform(glm::vec3(1.0f, 0.0f, 0.0f)));
+	_monkey_scene_node = &_scene->add_node(cube, Transform(glm::vec3(0.0f, 0.0f, 0.0f)));
 
 	/*for (int x = 0; x < 20; x+=2)
 	{
@@ -103,7 +103,7 @@ void Game::Tick( float dt )
 	if (t > 2 * PI)
 		t -= 2 * PI;
 
-	_monkey_scene_node->transform.orientation.y = cos(t);
+	_monkey_scene_node->transform.orientation = glm::angleAxis(t, glm::vec3(0,1,0));
 
 	_ray_tracer->RayTrace(*_camera);
 	_out.Render();

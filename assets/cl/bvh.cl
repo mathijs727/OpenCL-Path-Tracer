@@ -32,7 +32,7 @@ typedef struct
 	unsigned int isLeaf;
 } FatBvhNode;
 
-bool intersectRayFatBvh(const Ray* ray, const FatBvhNode* node, float nearestT)
+bool intersectRayFatBvh(const Ray* ray, const __global FatBvhNode* node, float nearestT)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
 	float3 aabbMin = node->centre - node->extents;

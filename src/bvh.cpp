@@ -57,7 +57,8 @@ void raytracer::Bvh::updateTopLevelBvh()
 	{
 		std::pair<SceneNode*, glm::mat4> currentPair = nodeStack.top(); nodeStack.pop();
 		SceneNode* sceneNode = currentPair.first;
-		glm::mat4 transform = currentPair.second * sceneNode->transform.matrix();
+		glm::mat4 matrix = sceneNode->transform.matrix();
+		glm::mat4 transform = currentPair.second * matrix;
 
 		// Visit children
 		for (uint i = 0; i < sceneNode->children.size(); i++)
