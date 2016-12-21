@@ -125,8 +125,14 @@ bool traceRay(
 				thinBvhStackPtr++;
 				break;// Stop top lvl traversal and check out this thin bvh
 			} else {
-				float3 leftVec = scene->topLevelBvh[node->leftChildIndex].centre - ray->origin;
-				float3 rightVec = scene->topLevelBvh[node->rightChildIndex].centre - ray->origin;
+				// Calculate which childs' AABB centre is closer to the ray's origin
+				float3 leftMin = scene->topLevelBvh[node->leftChildIndex].min;
+				float3 leftMax = scene->topLevelBvh[node->leftChildIndex].max;
+				float3 rightMin = scene->topLevelBvh[node->rightChildIndex].min;
+				float3 rightMax = scene->topLevelBvh[node->rightChildIndex].max;
+
+				float3 leftVec = (leftMin + leftMax) / 2.0f - ray->origin;
+				float3 rightVec = (rightMin + rightMax) / 2.0f - ray->origin;
 
 				if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
 				{
@@ -182,8 +188,8 @@ bool traceRay(
 				left = scene->thinBvh[node.leftChildIndex + 0];
 				right = scene->thinBvh[node.leftChildIndex + 1];
 
-				float3 leftVec = left.centre - transformedRay.origin;
-				float3 rightVec = right.centre - transformedRay.origin;
+				float3 leftVec = (left.min + left.max) / 2.0f - transformedRay.origin;
+				float3 rightVec = (right.min + right.max) / 2.0f - transformedRay.origin;
 
 				if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
 				{

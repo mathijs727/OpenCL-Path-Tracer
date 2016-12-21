@@ -4,8 +4,9 @@
 
 typedef struct
 {
-	float3 centre;
-	float3 extents;
+	float3 min;
+	float3 max;
+	
 	union
 	{
 		unsigned int leftChildIndex;
@@ -16,8 +17,8 @@ typedef struct
 
 typedef struct
 {
-	float3 centre;
-	float3 extents;
+	float3 min;
+	float3 max;
 
 	float invTransform[16];
 	union
@@ -35,8 +36,8 @@ typedef struct
 bool intersectRayFatBvh(const Ray* ray, const __global FatBvhNode* node, float nearestT)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
-	float3 aabbMin = node->centre - node->extents;
-	float3 aabbMax = node->centre + node->extents;
+	float3 aabbMin = node->min;
+	float3 aabbMax = node->max;
 
 	if (ray->direction.x != 0.0f)
 	{
@@ -74,8 +75,8 @@ bool intersectRayFatBvh(const Ray* ray, const __global FatBvhNode* node, float n
 bool intersectLineFatBvh(const Line* line, const FatBvhNode* node)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
-	float3 aabbMin = node->centre - node->extents;
-	float3 aabbMax = node->centre + node->extents;
+	float3 aabbMin = node->min;
+	float3 aabbMax = node->max;
 
 	float3 direction = normalize(line->dest - line->origin);
 	if (direction.x != 0.0f)
@@ -122,8 +123,8 @@ bool intersectLineFatBvh(const Line* line, const FatBvhNode* node)
 bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node, float nearestT)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
-	float3 aabbMin = node->centre - node->extents;
-	float3 aabbMax = node->centre + node->extents;
+	float3 aabbMin = node->min;
+	float3 aabbMax = node->max;
 
 	if (ray->direction.x != 0.0f)
 	{
@@ -161,8 +162,8 @@ bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node, float nearestT
 bool intersectLineThinBvh(const Line* line, const ThinBvhNode* node)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
-	float3 aabbMin = node->centre - node->extents;
-	float3 aabbMax = node->centre + node->extents;
+	float3 aabbMin = node->min;
+	float3 aabbMax = node->max;
 
 	float3 direction = normalize(line->dest - line->origin);
 	if (direction.x != 0.0f)
