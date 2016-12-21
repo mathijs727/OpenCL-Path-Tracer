@@ -164,7 +164,7 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 {
 	// Build BVH and move it to OpenCL
 	std::cout << "Building BVH" << std::endl;
-	_bvh = std::make_unique<Bvh>(scene);
+	_bvh = std::unique_ptr<Bvh>(new Bvh(scene));
 	_bvh->buildThinBvhs();
 	std::cout << "Done building BVH" << std::endl;
 
