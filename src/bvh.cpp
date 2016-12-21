@@ -5,6 +5,8 @@
 #include <array>
 #include <algorithm>
 
+#define BVH_SPLITS 8
+
 using namespace raytracer;
 
 #define BVH_SPLITS 8
@@ -424,35 +426,25 @@ bool raytracer::Bvh::partitionBinned(ThinBvhNode& node) {
 		curTempCentres.resize(node.triangleCount);
 		std::copy(centres.begin(), centres.end(), curTempCentres.begin());
 
-		// order the triangle buffer by axis, TODO: use quicksort
-		for (u32 i = 0; i < triSecIndxBuf.size(); i++) {
-			for (u32 j = i; j < triSecIndxBuf.size(); j++) {
-				if (curTempCentres[i][axis] < curTempCentres[j][axis]) {
-					std::swap(triSecIndxBuf[i], triSecIndxBuf[j]);
-					std::swap(curTempCentres[i], curTempCentres[j]); // no real reason for this line, probably removable
-				}
-			}
-		}
-
-		// calculate bins
-		u32 size = triSecIndxBuf.size();
-		u32 halfSize = triSecIndxBuf.size() / 2;
-		u32 quarterSize = halfSize / 2;
-		u32 eighthSize = quarterSize / 2;
-		u32 possibleSplits[7] = {
-			eighthSize,
-			quarterSize,
-			quarterSize + eighthSize,
-			halfSize,
-			halfSize + eighthSize,
-			halfSize + quarterSize,
-			halfSize + quarterSize + eighthSize
+		// order the triangle buffer by axis
+		auto compareFn = [&](int a, int b) {
+			return curTempCentres[a][axis] > curTempCentres[b][axis];
 		};
+		auto swapFn = [&](int a, int b) {
+			std::swap(curTempCentres[a], curTempCentres[b]);
+			std::swap(triSecIndxBuf[a], triSecIndxBuf[b]);
+		};
+		sort(node.triangleCount, compareFn, swapFn);
+
+		u32 possibleSplits[BVH_SPLITS-1];
+		for (int splitn = 1; splitn < BVH_SPLITS; ++splitn) {
+			possibleSplits[splitn-1] = node.triangleCount * splitn / BVH_SPLITS;
+		}
 
 		// test bins for the SAH statistic
 		float best_sah_axis = std::numeric_limits<float>::max();
 		uint best_split_index = 0;
-		for (uint i = 0; i < 7; ++i) {
+		for (uint i = 0; i < BVH_SPLITS-1; ++i) {
 			uint nFirst = possibleSplits[i];
 			uint nSecond = triSecIndxBuf.size() - possibleSplits[i];
 			AABB firstBound = create_bounds(triSecIndxBuf.data(), nFirst);
