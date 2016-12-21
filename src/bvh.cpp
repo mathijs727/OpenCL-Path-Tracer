@@ -319,6 +319,7 @@ bool raytracer::Bvh::partitionBinned(ThinBvhNode& node) {
 	if (bestSplit == -1)
 		return false;
 
+	// Partition the array around the bin pivot
 	// http://www.inf.fh-flensburg.de/lang/algorithmen/sortieren/quick/quicken.htm
 	u32 i = node.firstTriangleIndex;
 	u32 j = end - 1;

@@ -162,10 +162,17 @@ void raytracer::RayTracer::InitBuffers()
 
 void raytracer::RayTracer::SetScene(Scene& scene)
 {
+	using namespace std::chrono;
+
 	// Build BVH and move it to OpenCL
 	std::cout << "Building BVH" << std::endl;
 	_bvh = std::unique_ptr<Bvh>(new Bvh(scene));
+	auto t1 = high_resolution_clock::now();
 	_bvh->buildThinBvhs();
+	auto t2 = high_resolution_clock::now();
+	auto d = duration_cast<duration<double>>(t2 - t1);
+	std::cout << "Thin BVH construction time: " << d.count() * 1000.0 << "ms" << std::endl;
+
 	std::cout << "Done building BVH" << std::endl;
 
 	_num_lights = scene.GetLights().size();
