@@ -346,24 +346,9 @@ bool raytracer::Bvh::partitionBinned(ThinBvhNode& node) {
 		if (i <= j)
 		{
 			// Swap
-			//std::swap(_scene.GetTriangleIndices()[i], _scene.GetTriangleIndices()[j]);
-			//std::swap(_centres[i], _centres[j]);
-			//std::swap(_aabbs[i], _aabbs[j]);
-			{
-				auto x = _scene.GetTriangleIndices()[i];
-				_scene.GetTriangleIndices()[i] = _scene.GetTriangleIndices()[j];
-				_scene.GetTriangleIndices()[j] = x;
-			}
-			{
-				auto x = _centres[i];
-				_centres[i] = _centres[j];
-				_centres[j] = x;
-			}
-			{
-				auto x = _aabbs[i];
-				_aabbs[i] = _aabbs[j];
-				_aabbs[j] = x;
-			}
+			std::swap(_scene.GetTriangleIndices()[i], _scene.GetTriangleIndices()[j]);
+			std::swap(_centres[i], _centres[j]);
+			std::swap(_aabbs[i], _aabbs[j]);
 			i++;
 			j--;
 		}
