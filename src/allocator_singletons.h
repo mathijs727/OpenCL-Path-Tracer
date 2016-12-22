@@ -11,4 +11,6 @@ namespace raytracer
 	LinearAllocator<Material>& getMaterialAllocatorInstance();
 	LinearAllocator<SubBvhNode>& getSubBvhAllocatorInstance();
 	LinearAllocator<TopBvhNode>& getTopBvhAllocatorInstance();
+
+	void SwitchActiveBvhAllocator();
 }

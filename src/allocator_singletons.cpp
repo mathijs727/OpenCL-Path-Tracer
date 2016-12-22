@@ -2,6 +2,8 @@
 
 using namespace raytracer;
 
+uint s_active_bvh_allocator = 0;
+
 LinearAllocator<VertexSceneData>& raytracer::getVertexAllocatorInstance()
 {
 	static auto instance = std::make_unique<LinearAllocator<VertexSceneData>>();
@@ -28,6 +30,14 @@ LinearAllocator<SubBvhNode>& raytracer::getSubBvhAllocatorInstance()
 
 LinearAllocator<TopBvhNode>& raytracer::getTopBvhAllocatorInstance()
 {
-	static auto instance = std::make_unique<LinearAllocator<TopBvhNode>>();
-	return *instance.get();
+	static std::unique_ptr<LinearAllocator<TopBvhNode>> instances[2] = {
+		std::make_unique<LinearAllocator<TopBvhNode>>(),
+		std::make_unique<LinearAllocator<TopBvhNode>>()
+	};
+	return *(instances[s_active_bvh_allocator]).get();
+}
+
+void raytracer::SwitchActiveBvhAllocator()
+{
+	s_active_bvh_allocator = (s_active_bvh_allocator + 1) % 2;
 }

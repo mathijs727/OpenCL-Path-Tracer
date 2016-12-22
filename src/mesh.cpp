@@ -82,11 +82,7 @@ void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const gl
 		vertex.vertex = position;
 		vertex.normal = normal;
 		vertex.texCoord = texCoords;
-
 		//std::cout << "importing vertex: " << position.x << ", " << position.y << ", " << position.z << std::endl;
-		/*result._vertices.push_back(vertex);
-		result._normals.push_back(normal);
-		result._textureCoords.push_back(texCoords);*/
 	}
 
 	// add all of the faces data
@@ -111,7 +107,6 @@ void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const gl
 
 		_triangleCount++;
 		//std::cout << "importing face: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", starting index: " << vertex_starting_index << std::endl;
-		//result._faces.push_back(face);
 	}
 }
 
