@@ -47,7 +47,7 @@ namespace raytracer
 	template<typename T>
 	inline size_t LinearAllocator<T>::size()
 	{
-		return _memory.size();
+		return _poolPtr;
 	}
 
 	template<typename T>

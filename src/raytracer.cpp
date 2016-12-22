@@ -176,11 +176,13 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 
 	std::cout << "Done building BVH" << std::endl;*/
 	_bvhBuilder = std::make_unique<TopLevelBvhBuilder>(scene);
+	_bvhBuilder->build();
 
 	auto& vertices = getVertexAllocatorInstance();
 	auto& triangles = getTriangleAllocatorInstance();
 	auto& materials = getMaterialAllocatorInstance();
 	auto& subBvhNodes = getSubBvhAllocatorInstance();
+	auto& topBvhNodes = getTopBvhAllocatorInstance();
 
 	_num_lights = scene.GetLights().size();
 	_num_vertices = vertices.size();
@@ -190,8 +192,21 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 	_num_sub_bvh_nodes = subBvhNodes.size();
 
 	InitBuffers();
+	_num_top_bvh_nodes[0] = topBvhNodes.size();
 
 	cl_int err;
+
+	// TODO: do this in real time so we get rigid body motion back
+	err = _queue.enqueueWriteBuffer(
+		_top_bvh[0],
+		CL_TRUE,
+		0,
+		_num_top_bvh_nodes[0]* sizeof(TopBvhNode),
+		topBvhNodes.data());
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+
+
+
 	// Copy textures to the GPU
 	for (uint texId = 0; texId < _num_textures; texId++)
 	{
@@ -312,7 +327,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		data.numTriangles = _num_triangles;
 		data.numLights = _num_lights;
 
-		data.topLevelBvhRoot = _num_top_bvh_nodes[_active_top_bvh] - 1;
+		data.topLevelBvhRoot = _num_top_bvh_nodes[0] - 1;//_num_top_bvh_nodes[_active_top_bvh] - 1;
 
 		cl_int err = _queue.enqueueWriteBuffer(
 			_kernel_data,
@@ -336,7 +351,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	_helloWorldKernel.setArg(5, _material_textures);
 	_helloWorldKernel.setArg(6, _lights);
 	_helloWorldKernel.setArg(7, _sub_bvh);
-	_helloWorldKernel.setArg(8, _top_bvh[_active_top_bvh]);
+	_helloWorldKernel.setArg(8, _top_bvh[0]);
 
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,
@@ -347,9 +362,9 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		&event);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 	
-	{
+	/*{
 		// Manually flush the queue
-		// At least on AMD, the queue is flushed after the enqueueWriteBuffer (probably because it subks
+		// At least on AMD, the queue is flushed after the enqueueWriteBuffer (probably because it thinks
 		//  one kernel launch is not enough reason to flush). So it would be executed at _queue.finish(), which
 		//  is called after the top lvl bvh construction (which is expensive) has completed. Instead we manually
 		//  flush and than calculate the top lvl bvh.
@@ -381,7 +396,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 			err = _queue.enqueueBarrierWithWaitList(&waitEvents);
 			checkClErr(err, "CommandQueue::enqueueBarrierWithWaitList");
 		}
-	}
+	}*/
 
 	// Before returning the objects to OpenGL, we sync to make sure OpenCL is done.
 	err = _queue.finish();
