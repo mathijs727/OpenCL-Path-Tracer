@@ -84,6 +84,7 @@ bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
 	auto& faces = getTriangleAllocatorInstance();
 	auto& bvhAllocator = getSubBvhAllocatorInstance();
 
+	// Use pointer because references are not reassignable (we need to reassign after allocation)
 	auto* node = &bvhAllocator.get(nodeId);
 
 	// Split along the widest axis
