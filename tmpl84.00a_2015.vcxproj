@@ -19,7 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\bvh.cpp" />
+    <ClCompile Include="src\allocator_singletons.cpp" />
+    <ClCompile Include="src\binned_bvh.cpp" />
+    <ClCompile Include="src\top_bvh.cpp" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\game.cpp" />
     <ClCompile Include="src\gloutput.cpp" />
@@ -33,7 +35,12 @@
     <ClCompile Include="src\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\bvh.h" />
+    <ClInclude Include="src\aabb.h" />
+    <ClInclude Include="src\allocator_singletons.h" />
+    <ClInclude Include="src\linear_allocator.h" />
+    <ClInclude Include="src\binned_bvh.h" />
+    <ClInclude Include="src\top_bvh.h" />
+    <ClInclude Include="src\bvh_nodes.h" />
     <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\game.h" />
     <ClInclude Include="src\gloutput.h" />
@@ -53,6 +60,7 @@
     <ClInclude Include="src\Texture.h" />
     <ClInclude Include="src\transform.h" />
     <ClInclude Include="src\types.h" />
+    <ClInclude Include="src\vertices.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectName>Template</ProjectName>

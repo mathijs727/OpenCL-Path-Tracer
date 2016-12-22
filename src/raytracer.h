@@ -1,8 +1,9 @@
 #pragma once
 //#include "template/template.h"// Includes template/cl.hpp
 #include "template/includes.h"
-#include "bvh.h"
+#include "top_bvh.h"
 #include <memory>
+#include <vector>
 
 namespace Tmpl8 {
 class Surface;
@@ -29,9 +30,9 @@ private:
 
 	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
 private:
-	cl_uint _scr_width, _scr_height;
+	std::unique_ptr<TopLevelBvhBuilder> _bvhBuilder;
 
-	std::unique_ptr<Bvh> _bvh;
+	cl_uint _scr_width, _scr_height;
 
 	cl::Context _context;
 	std::vector<cl::Device> _devices;
@@ -54,12 +55,12 @@ private:
 	cl_int _num_lights;
 	cl::Buffer _lights;
 
-	uint _active_fat_bvh = 0;
-	cl_int _num_fat_bvh_nodes[2];
-	cl::Buffer _fat_bvh[2];
+	uint _active_top_bvh = 0;
+	cl_int _num_top_bvh_nodes[2];
+	cl::Buffer _top_bvh[2];
 
-	cl_int _num_thin_bvh_nodes;
-	cl::Buffer _thin_bvh;
+	cl_int _num_sub_bvh_nodes;
+	cl::Buffer _sub_bvh;
 
 	cl::Image2DArray _material_textures;
 	cl::ImageGL _output_image;

@@ -6,8 +6,8 @@
 #include <stack>
 #include <iostream>
 #include "template/includes.h"// Includes opencl
-#include "material.h"
 #include "template/surface.h"
+#include "allocator_singletons.h"
 
 using namespace raytracer;
 
@@ -31,15 +31,22 @@ inline glm::mat4 remove_translation(const glm::mat4& mat) {
 	return result;
 }
 
-Mesh raytracer::Mesh::makeMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix) {
+inline glm::mat4 normal_matrix(const glm::mat4& mat)
+{
+	return glm::transpose(glm::inverse(mat));
+}
+
+void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix) {
 	aiMesh* in_mesh = scene->mMeshes[mesh_index];
-	Mesh result;
-	uint vertex_starting_index = 0;
-	// reserve the correct space for empty vectors;
-	result._vertices.reserve(in_mesh->mNumVertices);
-	result._normals.reserve(in_mesh->mNumVertices);
-	result._textureCoords.reserve(in_mesh->mNumVertices);
-	result._faces.reserve(in_mesh->mNumFaces);
+	u32 vertex_starting_index = -1;
+
+	if (in_mesh->mNumVertices == 0 || in_mesh->mNumFaces == 0)
+		return;
+
+	auto& materialAllocator = getMaterialAllocatorInstance();
+	auto& vertexAllocator = getVertexAllocatorInstance();
+	auto& triangleAllocator = getTriangleAllocatorInstance();
+	u32 materialId = materialAllocator.allocate();
 
 	// process the materials
 	aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
@@ -48,25 +55,38 @@ Mesh raytracer::Mesh::makeMesh(const aiScene* scene, uint mesh_index, const glm:
 	if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 		aiString path;
 		material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
-		result._material = Material::Diffuse(Texture(path.C_Str()), ai2glm(colour));
+		materialAllocator.get(materialId) = Material::Diffuse(Texture(path.C_Str()), ai2glm(colour));
 	}
 	else {
-		result._material = Material::Diffuse(ai2glm(colour));
+		materialAllocator.get(materialId) = Material::Diffuse(ai2glm(colour));
 	}
 
 	// add all of the vertex data
+	glm::mat4 normalMatrix = normal_matrix(transform_matrix);
 	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
-		glm::vec4 vertex = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
-		glm::vec4 normal = remove_translation(transform_matrix) * glm::vec4(ai2glm(in_mesh->mNormals[v]), 1);
+		glm::vec4 position = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
+		glm::vec4 normal = normalMatrix * glm::vec4(ai2glm(in_mesh->mNormals[v]), 1);
 		glm::vec2 texCoords;
 		if (in_mesh->HasTextureCoords(0)) {
 			texCoords.x = in_mesh->mTextureCoords[0][v].x;
 			texCoords.y = in_mesh->mTextureCoords[0][v].y;
 		}
+
+		// Allocate a vertex
+		u32 vertexId = vertexAllocator.allocate();
+		if (vertex_starting_index == -1)
+			vertex_starting_index = vertexId;
+
+		// Fill in the vertex
+		auto& vertex = vertexAllocator.get(vertexId);
+		vertex.vertex = position;
+		vertex.normal = normal;
+		vertex.texCoord = texCoords;
+
 		//std::cout << "importing vertex: " << position.x << ", " << position.y << ", " << position.z << std::endl;
-		result._vertices.push_back(vertex);
+		/*result._vertices.push_back(vertex);
 		result._normals.push_back(normal);
-		result._textureCoords.push_back(texCoords);
+		result._textureCoords.push_back(texCoords);*/
 	}
 
 	// add all of the faces data
@@ -78,20 +98,34 @@ Mesh raytracer::Mesh::makeMesh(const aiScene* scene, uint mesh_index, const glm:
 		}
 		auto aiIndices = in_face->mIndices;
 		auto face = glm::u32vec3(aiIndices[0], aiIndices[1], aiIndices[2]) + vertex_starting_index;
-		result._faces.push_back(face);
-		//std::cout << "importing face: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", starting index: " << vertex_starting_index << std::endl;
-	}
+		
+		// Allocate a triangle
+		u32 triangleIndex = triangleAllocator.allocate();
+		auto& triangle = triangleAllocator.get(triangleIndex);
+		if (_firstTriangleIndex == -1)
+			_firstTriangleIndex = triangleIndex;
 
-	return result;
+		// Fill in the triangle
+		triangle.indices = face;
+		triangle.material_index = materialId;
+
+		_triangleCount++;
+		//std::cout << "importing face: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", starting index: " << vertex_starting_index << std::endl;
+		//result._faces.push_back(face);
+	}
 }
 
-void raytracer::Mesh::LoadFromFile(std::vector<Mesh>& out_vec, const char* file, const Transform& offset) {
+void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 	struct StackElement
 	{
 		aiNode* node;
 		glm::mat4x4 transform;
 		StackElement(aiNode* node, const glm::mat4& transform = glm::mat4()) : node(node), transform(transform) {}
 	};
+
+	_triangleCount = 0;
+	_firstTriangleIndex = -1;
+	_bvhRootNode = -1;
 
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
@@ -105,14 +139,18 @@ void raytracer::Mesh::LoadFromFile(std::vector<Mesh>& out_vec, const char* file,
 			stack.pop();
 			glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
 			for (uint i = 0; i < current.node->mNumMeshes; ++i) {
-				Mesh mesh = makeMesh(scene, current.node->mMeshes[i], cur_transform);
-				if (!mesh.isValid()) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
-				else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
-				out_vec.push_back(mesh);
+				addSubMesh(scene, current.node->mMeshes[i], cur_transform);
+				//if (!success) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
+				//else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
+				//out_vec.push_back(mesh);
 			}
 			for (uint i = 0; i < current.node->mNumChildren; ++i) {
 				stack.push(StackElement(current.node->mChildren[i], cur_transform));
 			}
 		}
 	}
+
+	// Create a BVH for the mesh
+	BinnedBvhBuilder bvhBuilder;
+	_bvhRootNode = bvhBuilder.build(_firstTriangleIndex, _triangleCount);
 }

@@ -4,6 +4,15 @@
     <Filter Include="template code">
       <UniqueIdentifier>{bf32dd6e-4be7-4889-8ac6-49e7ee163c40}</UniqueIdentifier>
     </Filter>
+    <Filter Include="bvh">
+      <UniqueIdentifier>{18c9850d-2151-451c-8dbe-101c0cdfc930}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="memory">
+      <UniqueIdentifier>{62548697-7862-48ea-98f6-9231a857fe01}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="model">
+      <UniqueIdentifier>{72aed585-5e22-4992-8d7d-8314f67bbe1c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\game.cpp" />
@@ -21,9 +30,19 @@
     <ClCompile Include="src\raytracer.cpp" />
     <ClCompile Include="src\light.cpp" />
     <ClCompile Include="src\gloutput.cpp" />
-    <ClCompile Include="src\mesh.cpp" />
     <ClCompile Include="src\Texture.cpp" />
-    <ClCompile Include="src\bvh.cpp" />
+    <ClCompile Include="src\mesh.cpp">
+      <Filter>model</Filter>
+    </ClCompile>
+    <ClCompile Include="src\top_bvh.cpp">
+      <Filter>bvh</Filter>
+    </ClCompile>
+    <ClCompile Include="src\binned_bvh.cpp">
+      <Filter>bvh</Filter>
+    </ClCompile>
+    <ClCompile Include="src\allocator_singletons.cpp">
+      <Filter>memory</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
@@ -37,7 +56,6 @@
       <Filter>template code</Filter>
     </ClInclude>
     <ClInclude Include="src\camera.h" />
-    <ClInclude Include="src\material.h" />
     <ClInclude Include="src\scene.h" />
     <ClInclude Include="src\shapes.h" />
     <ClInclude Include="src\transform.h" />
@@ -53,8 +71,33 @@
     <ClInclude Include="src\template\includes.h">
       <Filter>template code</Filter>
     </ClInclude>
-    <ClInclude Include="src\mesh.h" />
     <ClInclude Include="src\Texture.h" />
-    <ClInclude Include="src\bvh.h" />
+    <ClInclude Include="src\mesh.h">
+      <Filter>model</Filter>
+    </ClInclude>
+    <ClInclude Include="src\aabb.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bvh_nodes.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\top_bvh.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\binned_bvh.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\linear_allocator.h">
+      <Filter>memory</Filter>
+    </ClInclude>
+    <ClInclude Include="src\material.h">
+      <Filter>model</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vertices.h">
+      <Filter>model</Filter>
+    </ClInclude>
+    <ClInclude Include="src\allocator_singletons.h">
+      <Filter>memory</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

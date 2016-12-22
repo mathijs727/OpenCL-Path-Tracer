@@ -36,20 +36,17 @@ void Game::Init()
 		_scene->add_light(light);
 	}
 
-	std::vector<Mesh> cornell_box;
-	Mesh::LoadFromFile(
-		cornell_box,
-		"assets/obj/CornellBox-Empty-RG.obj"
-	);
+	Mesh cornell_box;
+	cornell_box.loadFromFile("assets/obj/CornellBox-Empty-RG.obj");
 
-	std::vector<Mesh> monkey;
-	Mesh::LoadFromFile(monkey, "assets/obj/monkey.obj");
+	Mesh monkey;
+	monkey.loadFromFile("assets/obj/monkey.obj");
 
-	std::vector<Mesh> cube;
-	Mesh::LoadFromFile(cube, "assets/obj/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
+	Mesh cube;
+	cube.loadFromFile( "assets/obj/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
 
-	std::vector<Mesh> plane;
-	Mesh::LoadFromFile(plane, "assets/obj/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
+	Mesh plane;
+	plane.loadFromFile("assets/obj/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
 
 	//_scene->add_node(cornell_box, Transform(glm::vec3(0.f,-0.5f,0.f)));
 	_scene->add_node(plane);
@@ -103,7 +100,7 @@ void Game::Tick( float dt )
 	if (t > 2 * PI)
 		t -= 2 * PI;
 
-	_monkey_scene_node->transform.orientation = glm::angleAxis(t, glm::vec3(0,1,0));
+	//_monkey_scene_node->transform.orientation = glm::angleAxis(t, glm::vec3(0,1,0));
 
 	_ray_tracer->RayTrace(*_camera);
 	_out.Render();

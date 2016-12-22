@@ -17,6 +17,7 @@
 #include <chrono>
 //#include <OpenGL/wglew.h>
 #include "template/includes.h"
+#include "allocator_singletons.h"
 
 struct KernelData
 {
@@ -106,37 +107,37 @@ void raytracer::RayTracer::InitBuffers()
 
 	_vertices = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		std::max(1, _num_vertices) * sizeof(Scene::VertexSceneData),
+		std::max(1, _num_vertices) * sizeof(VertexSceneData),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
 	_triangles = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		std::max(1, _num_triangles) * sizeof(Scene::TriangleSceneData),
+		std::max(1, _num_triangles) * sizeof(TriangleSceneData),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
-	_thin_bvh = cl::Buffer(_context,
+	_sub_bvh = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		std::max(1, _num_thin_bvh_nodes) * sizeof(ThinBvhNode),
+		std::max(1, _num_sub_bvh_nodes) * sizeof(SubBvhNode),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
-	_num_fat_bvh_nodes[0] = 0;
-	_fat_bvh[0] = cl::Buffer(_context,
+	_num_top_bvh_nodes[0] = 0;
+	_top_bvh[0] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		256 * sizeof(FatBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
+		256 * sizeof(TopBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
-	_num_fat_bvh_nodes[1] = 0;
-	_fat_bvh[1] = cl::Buffer(_context,
+	_num_top_bvh_nodes[1] = 0;
+	_top_bvh[1] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		256 * sizeof(FatBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
+		256 * sizeof(TopBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
@@ -165,22 +166,28 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 	using namespace std::chrono;
 
 	// Build BVH and move it to OpenCL
-	std::cout << "Building BVH" << std::endl;
+	/*std::cout << "Building BVH" << std::endl;
 	_bvh = std::unique_ptr<Bvh>(new Bvh(scene));
 	auto t1 = high_resolution_clock::now();
-	_bvh->buildThinBvhs();
+	_bvh->buildsubBvhs();
 	auto t2 = high_resolution_clock::now();
 	auto d = duration_cast<duration<double>>(t2 - t1);
-	std::cout << "Thin BVH construction time: " << d.count() * 1000.0 << "ms" << std::endl;
+	std::cout << "sub BVH construction time: " << d.count() * 1000.0 << "ms" << std::endl;
 
-	std::cout << "Done building BVH" << std::endl;
+	std::cout << "Done building BVH" << std::endl;*/
+	_bvhBuilder = std::make_unique<TopLevelBvhBuilder>(scene);
+
+	auto& vertices = getVertexAllocatorInstance();
+	auto& triangles = getTriangleAllocatorInstance();
+	auto& materials = getMaterialAllocatorInstance();
+	auto& subBvhNodes = getSubBvhAllocatorInstance();
 
 	_num_lights = scene.GetLights().size();
-	_num_vertices = scene.GetVertices().size();
-	_num_triangles = scene.GetTriangleIndices().size();
-	_num_mesh_materials = scene.GetMeshMaterials().size();
+	_num_vertices = vertices.size();
+	_num_triangles = triangles.size();
+	_num_mesh_materials = materials.size();
 	_num_textures = Texture::getNumUniqueSurfaces();
-	_num_thin_bvh_nodes = _bvh->GetThinNodes().size();
+	_num_sub_bvh_nodes = subBvhNodes.size();
 
 	InitBuffers();
 
@@ -208,14 +215,14 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 		checkClErr(err, "CommandQueue::enqueueWriteImage");
 	}
 
-	if (scene.GetMeshMaterials().size() > 0)
+	if (_num_mesh_materials > 0)
 	{
 		err = _queue.enqueueWriteBuffer(
 			_materials,
 			CL_TRUE,
 			0,
-			scene.GetMeshMaterials().size() * sizeof(Material),
-			scene.GetMeshMaterials().data());
+			_num_mesh_materials * sizeof(Material),
+			materials.data());
 		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 	}
 
@@ -243,8 +250,8 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 			_vertices,
 			CL_TRUE,
 			0,
-			_num_vertices * sizeof(Scene::VertexSceneData),
-			scene.GetVertices().data());
+			_num_vertices * sizeof(VertexSceneData),
+			vertices.data());
 		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 	}
 
@@ -254,19 +261,19 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 			_triangles,
 			CL_TRUE,
 			0,
-			_num_triangles * sizeof(Scene::TriangleSceneData),
-			scene.GetTriangleIndices().data());
+			_num_triangles * sizeof(TriangleSceneData),
+			triangles.data());
 		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 	}
 
-	if (_num_thin_bvh_nodes > 0)
+	if (_num_sub_bvh_nodes > 0)
 	{
 		err = _queue.enqueueWriteBuffer(
-			_thin_bvh,
+			_sub_bvh,
 			CL_TRUE,
 			0,
-			_num_thin_bvh_nodes * sizeof(ThinBvhNode),
-			_bvh->GetThinNodes().data());
+			_num_sub_bvh_nodes * sizeof(SubBvhNode),
+			subBvhNodes.data());
 		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 	}
 }
@@ -305,7 +312,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		data.numTriangles = _num_triangles;
 		data.numLights = _num_lights;
 
-		data.topLevelBvhRoot = _num_fat_bvh_nodes[_active_fat_bvh] - 1;
+		data.topLevelBvhRoot = _num_top_bvh_nodes[_active_top_bvh] - 1;
 
 		cl_int err = _queue.enqueueWriteBuffer(
 			_kernel_data,
@@ -328,8 +335,8 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	_helloWorldKernel.setArg(4, _materials);
 	_helloWorldKernel.setArg(5, _material_textures);
 	_helloWorldKernel.setArg(6, _lights);
-	_helloWorldKernel.setArg(7, _thin_bvh);
-	_helloWorldKernel.setArg(8, _fat_bvh[_active_fat_bvh]);
+	_helloWorldKernel.setArg(7, _sub_bvh);
+	_helloWorldKernel.setArg(8, _top_bvh[_active_top_bvh]);
 
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,
@@ -342,25 +349,29 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	
 	{
 		// Manually flush the queue
-		// At least on AMD, the queue is flushed after the enqueueWriteBuffer (probably because it thinks
+		// At least on AMD, the queue is flushed after the enqueueWriteBuffer (probably because it subks
 		//  one kernel launch is not enough reason to flush). So it would be executed at _queue.finish(), which
 		//  is called after the top lvl bvh construction (which is expensive) has completed. Instead we manually
 		//  flush and than calculate the top lvl bvh.
 		_queue.flush();
 
 		// Update the top level BVH and copy it to the GPU on a seperate copy queue
-		_bvh->updateTopLevelBvh();
-		int copyBvh = (_active_fat_bvh + 1) % 2;
-		_num_fat_bvh_nodes[copyBvh] = _bvh->GetFatNodes().size();
-		if (_num_fat_bvh_nodes[copyBvh] > 0)
+		auto& topNodes = getTopBvhAllocatorInstance();
+		topNodes.clear();
+		_bvhBuilder->build();
+
+
+		int copyBvh = (_active_top_bvh + 1) % 2;
+		_num_top_bvh_nodes[copyBvh] = topNodes.size();
+		if (_num_top_bvh_nodes[copyBvh] > 0)
 		{
 			cl::Event copyEvent;
 			cl_int err = _copyQueue.enqueueWriteBuffer(
-				_fat_bvh[copyBvh],
-				CL_FALSE,
+				_top_bvh[copyBvh],
+				CL_TRUE,// TODO: can we make this "false" again?
 				0,
-				_num_fat_bvh_nodes[copyBvh] * sizeof(FatBvhNode),
-				_bvh->GetFatNodes().data(),
+				_num_top_bvh_nodes[copyBvh] * sizeof(TopBvhNode),
+				topNodes.data(),
 				nullptr,
 				&copyEvent);
 			checkClErr(err, "CommandQueue::enqueueWriteBuffer");
@@ -378,7 +389,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 
 	_queue.enqueueReleaseGLObjects(&images);
 
-	_active_fat_bvh = (_active_fat_bvh + 1) % 2;
+	_active_top_bvh = (_active_top_bvh + 1) % 2;
 }
 
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/
