@@ -17,22 +17,26 @@ namespace raytracer {
 class Mesh
 {
 public:
-	Mesh() : _firstTriangleIndex(-1), _triangleCount(0), _bvhRootNode(-1) {}
+	Mesh() {}
 	~Mesh() { }
 	
-	bool isValid() const { return _firstTriangleIndex >= 0 && _triangleCount > 0 && _bvhRootNode >= 0; };
-
 	void loadFromFile(const char* file,	const Transform& offset = Transform());
 
-	u32 getBvhRoot() const { return _bvhRootNode; };
-	u32 getFirstTriangleIndex() const { return _firstTriangleIndex; };
-	u32 getTriangleCount() const { return _triangleCount; };
+	const std::vector<TriangleSceneData>& getTriangles() const { return _triangles; }
+	const std::vector<VertexSceneData>& getVertices() const { return _vertices; }
+	const std::vector<Material>& getMaterials() const { return _materials; }
+	const std::vector<SubBvhNode>& getBvhNodes() const { return _bvh_nodes; }
+	
+	u32 getRootBvhNode() const { return _root_bvh_node; };
 private:
 	void addSubMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix);
 private:
-	u32 _firstTriangleIndex;
-	u32 _triangleCount;
-	u32 _bvhRootNode;
+	std::vector<TriangleSceneData> _triangles;
+	std::vector<VertexSceneData> _vertices;
+	std::vector<Material> _materials;
+	std::vector<SubBvhNode> _bvh_nodes;
+
+	u32 _root_bvh_node;
 };
 }
 

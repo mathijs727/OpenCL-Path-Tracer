@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <memory>
 #include "shapes.h"
 #include "ray.h"
 #include "material.h"
@@ -10,21 +11,23 @@
 
 namespace raytracer {
 
-struct MeshSceneData
-{
-	u32 start_triangle_index;
-	u32 triangle_count;
-	u32 bvhIndex;
-	bool is_empty() { return triangle_count == 0; }
-	MeshSceneData(u32 startIndex = 0, u32 count = 0) : start_triangle_index(startIndex), triangle_count(count), bvhIndex(-1) {}
-};
-
 struct SceneNode
 {
 	SceneNode* parent = nullptr;
 	std::vector<std::unique_ptr<SceneNode>> children;
 	Transform transform;
-	MeshSceneData meshData;
+	u32 mesh = -1;
+};
+
+struct MeshBvhPair
+{
+	MeshBvhPair(std::shared_ptr<Mesh>& mesh, u32 offset)
+	{
+		this->mesh = mesh;
+		this->bvh_offset = offset;
+	}
+	std::shared_ptr<Mesh> mesh;
+	u32 bvh_offset;// Offset of meshes bvh into the global bvh array
 };
 
 class Scene
@@ -34,7 +37,7 @@ public:
 
 	Scene() { };
 
-	SceneNode& add_node(const Mesh& primitive, const Transform& transform = Transform(), SceneNode* parent = nullptr);
+	SceneNode& add_node(const std::shared_ptr<Mesh> primitive, const Transform& transform = Transform(), SceneNode* parent = nullptr);
 	//SceneNode& add_node(const std::vector<Mesh>& primitive, const Transform& transform = Transform(), SceneNode* parent = nullptr);
 
 	void add_light(Light& light)
@@ -44,11 +47,8 @@ public:
 
 	SceneNode& get_root_node() { return _root_node; }
 
-	const std::vector<Light>& GetLights() const { return _lights; };
-	//const std::vector<VertexSceneData>& GetVertices() const { return _vertices; }
-	//std::vector<TriangleSceneData>& GetTriangleIndices() { return _triangle_indices; }
-	//const std::vector<Material>& GetMeshMaterials() const { return _meshes_materials; }
-
+	const std::vector<Light>& get_lights() const { return _lights; };
+	std::vector<MeshBvhPair>& get_meshes() { return _meshes; };
 public:
 	struct LightIterableConst {
 		const Scene& scene;
@@ -67,11 +67,7 @@ public:
 private:
 	SceneNode _root_node;
 
-	//std::vector<VertexSceneData> _vertices;
-	//std::vector<TriangleSceneData> _triangle_indices;
-	//std::vector<MeshSceneData> _meshes;
-	//std::vector<Material> _meshes_materials;
-
 	std::vector<Light> _lights;
+	std::vector<MeshBvhPair> _meshes;
 };
 }

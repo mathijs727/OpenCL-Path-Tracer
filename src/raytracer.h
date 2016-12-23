@@ -2,6 +2,8 @@
 //#include "template/template.h"// Includes template/cl.hpp
 #include "template/includes.h"
 #include "top_bvh.h"
+#include "vertices.h"
+#include "material.h"
 #include <memory>
 #include <vector>
 
@@ -26,9 +28,18 @@ public:
 	void RayTrace(const Camera& camera);
 private:
 	void InitOpenCL();
-	void InitBuffers();
+	void InitBuffers(
+		u32 numVertices,
+		u32 numTriangles,
+		u32 numMaterials,
+		u32 numSubBvhNodes,
+		u32 numTopBvhNodes,
+		u32 numLights);
 
 	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
+	
+	template<typename T>
+	void blockingWrite(cl::Buffer& buffer, std::vector<T> items);
 private:
 	std::unique_ptr<TopLevelBvhBuilder> _bvhBuilder;
 
@@ -40,30 +51,62 @@ private:
 	cl::CommandQueue _copyQueue;
 
 	cl::Kernel _helloWorldKernel;
-
 	cl::Buffer _kernel_data;
 
-	cl_int _num_vertices;
-	cl::Buffer _vertices;
-	cl_int _num_triangles;
-	cl::Buffer _triangles;
+	std::vector<VertexSceneData> _vertices_host;
+	std::vector<TriangleSceneData> _triangles_host;
+	std::vector<Material> _materials_host;
+	std::vector<SubBvhNode> _sub_bvh_nodes_host;
 
-	cl_int _num_mesh_materials;
-	cl_int _num_textures;
-	cl::Buffer _materials;
-	
+	cl_int _num_static_vertices;
+	cl_int _num_static_triangles;
+	cl_int _num_static_materials;
+	cl_int _num_static_bvh_nodes;
 	cl_int _num_lights;
+	cl::Buffer _vertices;
+	cl::Buffer _triangles;
+	cl::Buffer _materials;
+	cl::Buffer _sub_bvh;
 	cl::Buffer _lights;
+	
+	cl::Image2DArray _material_textures;
 
 	uint _active_top_bvh = 0;
 	cl_int _num_top_bvh_nodes[2];
+	std::vector<TopBvhNode> _top_bvh_host;
 	cl::Buffer _top_bvh[2];
 
-	cl_int _num_sub_bvh_nodes;
-	cl::Buffer _sub_bvh;
-
-	cl::Image2DArray _material_textures;
 	cl::ImageGL _output_image;
 };
+
+
+
+
+#ifdef _DEBUG
+#define checkClErr(ERROR_CODE, NAME) \
+	if ((ERROR_CODE) != CL_SUCCESS) { \
+		std::cout << "OpenCL ERROR: " << NAME << " " << (ERROR_CODE) << " (" << __FILE__ << ":" << __LINE__ << ")" << std::endl; \
+		system("PAUSE"); \
+		exit(EXIT_FAILURE); \
+	}
+#else
+#define checkClErr(ERROR_CODE, NAME)
+#endif
+
+template<typename T>
+inline void RayTracer::blockingWrite(cl::Buffer& buffer, std::vector<T> items)
+{
+	if (items.size() == 0)
+		return;
+
+	cl_int err = _queue.enqueueWriteBuffer(
+		buffer,
+		CL_TRUE,
+		0,
+		items.size() * sizeof(T),
+		items.data());
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+}
+
 }
 
