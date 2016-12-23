@@ -8,6 +8,7 @@
 #include "template/includes.h"// Includes opencl
 #include "template/surface.h"
 #include "allocator_singletons.h"
+#include "sbvh.h"
 
 using namespace raytracer;
 
@@ -146,6 +147,6 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 	}
 
 	// Create a BVH for the mesh
-	BinnedBvhBuilder bvhBuilder;
+	SbvhBuilder bvhBuilder;
 	_bvhRootNode = bvhBuilder.build(_firstTriangleIndex, _triangleCount);
 }

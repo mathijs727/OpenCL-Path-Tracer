@@ -27,6 +27,5 @@ namespace raytracer {
 		u32 _triangleOffset;
 		std::vector<glm::vec3> _centres;
 		std::vector<AABB> _aabbs;
-		std::vector<u32> _secondaryIndexBuffer;
 	};
 }
