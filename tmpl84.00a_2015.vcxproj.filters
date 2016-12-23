@@ -43,6 +43,9 @@
     <ClCompile Include="src\allocator_singletons.cpp">
       <Filter>memory</Filter>
     </ClCompile>
+    <ClCompile Include="src\sbvh.cpp">
+      <Filter>bvh</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
@@ -98,6 +101,9 @@
     </ClInclude>
     <ClInclude Include="src\allocator_singletons.h">
       <Filter>memory</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sbvh.h">
+      <Filter>bvh</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
