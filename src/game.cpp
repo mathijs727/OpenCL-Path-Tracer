@@ -37,19 +37,19 @@ void Game::Init()
 	}
 
 	Mesh cornell_box;
-	//cornell_box.loadFromFile("assets/obj/CornellBox-Empty-RG.obj");
+	cornell_box.loadFromFile("assets/obj/CornellBox-Empty-RG.obj");
 
 	Mesh monkey;
 	monkey.loadFromFile("assets/obj/monkey.obj");
 
 	Mesh cube;
-	//cube.loadFromFile( "assets/obj/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
+	cube.loadFromFile( "assets/obj/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
 
 	Mesh plane;
-	//plane.loadFromFile("assets/obj/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
+	plane.loadFromFile("assets/obj/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
 
 	//_scene->add_node(cornell_box, Transform(glm::vec3(0.f,-0.5f,0.f)));
-	//_scene->add_node(plane);
+	_scene->add_node(plane);
 	_monkey_scene_node = &_scene->add_node(monkey, Transform(glm::vec3(0.0f, 0.0f, 0.0f)));
 
 	/*for (int x = 0; x < 20; x+=2)
