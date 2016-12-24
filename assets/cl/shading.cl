@@ -44,17 +44,25 @@ float3 diffuseShade(
 			ray.origin = line.origin;
 			ray.direction = normalize(direction);
 			float maxT = dot(direction, direction);
-#ifdef COUNT_TRAVERSAL
-			lightVisible = !traceRay(scene, &ray, true, maxT, NULL, NULL, NULL, NULL, NULL);
+#ifdef NO_SHADOWS
+			lightVisible = true;
 #else
+	#ifdef COUNT_TRAVERSAL
+			lightVisible = !traceRay(scene, &ray, true, maxT, NULL, NULL, NULL, NULL, NULL);
+	#else
 			lightVisible = !traceRay(scene, &ray, true, maxT, NULL, NULL, NULL, NULL);
+	#endif
 #endif
 		} else {
 			ray.origin += normal * RAYTRACER_EPSILON;
-#ifdef COUNT_TRAVERSAL
-			lightVisible = !traceRay(scene, &ray, true, INFINITY, NULL, NULL, NULL, NULL, NULL);
+#ifdef NO_SHADOWS
+			lightVisible = true;
 #else
+	#ifdef COUNT_TRAVERSAL
+			lightVisible = !traceRay(scene, &ray, true, INFINITY, NULL, NULL, NULL, NULL, NULL);
+	#else
 			lightVisible = !traceRay(scene, &ray, true, INFINITY, NULL, NULL, NULL, NULL);
+	#endif
 #endif
 		}
 

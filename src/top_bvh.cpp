@@ -1,6 +1,5 @@
 #include "top_bvh.h"
 #include "scene.h"
-#include "allocator_singletons.h"
 #include <stack>
 #include <numeric>
 #include <array>
@@ -9,9 +8,12 @@
 
 using namespace raytracer;
 
-void raytracer::TopLevelBvhBuilder::build()
+u32 raytracer::TopLevelBvhBuilder::build(
+	std::vector<SubBvhNode>& subBvhNodes, 
+	std::vector<TopBvhNode>& outTopNodes)
 {
-	auto& bvhAllocator = getTopBvhAllocatorInstance();
+	_sub_bvh_nodes = &subBvhNodes;
+	_top_bvh_nodes = &outTopNodes;
 
 	// Add the scene graph nodes to teh top-level BVH buffer
 	std::vector<u32> list;
@@ -30,10 +32,13 @@ void raytracer::TopLevelBvhBuilder::build()
 			nodeStack.push(std::make_pair(sceneNode->children[i].get(), transform));
 		}
 
-		if (sceneNode->meshData.triangle_count > 0)
+		if (sceneNode->mesh == -1)
+			continue;
+
+		if (_scene.get_meshes()[sceneNode->mesh].mesh > 0)
 		{
-			u32 nodeId = bvhAllocator.allocate();
-			bvhAllocator.get(nodeId) = createNode(sceneNode, transform);
+			u32 nodeId = outTopNodes.size();
+			outTopNodes.push_back(createNode(sceneNode, transform));
 			list.push_back(nodeId);
 		}
 	}
@@ -55,8 +60,8 @@ void raytracer::TopLevelBvhBuilder::build()
 			list.erase(newEndB);
 			
 			// A = new Node(A, B);
-			u32 nodeId = bvhAllocator.allocate();
-			bvhAllocator.get(nodeId) = mergeNodes(nodeA, nodeB);
+			u32 nodeId = _top_bvh_nodes->size();
+			_top_bvh_nodes->push_back(mergeNodes(nodeA, nodeB));
 			nodeA = nodeId;
 
 			list.push_back(nodeA);
@@ -67,18 +72,18 @@ void raytracer::TopLevelBvhBuilder::build()
 			nodeB = nodeC;
 		}
 	}
+
+	return outTopNodes.size() - 1;// Root node is at the end
 }
 
 u32 raytracer::TopLevelBvhBuilder::findBestMatch(const std::vector<u32>& list, u32 nodeId)
 {
-	auto& bvhAllocator = getTopBvhAllocatorInstance();
-
-	TopBvhNode& node = bvhAllocator.get(nodeId);
+	TopBvhNode& node = (*_top_bvh_nodes)[nodeId];
 	float curMinArea = std::numeric_limits<float>::max();
 	u32 curMin = -1;
 	for (u32 otherNodeId : list)
 	{
-		TopBvhNode& otherNode = bvhAllocator.get(otherNodeId);
+		TopBvhNode& otherNode = (*_top_bvh_nodes)[otherNodeId];
 		AABB bounds = calcCombinedBounds(node.bounds, otherNode.bounds);
 		glm::vec3 extents = bounds.max - bounds.min;
 		float leftArea = extents.z * extents.y;
@@ -98,11 +103,11 @@ u32 raytracer::TopLevelBvhBuilder::findBestMatch(const std::vector<u32>& list, u
 
 TopBvhNode raytracer::TopLevelBvhBuilder::createNode(const SceneNode* sceneGraphNode, const glm::mat4 transform)
 {
-	auto& subBvhAllocator = getSubBvhAllocatorInstance();
+	auto& bvhMeshPair = _scene.get_meshes()[sceneGraphNode->mesh];
 
 	TopBvhNode node;
-	node.subBvhNode = sceneGraphNode->meshData.bvhIndex;
-	node.bounds = calcTransformedAABB(subBvhAllocator.get(node.subBvhNode).bounds, transform);
+	node.subBvhNode = bvhMeshPair.mesh->getBvhRootNode() + bvhMeshPair.bvh_offset;
+	node.bounds = calcTransformedAABB((*_sub_bvh_nodes)[node.subBvhNode].bounds, transform);
 	node.invTransform = glm::inverse(transform);
 	node.isLeaf = true;
 	return node;
@@ -110,10 +115,8 @@ TopBvhNode raytracer::TopLevelBvhBuilder::createNode(const SceneNode* sceneGraph
 
 TopBvhNode raytracer::TopLevelBvhBuilder::mergeNodes(u32 nodeId1, u32 nodeId2)
 {
-	auto& bvhAllocator = getTopBvhAllocatorInstance();
-
-	const TopBvhNode& node1 = bvhAllocator.get(nodeId1);
-	const TopBvhNode& node2 = bvhAllocator.get(nodeId2);
+	const TopBvhNode& node1 = (*_top_bvh_nodes)[nodeId1];
+	const TopBvhNode& node2 = (*_top_bvh_nodes)[nodeId2];
 
 	TopBvhNode node;
 	node.bounds = calcCombinedBounds(node1.bounds, node2.bounds);

@@ -7,8 +7,8 @@
 #include <iostream>
 #include "template/includes.h"// Includes opencl
 #include "template/surface.h"
-#include "allocator_singletons.h"
 #include "sbvh.h"
+#include <string>
 
 using namespace raytracer;
 
@@ -24,46 +24,53 @@ inline glm::vec3 ai2glm(const aiColor3D& c) {
 	return glm::vec3(c.r, c.g, c.b);
 }
 
-inline glm::mat4 remove_translation(const glm::mat4& mat) {
-	glm::mat4 result = mat;
-	result[3][0] = 0;
-	result[3][1] = 0;
-	result[3][2] = 0;
-	return result;
-}
-
 inline glm::mat4 normal_matrix(const glm::mat4& mat)
 {
 	return glm::transpose(glm::inverse(mat));
 }
 
-void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix) {
+// http://stackoverflow.com/questions/3071665/getting-a-directory-name-from-a-filename
+inline std::string getPath(const std::string& str)
+{
+	size_t found;
+	found = str.find_last_of("/\\");
+	return str.substr(0, found) + "/";
+}
+
+
+
+void raytracer::Mesh::addSubMesh(
+	const aiScene* scene,
+	uint mesh_index,
+	const glm::mat4& transform_matrix,
+	const char* texturePath) {
 	aiMesh* in_mesh = scene->mMeshes[mesh_index];
-	u32 vertex_starting_index = -1;
 
 	if (in_mesh->mNumVertices == 0 || in_mesh->mNumFaces == 0)
 		return;
 
-	auto& materialAllocator = getMaterialAllocatorInstance();
-	auto& vertexAllocator = getVertexAllocatorInstance();
-	auto& triangleAllocator = getTriangleAllocatorInstance();
-	u32 materialId = materialAllocator.allocate();
+	std::cout << "Loading " << in_mesh->mNumVertices << " vertices" << std::endl;
+	std::cout << "Loading " << in_mesh->mNumFaces << " triangles" << std::endl;
 
 	// process the materials
+	u32 materialId = _materials.size();
 	aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
 	aiColor3D colour; 
 	material->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
 	if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 		aiString path;
 		material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
-		materialAllocator.get(materialId) = Material::Diffuse(Texture(path.C_Str()), ai2glm(colour));
+		std::string textureFile = texturePath;
+		textureFile += path.C_Str();
+		_materials.push_back(Material::Diffuse(Texture(textureFile.c_str()), ai2glm(colour)));
 	}
 	else {
-		materialAllocator.get(materialId) = Material::Diffuse(ai2glm(colour));
+		_materials.push_back(Material::Diffuse(ai2glm(colour)));
 	}
 
 	// add all of the vertex data
 	glm::mat4 normalMatrix = normal_matrix(transform_matrix);
+	u32 vertexOffset = _vertices.size();
 	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
 		glm::vec4 position = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
 		glm::vec4 normal = normalMatrix * glm::vec4(ai2glm(in_mesh->mNormals[v]), 1);
@@ -73,16 +80,12 @@ void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const gl
 			texCoords.y = in_mesh->mTextureCoords[0][v].y;
 		}
 
-		// Allocate a vertex
-		u32 vertexId = vertexAllocator.allocate();
-		if (vertex_starting_index == -1)
-			vertex_starting_index = vertexId;
-
 		// Fill in the vertex
-		auto& vertex = vertexAllocator.get(vertexId);
+		VertexSceneData vertex;
 		vertex.vertex = position;
 		vertex.normal = normal;
 		vertex.texCoord = texCoords;
+		_vertices.push_back(vertex);
 		//std::cout << "importing vertex: " << position.x << ", " << position.y << ", " << position.z << std::endl;
 	}
 
@@ -94,19 +97,14 @@ void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const gl
 			continue;
 		}
 		auto aiIndices = in_face->mIndices;
-		auto face = glm::u32vec3(aiIndices[0], aiIndices[1], aiIndices[2]) + vertex_starting_index;
-		
-		// Allocate a triangle
-		u32 triangleIndex = triangleAllocator.allocate();
-		auto& triangle = triangleAllocator.get(triangleIndex);
-		if (_firstTriangleIndex == -1)
-			_firstTriangleIndex = triangleIndex;
+		auto face = glm::u32vec3(aiIndices[0], aiIndices[1], aiIndices[2]);
 
 		// Fill in the triangle
-		triangle.indices = face;
+		TriangleSceneData triangle;
+		triangle.indices = face + vertexOffset;
 		triangle.material_index = materialId;
+		_triangles.push_back(triangle);
 
-		_triangleCount++;
 		//std::cout << "importing face: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", starting index: " << vertex_starting_index << std::endl;
 	}
 }
@@ -119,23 +117,23 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 		StackElement(aiNode* node, const glm::mat4& transform = glm::mat4()) : node(node), transform(transform) {}
 	};
 
-	_triangleCount = 0;
-	_firstTriangleIndex = -1;
-	_bvhRootNode = -1;
+	std::string path = getPath(file);
 
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
+
+	if (scene == nullptr || scene->mRootNode == nullptr)
+		std::cout << "Mesh not found: " << file << std::endl;
 
 	if (scene != nullptr && scene->mFlags != AI_SCENE_FLAGS_INCOMPLETE && scene->mRootNode != nullptr) {
 		std::stack<StackElement> stack;
 		stack.push(StackElement(scene->mRootNode, offset.matrix()));
 		while (!stack.empty()) {
-			std::cout << "loading .obj node..." << std::endl;
 			auto current = stack.top();
 			stack.pop();
 			glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
 			for (uint i = 0; i < current.node->mNumMeshes; ++i) {
-				addSubMesh(scene, current.node->mMeshes[i], cur_transform);
+				addSubMesh(scene, current.node->mMeshes[i], cur_transform, path.c_str());
 				//if (!success) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
 				//else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
 				//out_vec.push_back(mesh);
@@ -148,5 +146,5 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 
 	// Create a BVH for the mesh
 	SbvhBuilder bvhBuilder;
-	_bvhRootNode = bvhBuilder.build(_firstTriangleIndex, _triangleCount);
+	_bvh_root_node = bvhBuilder.build(_vertices, _triangles, _bvh_nodes);
 }

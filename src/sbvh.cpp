@@ -1,22 +1,25 @@
 #include "sbvh.h"
-#include "allocator_singletons.h"
 #include <numeric>
 #include <array>
-#include "linear_allocator.h"
 #include <stack>
+#include "bvh_nodes.h"
+#include <xutility>
 
 #define BVH_SPLITS 8
 
-u32 raytracer::SbvhBuilder::build(u32 firstTriangle, u32 triangleCount)
+u32 raytracer::SbvhBuilder::build(
+	std::vector<VertexSceneData>& vertices,
+	std::vector<TriangleSceneData>& triangles,
+	std::vector<SubBvhNode>& outBvhNodes)
 {
-	_triangleOffset = firstTriangle;
+	u32 triangleCount = triangles.size();
+	_triangles = &triangles;
+	_vertices = &vertices;
+	_bvh_nodes = &outBvhNodes;
+	_triangleOffset = 0;
 	_centres.resize(triangleCount);
 	_aabbs.resize(triangleCount);
 	_secondaryIndexBuffer.resize(triangleCount);
-
-	auto& vertices = getVertexAllocatorInstance();
-	auto& faces = getTriangleAllocatorInstance();
-	auto& bvhAllocator = getSubBvhAllocatorInstance();
 
 	for (u32 i = 0; i < triangleCount; ++i) {
 		_secondaryIndexBuffer[i] = i;
@@ -25,7 +28,7 @@ u32 raytracer::SbvhBuilder::build(u32 firstTriangle, u32 triangleCount)
 	// Calculate centroids
 	for (uint i = 0; i < triangleCount; ++i) {
 		std::array<glm::vec3, 3> face;
-		auto& triangle = faces[_triangleOffset + i];
+		auto& triangle = (*_triangles)[_triangleOffset + i];
 		face[0] = (glm::vec3) vertices[triangle.indices[0]].vertex;
 		face[1] = (glm::vec3) vertices[triangle.indices[1]].vertex;
 		face[2] = (glm::vec3) vertices[triangle.indices[2]].vertex;
@@ -34,11 +37,11 @@ u32 raytracer::SbvhBuilder::build(u32 firstTriangle, u32 triangleCount)
 
 	// Calculate AABBs
 	for (uint i = 0; i < triangleCount; ++i) {
-		_aabbs[i] = createBounds(firstTriangle + i);
+		_aabbs[i] = createBounds(i);
 	}
 
 	u32 rootIndex = allocateNodePair();
-	auto& root = bvhAllocator[rootIndex];
+	auto& root = (*_bvh_nodes)[rootIndex];
 	root.firstTriangleIndex = 0; // _triangleOffset;
 	root.triangleCount = triangleCount;
 
@@ -57,17 +60,16 @@ u32 raytracer::SbvhBuilder::build(u32 firstTriangle, u32 triangleCount)
 	// Subdivide the root node
 	subdivide(rootIndex);
 
-	faces.allocateInPlace(_triangleOffset + triangleCount, _secondaryIndexBuffer.size() - triangleCount);
-
 	std::vector<TriangleSceneData> newFaces;
 	newFaces.reserve(_secondaryIndexBuffer.size());
-	for (u32 i : _secondaryIndexBuffer) newFaces.push_back(faces[_triangleOffset + i]);
-	std::copy(newFaces.begin(), newFaces.end(), faces.data() + _triangleOffset);
+	for (u32 i : _secondaryIndexBuffer) newFaces.push_back((*_triangles)[_triangleOffset + i]);
+
+	*_triangles = std::move(newFaces);
 
 	std::stack<u32> nodeStack;
 	nodeStack.push(rootIndex);
 	while (!nodeStack.empty()) {
-		auto& node = bvhAllocator[nodeStack.top()]; nodeStack.pop();
+		auto& node = (*_bvh_nodes)[nodeStack.top()]; nodeStack.pop();
 		if (node.triangleCount == 0) {
 			nodeStack.push(node.leftChildIndex);
 			nodeStack.push(node.leftChildIndex + 1);
@@ -82,13 +84,11 @@ u32 raytracer::SbvhBuilder::build(u32 firstTriangle, u32 triangleCount)
 
 void raytracer::SbvhBuilder::subdivide(u32 nodeId)
 {
-	auto& bvhAllocator = getSubBvhAllocatorInstance();
-
-	if (bvhAllocator[nodeId].triangleCount < 4)
+	if ((*_bvh_nodes)[nodeId].triangleCount < 4)
 		return;
 
 	if (partition(nodeId)) {// Divides our triangles over our children and calculates their bounds
-		u32 leftIndex = bvhAllocator[nodeId].leftChildIndex;
+		u32 leftIndex = (*_bvh_nodes)[nodeId].leftChildIndex;
 		_ASSERT(leftIndex > nodeId);
 		subdivide(leftIndex);
 		subdivide(leftIndex + 1);
@@ -97,10 +97,8 @@ void raytracer::SbvhBuilder::subdivide(u32 nodeId)
 
 bool raytracer::SbvhBuilder::partition(u32 nodeId)
 {
-	auto& bvhAllocator = getSubBvhAllocatorInstance();
-
 	// Use pointer because references are not reassignable (we need to reassign after allocation)
-	auto* node = &bvhAllocator[nodeId];
+	auto* node = &(*_bvh_nodes)[nodeId];
 
 	// Split along the widest axis
 	uint axis = -1;
@@ -224,18 +222,18 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 
 	// Allocate child nodes
 	u32 leftIndex = allocateNodePair();
-	node = &bvhAllocator[nodeId];	// Allocation currently uses a std::vector, which means
+	node = &(*_bvh_nodes)[nodeId];	// Allocation currently uses a std::vector, which means
 									 // that addresses may change after allocation
 
 									 // Initialize child nodes
-	auto& lNode = bvhAllocator[leftIndex];
+	auto& lNode = (*_bvh_nodes)[leftIndex];
 	lNode.firstTriangleIndex = node->firstTriangleIndex;
 	lNode.triangleCount = leftCount;
 	lNode.bounds = leftBounds;
 	
 	_ASSERT(lNode.firstTriangleIndex >= 0);
 
-	auto& rNode = bvhAllocator[leftIndex + 1];
+	auto& rNode = (*_bvh_nodes)[leftIndex + 1];
 	rNode.firstTriangleIndex = node->firstTriangleIndex + leftCount;
 	rNode.triangleCount = rightCount;
 	rNode.bounds = rightBounds;
@@ -245,7 +243,7 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 	// set this node as not a leaf anymore
 	node->triangleCount = 0;
 	node->leftChildIndex = leftIndex;
-	_ASSERT(bvhAllocator[nodeId].leftChildIndex == leftIndex);
+	_ASSERT((*_bvh_nodes)[nodeId].leftChildIndex == leftIndex);
 	_ASSERT(node->leftChildIndex > nodeId);
 
 	return true;// Yes we have split, in the future you may want to decide whether you split or not based on the SAH
@@ -253,16 +251,13 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 
 raytracer::AABB raytracer::SbvhBuilder::createBounds(u32 triangleIndex)
 {
-	auto& vertices = getVertexAllocatorInstance();
-	auto& faces = getTriangleAllocatorInstance();
-
 	glm::vec3 min = glm::vec3(std::numeric_limits<float>::max());// Work around bug in glm
 	glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest());// Work around bug in glm
 
 	std::array<glm::vec3, 3> face;
-	face[0] = (glm::vec3) vertices.get(faces.get(triangleIndex).indices[0]).vertex;
-	face[1] = (glm::vec3) vertices.get(faces.get(triangleIndex).indices[1]).vertex;
-	face[2] = (glm::vec3) vertices.get(faces.get(triangleIndex).indices[2]).vertex;
+	face[0] = (glm::vec3) (*_vertices)[(*_triangles)[triangleIndex].indices[0]].vertex;
+	face[1] = (glm::vec3) (*_vertices)[(*_triangles)[triangleIndex].indices[1]].vertex;
+	face[2] = (glm::vec3) (*_vertices)[(*_triangles)[triangleIndex].indices[2]].vertex;
 	for (auto& v : face)
 	{
 		min = glm::min(min, v);
@@ -277,18 +272,14 @@ raytracer::AABB raytracer::SbvhBuilder::createBounds(u32 triangleIndex)
 
 u32 raytracer::SbvhBuilder::allocateNodePair()
 {
-	auto& bvhAllocator = getSubBvhAllocatorInstance();
-
-	u32 first = bvhAllocator.allocate();
-	bvhAllocator.allocate();// Second child
-	return first;
+	u32 index = _bvh_nodes->size();
+	_bvh_nodes->emplace_back();
+	_bvh_nodes->emplace_back();
+	return index;
 }
 
 bool raytracer::SbvhBuilder::doObjectSelection(SubBvhNode* node, u32 axis, u32& outBestSplit, float& outBestSah, ObjectBin* bins)
 {
-	auto& faces = getTriangleAllocatorInstance();
-	auto& bvhAllocator = getSubBvhAllocatorInstance();
-
 	for (int i = 0; i < BVH_SPLITS; i++)
 		bins[i].triangleCount = 0;
 
