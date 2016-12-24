@@ -49,6 +49,7 @@ void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const gl
 
 	// add all of the vertex data
 	glm::mat4 normalMatrix = normal_matrix(transform_matrix);
+	u32 vertexOffset = _vertices.size();
 	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
 		glm::vec4 position = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
 		glm::vec4 normal = normalMatrix * glm::vec4(ai2glm(in_mesh->mNormals[v]), 1);
@@ -79,7 +80,7 @@ void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const gl
 
 		// Fill in the triangle
 		TriangleSceneData triangle;
-		triangle.indices = face;
+		triangle.indices = face + vertexOffset;
 		triangle.material_index = materialId;
 		_triangles.push_back(triangle);
 

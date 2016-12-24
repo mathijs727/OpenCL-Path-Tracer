@@ -3,6 +3,8 @@
 #include "scene.h"
 #include "raytracer.h"
 #include "gloutput.h"
+#include "mesh_sequence.h"
+#include <memory>
 #include <unordered_map>
 
 #define SCRWIDTH	 1280
@@ -39,6 +41,7 @@ private:
 	glm::vec3 _camera_euler;
 
 	float t = 0.0f;
+	std::shared_ptr<raytracer::MeshSequence> _heli;
 	raytracer::SceneNode* _monkey_scene_node;
 
 	std::unique_ptr<raytracer::RayTracer> _ray_tracer;

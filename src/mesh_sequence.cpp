@@ -134,6 +134,7 @@ void raytracer::MeshSequence::addSubMesh(
 
 	// add all of the vertex data
 	glm::mat4 normalMatrix = normal_matrix(transform_matrix);
+	u32 vertexOffset = vertices.size();
 	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
 		glm::vec4 position = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
 		glm::vec4 normal = normalMatrix * glm::vec4(ai2glm(in_mesh->mNormals[v]), 1);
@@ -149,7 +150,6 @@ void raytracer::MeshSequence::addSubMesh(
 		vertex.normal = normal;
 		vertex.texCoord = texCoords;
 		vertices.push_back(vertex);
-		//std::cout << "importing vertex: " << position.x << ", " << position.y << ", " << position.z << std::endl;
 	}
 
 	// add all of the faces data
@@ -164,7 +164,7 @@ void raytracer::MeshSequence::addSubMesh(
 
 		// Fill in the triangle
 		TriangleSceneData triangle;
-		triangle.indices = face;
+		triangle.indices = face + vertexOffset;
 		triangle.material_index = materialId;
 		triangles.push_back(triangle);
 
