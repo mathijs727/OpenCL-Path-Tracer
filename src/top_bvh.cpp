@@ -8,7 +8,7 @@
 
 using namespace raytracer;
 
-void raytracer::TopLevelBvhBuilder::build(
+u32 raytracer::TopLevelBvhBuilder::build(
 	std::vector<SubBvhNode>& subBvhNodes, 
 	std::vector<TopBvhNode>& outTopNodes)
 {
@@ -72,6 +72,8 @@ void raytracer::TopLevelBvhBuilder::build(
 			nodeB = nodeC;
 		}
 	}
+
+	return outTopNodes.size() - 1;// Root node is at the end
 }
 
 u32 raytracer::TopLevelBvhBuilder::findBestMatch(const std::vector<u32>& list, u32 nodeId)
@@ -104,7 +106,7 @@ TopBvhNode raytracer::TopLevelBvhBuilder::createNode(const SceneNode* sceneGraph
 	auto& bvhMeshPair = _scene.get_meshes()[sceneGraphNode->mesh];
 
 	TopBvhNode node;
-	node.subBvhNode = bvhMeshPair.mesh->getRootBvhNode() + bvhMeshPair.bvh_offset;
+	node.subBvhNode = bvhMeshPair.mesh->getBvhRootNode() + bvhMeshPair.bvh_offset;
 	node.bounds = calcTransformedAABB((*_sub_bvh_nodes)[node.subBvhNode].bounds, transform);
 	node.invTransform = glm::inverse(transform);
 	node.isLeaf = true;

@@ -5,7 +5,7 @@
 
 using namespace raytracer;
 
-raytracer::SceneNode& raytracer::Scene::add_node(std::shared_ptr<Mesh> primitive, const Transform& transform, SceneNode* parent /*= nullptr*/) {
+raytracer::SceneNode& raytracer::Scene::add_node(std::shared_ptr<IMesh> primitive, const Transform& transform, SceneNode* parent /*= nullptr*/) {
 	//return add_node(std::vector<Mesh>{ primitive }, transform, parent );
 	if (!parent) parent = &get_root_node();
 

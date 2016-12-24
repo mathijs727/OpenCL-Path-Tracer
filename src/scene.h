@@ -21,12 +21,12 @@ struct SceneNode
 
 struct MeshBvhPair
 {
-	MeshBvhPair(std::shared_ptr<Mesh>& mesh, u32 offset)
+	MeshBvhPair(std::shared_ptr<IMesh>& mesh, u32 offset)
 	{
 		this->mesh = mesh;
 		this->bvh_offset = offset;
 	}
-	std::shared_ptr<Mesh> mesh;
+	std::shared_ptr<IMesh> mesh;
 	u32 bvh_offset;// Offset of meshes bvh into the global bvh array
 };
 
@@ -37,7 +37,7 @@ public:
 
 	Scene() { };
 
-	SceneNode& add_node(const std::shared_ptr<Mesh> primitive, const Transform& transform = Transform(), SceneNode* parent = nullptr);
+	SceneNode& add_node(const std::shared_ptr<IMesh> primitive, const Transform& transform = Transform(), SceneNode* parent = nullptr);
 	//SceneNode& add_node(const std::vector<Mesh>& primitive, const Transform& transform = Transform(), SceneNode* parent = nullptr);
 
 	void add_light(Light& light)

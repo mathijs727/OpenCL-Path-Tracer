@@ -33,7 +33,7 @@ public:
 private:
 	const Uint8* _keys;
 	Surface* _screen;
-	std::unique_ptr<raytracer::Scene> _scene;
+	std::shared_ptr<raytracer::Scene> _scene;
 	std::unique_ptr<raytracer::Camera> _camera;
 	std::unordered_map<int, float> _input_axes;
 	glm::vec3 _camera_euler;

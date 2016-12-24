@@ -73,6 +73,49 @@ cl_float3 glmToCl(const glm::vec3& vec);
 	}
 #endif
 
+template<typename T>
+inline void writeToBuffer(
+	cl::CommandQueue& queue,
+	cl::Buffer& buffer,
+	const std::vector<T>& items,
+	size_t offset = 0)
+{
+	if (items.size() == 0)
+		return;
+
+	cl_int err = queue.enqueueWriteBuffer(
+		buffer,
+		CL_TRUE,
+		offset * sizeof(T),
+		(items.size() - offset) * sizeof(T),
+		&items[offset]);
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+}
+
+template<typename T>
+inline void writeToBuffer(
+	cl::CommandQueue& queue,
+	cl::Buffer& buffer,
+	const std::vector<T>& items,
+	size_t offset,
+	std::vector<cl::Event>& events)
+{
+	if (items.size() == 0)
+		return;
+
+	cl::Event ev;
+	cl_int err = queue.enqueueWriteBuffer(
+		buffer,
+		CL_TRUE,
+		offset * sizeof(T),
+		(items.size() - offset) * sizeof(T),
+		&items[offset],
+		nullptr,
+		&ev);
+	events.push_back(ev);
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+}
+
 raytracer::RayTracer::RayTracer(int width, int height)
 {
 	_scr_width = width;
@@ -80,6 +123,9 @@ raytracer::RayTracer::RayTracer(int width, int height)
 
 	InitOpenCL();
 	_helloWorldKernel = LoadKernel("assets/cl/kernel.cl", "hello");
+
+	_top_bvh_root_node[0] = 0;
+	_top_bvh_root_node[1] = 0;
 }
 
 raytracer::RayTracer::~RayTracer()
@@ -96,43 +142,60 @@ void raytracer::RayTracer::InitBuffers(
 {
 	cl_int err;
 
-	_vertices = cl::Buffer(_context,
+	_vertices[0] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numVertices) * sizeof(VertexSceneData),
+		NULL,
+		&err);
+	_vertices[1] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		std::max(1u, numVertices) * sizeof(VertexSceneData),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
-	_triangles = cl::Buffer(_context,
+	_triangles[0] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numTriangles) * sizeof(TriangleSceneData),
+		NULL,
+		&err);
+	_triangles[1] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		std::max(1u, numTriangles) * sizeof(TriangleSceneData),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
-	_materials = cl::Buffer(_context,
+	_materials[0] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numMaterials) * sizeof(Material),
+		NULL,
+		&err);
+	_materials[1] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		std::max(1u, numMaterials) * sizeof(Material),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
-	_sub_bvh = cl::Buffer(_context,
+	_sub_bvh[0] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numSubBvhNodes) * sizeof(SubBvhNode),
+		NULL,
+		&err);
+	_sub_bvh[1] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		std::max(1u, numSubBvhNodes) * sizeof(SubBvhNode),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
-	_num_top_bvh_nodes[0] = 0;
 	_top_bvh[0] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		numTopBvhNodes * sizeof(TopBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
-
-	_num_top_bvh_nodes[1] = 0;
 	_top_bvh[1] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		numTopBvhNodes * sizeof(TopBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
@@ -168,9 +231,10 @@ void raytracer::RayTracer::InitBuffers(
 	checkClErr(err, "cl::Image2DArray");
 }
 
-void raytracer::RayTracer::SetScene(Scene& scene)
+void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 {
-	_bvhBuilder = std::make_unique<TopLevelBvhBuilder>(scene);
+	_scene = scene;
+	_bvhBuilder = std::make_unique<TopLevelBvhBuilder>(*scene.get());
 	//_bvhBuilder->build();
 
 	// Initialize buffers
@@ -178,8 +242,8 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 	_num_static_triangles = 0;
 	_num_static_materials = 0;
 	_num_static_bvh_nodes = 0;
-	_num_lights = scene.get_lights().size();
-	for (auto& meshBvhPair : scene.get_meshes())
+	_num_lights = scene->get_lights().size();
+	for (auto& meshBvhPair : scene->get_meshes())
 	{
 		auto mesh = meshBvhPair.mesh;
 		_num_static_vertices += mesh->getVertices().size();
@@ -189,15 +253,18 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 	}
 
 	InitBuffers(_num_static_vertices, _num_static_triangles, _num_static_materials,
-		_num_static_bvh_nodes, scene.get_meshes().size() * 2, scene.get_lights().size());
+		_num_static_bvh_nodes, scene->get_meshes().size() * 2, scene->get_lights().size());
 	
 
 
 	// Collect all static geometry and upload it to the GPU
-	for (auto& meshBvhPair : scene.get_meshes())
+	for (auto& meshBvhPair : scene->get_meshes())
 	{
-		// TODO: use memcpy instead of looping over vertices (faster?)
 		auto mesh = meshBvhPair.mesh;
+		if (mesh->isDynamic())
+			continue;
+
+		// TODO: use memcpy instead of looping over vertices (faster?)
 		u32 startVertex = _vertices_host.size();
 		for (auto& vertex : mesh->getVertices())
 		{
@@ -231,12 +298,17 @@ void raytracer::RayTracer::SetScene(Scene& scene)
 		meshBvhPair.bvh_offset = startBvhNode;
 	}
 
-	blockingWrite(_vertices, _vertices_host);
-	blockingWrite(_triangles, _triangles_host);
-	blockingWrite(_materials, _materials_host);
-	blockingWrite(_sub_bvh, _sub_bvh_nodes_host);
+	writeToBuffer(_queue, _vertices[0], _vertices_host);
+	writeToBuffer(_queue, _triangles[0], _triangles_host);
+	writeToBuffer(_queue, _materials[0], _materials_host);
+	writeToBuffer(_queue, _sub_bvh[0], _sub_bvh_nodes_host);
 
-	blockingWrite(_lights, scene.get_lights());
+	writeToBuffer(_queue, _vertices[1], _vertices_host);
+	writeToBuffer(_queue, _triangles[1], _triangles_host);
+	writeToBuffer(_queue, _materials[1], _materials_host);
+	writeToBuffer(_queue, _sub_bvh[1], _sub_bvh_nodes_host);
+
+	writeToBuffer(_queue, _lights, scene->get_lights());
 
 	// Copy textures to the GPU
 	for (uint texId = 0; texId < Texture::getNumUniqueSurfaces(); texId++)
@@ -296,7 +368,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		data.numTriangles = _num_static_triangles;
 		data.numLights = _num_lights;
 
-		data.topLevelBvhRoot = _num_top_bvh_nodes[_active_top_bvh] - 1;
+		data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];
 
 		cl_int err = _queue.enqueueWriteBuffer(
 			_kernel_data,
@@ -314,13 +386,13 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	cl::Event event;
 	_helloWorldKernel.setArg(0, _output_image);
 	_helloWorldKernel.setArg(1, _kernel_data);
-	_helloWorldKernel.setArg(2, _vertices);
-	_helloWorldKernel.setArg(3, _triangles);
-	_helloWorldKernel.setArg(4, _materials);
+	_helloWorldKernel.setArg(2, _vertices[_active_buffers]);
+	_helloWorldKernel.setArg(3, _triangles[_active_buffers]);
+	_helloWorldKernel.setArg(4, _materials[_active_buffers]);
 	_helloWorldKernel.setArg(5, _material_textures);
 	_helloWorldKernel.setArg(6, _lights);
-	_helloWorldKernel.setArg(7, _sub_bvh);
-	_helloWorldKernel.setArg(8, _top_bvh[_active_top_bvh]);
+	_helloWorldKernel.setArg(7, _sub_bvh[_active_buffers]);
+	_helloWorldKernel.setArg(8, _top_bvh[_active_buffers]);
 
 	err = _queue.enqueueNDRangeKernel(
 		_helloWorldKernel,
@@ -339,30 +411,77 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		//  flush and than calculate the top lvl bvh.
 		_queue.flush();
 
-		// Update the top level BVH and copy it to the GPU on a seperate copy queue
-		_top_bvh_host.clear();
-		_bvhBuilder->build(_sub_bvh_nodes_host, _top_bvh_host);
+		int copyBuffers = (_active_buffers + 1) % 2;
+		std::vector<cl::Event> waitEvents;
 
-		int copyBvh = (_active_top_bvh + 1) % 2;
-		_num_top_bvh_nodes[copyBvh] = _top_bvh_host.size();
-		if (_num_top_bvh_nodes[copyBvh] > 0)
 		{
-			cl::Event copyEvent;
-			cl_int err = _copyQueue.enqueueWriteBuffer(
-				_top_bvh[copyBvh],
-				CL_FALSE,
-				0,
-				_num_top_bvh_nodes[copyBvh] * sizeof(TopBvhNode),
-				_top_bvh_host.data(),
-				nullptr,
-				&copyEvent);
-			checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+			_vertices_host.resize(_num_static_vertices);
+			_triangles_host.resize(_num_static_triangles);
+			_materials_host.resize(_num_static_materials);
+			_sub_bvh_nodes_host.resize(_num_static_bvh_nodes);
 
-			std::vector<cl::Event> waitEvents;
-			waitEvents.push_back(copyEvent);
-			err = _queue.enqueueBarrierWithWaitList(&waitEvents);
-			checkClErr(err, "CommandQueue::enqueueBarrierWithWaitList");
+
+			// Collect all static geometry and upload it to the GPU
+			for (auto& meshBvhPair : _scene->get_meshes())
+			{
+				auto mesh = meshBvhPair.mesh;
+				if (!mesh->isDynamic())
+					continue;
+
+				mesh->buildBvh();
+
+				// TODO: use memcpy instead of looping over vertices (faster?)
+				u32 startVertex = _vertices_host.size();
+				for (auto& vertex : mesh->getVertices())
+				{
+					_vertices_host.push_back(vertex);
+				}
+
+				u32 startMaterial = _materials_host.size();
+				for (auto& material : mesh->getMaterials())
+				{
+					_materials_host.push_back(material);
+				}
+
+				u32 startTriangle = _triangles_host.size();
+				for (auto& triangle : mesh->getTriangles())
+				{
+					_triangles_host.push_back(triangle);
+					_triangles_host.back().indices += startVertex;
+					_triangles_host.back().material_index += startMaterial;
+				}
+
+				u32 startBvhNode = _sub_bvh_nodes_host.size();
+				for (auto& bvhNode : mesh->getBvhNodes())
+				{
+					_sub_bvh_nodes_host.push_back(bvhNode);
+					auto& newNode = _sub_bvh_nodes_host.back();
+					if (newNode.triangleCount > 0)
+						newNode.firstTriangleIndex += startTriangle;
+					else
+						newNode.leftChildIndex += startBvhNode;
+				}
+				meshBvhPair.bvh_offset = startBvhNode;
+			}
+
+			if (_vertices_host.size() > _num_static_vertices)// Dont copy if we dont have any dynamic geometry
+			{
+				writeToBuffer(_copyQueue, _vertices[copyBuffers], _vertices_host, _num_static_vertices, waitEvents);
+				writeToBuffer(_copyQueue, _triangles[copyBuffers], _triangles_host, _num_static_triangles, waitEvents);
+				writeToBuffer(_copyQueue, _materials[copyBuffers], _materials_host, _num_static_materials, waitEvents);
+				writeToBuffer(_copyQueue, _sub_bvh[copyBuffers], _sub_bvh_nodes_host, _num_static_bvh_nodes, waitEvents);
+			}
 		}
+
+		// Update the top level BVH and copy it to the GPU on a seperate copy queue
+		_top_bvh_nodes_host.clear();
+		_top_bvh_root_node[copyBuffers] = _bvhBuilder->build(_sub_bvh_nodes_host, _top_bvh_nodes_host);
+
+		writeToBuffer(_copyQueue, _top_bvh[copyBuffers], _top_bvh_nodes_host, 0, waitEvents);
+
+		// Make sure the main queue waits for the copy to finish
+		err = _queue.enqueueBarrierWithWaitList(&waitEvents);
+		checkClErr(err, "CommandQueue::enqueueBarrierWithWaitList");
 	}
 
 	// Before returning the objects to OpenGL, we sync to make sure OpenCL is done.
@@ -371,7 +490,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 
 	_queue.enqueueReleaseGLObjects(&images);
 
-	_active_top_bvh = (_active_top_bvh + 1) % 2;
+	_active_buffers = (_active_buffers + 1) % 2;
 }
 
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/

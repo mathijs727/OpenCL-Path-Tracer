@@ -23,7 +23,7 @@ public:
 	RayTracer(int width, int height);
 	~RayTracer();
 
-	void SetScene(Scene& scene);
+	void SetScene(std::shared_ptr<Scene> scene);
 	void SetTarget(GLuint glTexture);
 	void RayTrace(const Camera& camera);
 private:
@@ -37,10 +37,8 @@ private:
 		u32 numLights);
 
 	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
-	
-	template<typename T>
-	void blockingWrite(cl::Buffer& buffer, std::vector<T> items);
 private:
+	std::shared_ptr<Scene> _scene;
 	std::unique_ptr<TopLevelBvhBuilder> _bvhBuilder;
 
 	cl_uint _scr_width, _scr_height;
@@ -62,18 +60,19 @@ private:
 	cl_int _num_static_triangles;
 	cl_int _num_static_materials;
 	cl_int _num_static_bvh_nodes;
+	uint _active_buffers = 0;
+	cl::Buffer _vertices[2];
+	cl::Buffer _triangles[2];
+	cl::Buffer _materials[2];
+	cl::Buffer _sub_bvh[2];
+
 	cl_int _num_lights;
-	cl::Buffer _vertices;
-	cl::Buffer _triangles;
-	cl::Buffer _materials;
-	cl::Buffer _sub_bvh;
 	cl::Buffer _lights;
 	
 	cl::Image2DArray _material_textures;
 
-	uint _active_top_bvh = 0;
-	cl_int _num_top_bvh_nodes[2];
-	std::vector<TopBvhNode> _top_bvh_host;
+	std::vector<TopBvhNode> _top_bvh_nodes_host;
+	cl_int _top_bvh_root_node[2];
 	cl::Buffer _top_bvh[2];
 
 	cl::ImageGL _output_image;
@@ -92,21 +91,6 @@ private:
 #else
 #define checkClErr(ERROR_CODE, NAME)
 #endif
-
-template<typename T>
-inline void RayTracer::blockingWrite(cl::Buffer& buffer, std::vector<T> items)
-{
-	if (items.size() == 0)
-		return;
-
-	cl_int err = _queue.enqueueWriteBuffer(
-		buffer,
-		CL_TRUE,
-		0,
-		items.size() * sizeof(T),
-		items.data());
-	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-}
 
 }
 

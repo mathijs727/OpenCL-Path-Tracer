@@ -16,7 +16,8 @@ using namespace Tmpl8;
 // -----------------------------------------------------------
 void Game::Init()
 {
-	_scene = std::make_unique<Scene>();
+	_scene = std::make_shared<Scene>();
+
 	Transform camera_transform;
 	_camera_euler.y = -1.5f;
 	camera_transform.orientation = glm::quat(_camera_euler); // identity
@@ -54,7 +55,7 @@ void Game::Init()
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
-	_ray_tracer->SetScene(*_scene);
+	_ray_tracer->SetScene(_scene);
 	_ray_tracer->SetTarget(_out.GetGLTexture());
 
 }

@@ -1,12 +1,13 @@
-#include "mesh.h"
+#include "mesh_sequence.h"
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include <cassert>
 #include <stack>
 #include <iostream>
+#include <fstream>
 #include "template/includes.h"// Includes opencl
 #include "template/surface.h"
+#include "binned_bvh.h"
 
 using namespace raytracer;
 
@@ -27,24 +28,68 @@ inline glm::mat4 normal_matrix(const glm::mat4& mat)
 	return glm::transpose(glm::inverse(mat));
 }
 
-void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix) {
+inline bool file_exists(const char* name) {
+	std::ifstream f(name);
+	return f.good();
+}
+
+
+
+
+void raytracer::MeshSequence::loadFromFiles(const char* fileFormat, const Transform & offset)
+{
+	auto filename = std::make_unique<char[]>(strlen(fileFormat) + 10);
+	for (int i = 0; true; i++)
+	{
+		sprintf(filename.get(), fileFormat, i);
+		if (!file_exists(filename.get()))
+			break;
+
+		std::cout << "Reading mesh: " << filename.get() << std::endl;
+		loadFile(filename.get(), offset);
+	}
+}
+
+void raytracer::MeshSequence::goToNextFrame()
+{
+	_current_frame = (_current_frame + 1) % _frames.size();
+}
+
+void raytracer::MeshSequence::buildBvh()
+{
+	MeshFrame& frame = _frames[_current_frame];
+	frame.bvh_nodes.clear();
+
+	// Create a BVH for the mesh
+	BinnedBvhBuilder bvhBuilder;
+	frame.bvh_root_node = bvhBuilder.build(frame.vertices, frame.triangles, frame.bvh_nodes);
+}
+
+void raytracer::MeshSequence::addSubMesh(
+	const aiScene* scene,
+	uint mesh_index,
+	const glm::mat4 & transform_matrix,
+	std::vector<VertexSceneData>& vertices,
+	std::vector<TriangleSceneData>& triangles,
+	std::vector<Material>& materials)
+{
 	aiMesh* in_mesh = scene->mMeshes[mesh_index];
 
 	if (in_mesh->mNumVertices == 0 || in_mesh->mNumFaces == 0)
 		return;
 
 	// process the materials
-	u32 materialId = _materials.size();
+	u32 materialId = materials.size();
 	aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
-	aiColor3D colour; 
+	aiColor3D colour;
 	material->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
 	if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 		aiString path;
 		material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
-		_materials.push_back(Material::Diffuse(Texture(path.C_Str()), ai2glm(colour)));
+		materials.push_back(Material::Diffuse(Texture(path.C_Str()), ai2glm(colour)));
 	}
 	else {
-		_materials.push_back(Material::Diffuse(ai2glm(colour)));
+		materials.push_back(Material::Diffuse(ai2glm(colour)));
 	}
 
 	// add all of the vertex data
@@ -63,7 +108,7 @@ void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const gl
 		vertex.vertex = position;
 		vertex.normal = normal;
 		vertex.texCoord = texCoords;
-		_vertices.push_back(vertex);
+		vertices.push_back(vertex);
 		//std::cout << "importing vertex: " << position.x << ", " << position.y << ", " << position.z << std::endl;
 	}
 
@@ -81,19 +126,23 @@ void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const gl
 		TriangleSceneData triangle;
 		triangle.indices = face;
 		triangle.material_index = materialId;
-		_triangles.push_back(triangle);
+		triangles.push_back(triangle);
 
 		//std::cout << "importing face: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", starting index: " << vertex_starting_index << std::endl;
 	}
 }
 
-void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
+void raytracer::MeshSequence::loadFile(const char* file, const Transform & offset)
+{
 	struct StackElement
 	{
 		aiNode* node;
 		glm::mat4x4 transform;
 		StackElement(aiNode* node, const glm::mat4& transform = glm::mat4()) : node(node), transform(transform) {}
 	};
+
+	_frames.emplace_back();
+	MeshFrame& frame = _frames.back();
 
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
@@ -107,7 +156,12 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 			stack.pop();
 			glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
 			for (uint i = 0; i < current.node->mNumMeshes; ++i) {
-				addSubMesh(scene, current.node->mMeshes[i], cur_transform);
+				addSubMesh(scene,
+					current.node->mMeshes[i],
+					cur_transform,
+					frame.vertices,
+					frame.triangles,
+					frame.materials);
 				//if (!success) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
 				//else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
 				//out_vec.push_back(mesh);
@@ -117,8 +171,4 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 			}
 		}
 	}
-
-	// Create a BVH for the mesh
-	BinnedBvhBuilder bvhBuilder;
-	_bvh_root_node = bvhBuilder.build(_vertices, _triangles, _bvh_nodes);
 }

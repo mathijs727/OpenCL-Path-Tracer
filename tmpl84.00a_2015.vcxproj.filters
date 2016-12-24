@@ -37,6 +37,9 @@
     <ClCompile Include="src\binned_bvh.cpp">
       <Filter>bvh</Filter>
     </ClCompile>
+    <ClCompile Include="src\mesh_sequence.cpp">
+      <Filter>model</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
@@ -85,6 +88,12 @@
       <Filter>model</Filter>
     </ClInclude>
     <ClInclude Include="src\vertices.h">
+      <Filter>model</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imesh.h">
+      <Filter>model</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mesh_sequence.h">
       <Filter>model</Filter>
     </ClInclude>
   </ItemGroup>

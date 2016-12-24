@@ -15,7 +15,7 @@ class TopLevelBvhBuilder
 public:
 	TopLevelBvhBuilder(Scene& scene) : _scene(scene) { };
 
-	void build(std::vector<SubBvhNode>& subBvhNodes,
+	u32 build(std::vector<SubBvhNode>& subBvhNodes,
 		std::vector<TopBvhNode>& outTopNodes);
 private:
 	u32 findBestMatch(const std::vector<u32>& list, u32 nodeId);
