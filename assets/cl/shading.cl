@@ -26,45 +26,20 @@ float3 diffuseShade(
 		if (isLightCulled(&light, intersection))
 			continue;
 		
-		// TODO: pls make this not burn my eyes (probably just completely eliminate lines)
-		// Shadow test
 		bool lightVisible = false;
-		Line line;
 		Ray ray;
-		int rayOrLine = getShadowLineRay(&light, intersection, &line, &ray);
-		if (rayOrLine == 1)
-		{
-			line.origin += normal * RAYTRACER_EPSILON;
+		float maxT;
+		getShadowRay(&light, intersection, &ray, &maxT);
 
-			int triangleIndex;
-			float hitT;
-			float2 uv;
-
-			float3 direction = line.dest - line.origin;
-			ray.origin = line.origin;
-			ray.direction = normalize(direction);
-			float maxT = dot(direction, direction);
 #ifdef NO_SHADOWS
-			lightVisible = true;
+		lightVisible = true;
 #else
 	#ifdef COUNT_TRAVERSAL
-			lightVisible = !traceRay(scene, &ray, true, maxT, NULL, NULL, NULL, NULL, NULL);
+		lightVisible = !traceRay(scene, &ray, true, maxT, NULL, NULL, NULL, NULL, NULL);
 	#else
-			lightVisible = !traceRay(scene, &ray, true, maxT, NULL, NULL, NULL, NULL);
+		lightVisible = !traceRay(scene, &ray, true, maxT, NULL, NULL, NULL, NULL);
 	#endif
 #endif
-		} else {
-			ray.origin += normal * RAYTRACER_EPSILON;
-#ifdef NO_SHADOWS
-			lightVisible = true;
-#else
-	#ifdef COUNT_TRAVERSAL
-			lightVisible = !traceRay(scene, &ray, true, INFINITY, NULL, NULL, NULL, NULL, NULL);
-	#else
-			lightVisible = !traceRay(scene, &ray, true, INFINITY, NULL, NULL, NULL, NULL);
-	#endif
-#endif
-		}
 
 		if (lightVisible)
 		{

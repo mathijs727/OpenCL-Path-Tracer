@@ -40,6 +40,9 @@
     <ClCompile Include="src\mesh_sequence.cpp">
       <Filter>model</Filter>
     </ClCompile>
+    <ClCompile Include="src\bvh_test.cpp">
+      <Filter>bvh</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
@@ -95,6 +98,9 @@
     </ClInclude>
     <ClInclude Include="src\mesh_sequence.h">
       <Filter>model</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bvh_test.h">
+      <Filter>bvh</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -37,19 +37,19 @@ float3 getLightVector(const Light* light, float3 intersection)
 }
 
 // Return 1 for line, 2 for ray, 0 for error
-int getShadowLineRay(const Light* light, float3 intersection, Line* line, Ray* ray)
+void getShadowRay(const Light* light, float3 intersection, Ray* outRay, float* outMaxT)
 {
 	if (light->type == PointLightType)
 	{
-		line->origin = intersection;
-		line->dest = light->point.position;
-		return 1;
+		float3 direction = light->point.position - intersection;
+		outRay->origin = intersection;
+		outRay->direction = normalize(direction);
+		*outMaxT = sqrt(dot(direction, direction));
 	} else {
-		ray->origin = intersection;
-		ray->direction = -light->directional.direction;
-		return 2;
+		outRay->origin = intersection;
+		outRay->direction = -light->directional.direction;
+		*outMaxT = INFINITY;
 	}
-	return 0;
 }
 
 bool isLightCulled(const Light* light, float3 intersection)

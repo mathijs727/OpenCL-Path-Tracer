@@ -7,8 +7,6 @@
 #include "bvh.cl"
 #include "math.cl"
 
-#define USE_BVH
-
 // At least on AMD, this is not defined
 #define NULL 0
 
@@ -87,16 +85,15 @@ bool traceRay(
 	float2 closestUV;
 	const __global float* closestMatrix;
 
-#ifdef USE_BVH
 #ifdef COUNT_TRAVERSAL
 	if (count) *count = 0;
 #endif
 	// Check mesh intersection using BVH traversal
-	ThinBvhStackItem thinBvhStack[64];
+	ThinBvhStackItem thinBvhStack[128];
 	int thinBvhStackPtr = 0;
 
 	// Traverse top level BVH and add relevant sub-BVH's to the "thin BVH" stacks
-	unsigned int topLevelBvhStack[64];
+	unsigned int topLevelBvhStack[16];
 	unsigned int topLevelBvhStackPtr = 0;
 	topLevelBvhStack[topLevelBvhStackPtr++] = scene->topLevelBvhRoot;
 
@@ -227,32 +224,6 @@ bool traceRay(
 	} else {// We did not intersect with any triangle
 		return false;
 	}
-
-
-
-#else
-	// Old fashioned brute force
-	for (int i = 0; i < scene->numTriangles; ++i) {
-		float t;
-		float3 n;
-		float2 tex_coords_tmp;
-
-		VertexData v[3];
-		TriangleData triangle = scene->triangles[i];
-		getVertices(v, triangle.indices, scene);
-		float3 edge1 = v[1].vertex - v[0].vertex;
-		float3 edge2 = v[2].vertex - v[0].vertex;
-		bool backface = dot(ray->direction, cross(edge2, edge1)) < 0;
-		if (!backface && intersectRayTriangle(ray, &outT, &outUv) && t < minT)
-		{
-			minT = t;
-			i_current_hit = i;
-			type = MeshType;
-			normal = n;
-			tex_coords = tex_coords_tmp;
-		}
-	}
-#endif
 }
 
 #endif// __SCENE_CL

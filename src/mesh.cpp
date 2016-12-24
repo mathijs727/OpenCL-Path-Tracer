@@ -48,9 +48,6 @@ void raytracer::Mesh::addSubMesh(
 	if (in_mesh->mNumVertices == 0 || in_mesh->mNumFaces == 0)
 		return;
 
-	std::cout << "Loading " << in_mesh->mNumVertices << " vertices" << std::endl;
-	std::cout << "Loading " << in_mesh->mNumFaces << " triangles" << std::endl;
-
 	// process the materials
 	u32 materialId = _materials.size();
 	aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
