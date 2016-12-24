@@ -105,7 +105,7 @@ bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
 
 	// Loop through the triangles and calculate bin dimensions and triangle count
 	const u32 end = localFirstTriangleIndex + node->triangleCount;
-	float k1 = BVH_SPLITS / extents[axis] * 0.999999f;// Prevents the bin out of bounds (if centroid on the right bound)
+	float k1 = BVH_SPLITS / extents[axis] * 0.99999f;// Prevents the bin out of bounds (if centroid on the right bound)
 	for (u32 i = localFirstTriangleIndex; i < end; i++)
 	{
 		// Calculate the bin ID as described in the paper

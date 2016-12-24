@@ -101,7 +101,7 @@ void Game::Tick( float dt )
 		t -= 2 * PI;
 
 	//_monkey_scene_node->transform.orientation = glm::angleAxis(t, glm::vec3(0,1,0));
-	//_heli->goToNextFrame();
+	_heli->goToNextFrame();
 
 	_ray_tracer->RayTrace(*_camera);
 	_out.Render();

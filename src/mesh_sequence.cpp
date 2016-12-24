@@ -90,7 +90,7 @@ u32 raytracer::MeshSequence::maxNumBvhNodes() const
 	u32 max = 0;
 	for (auto& frame : _frames)
 	{
-		max = std::max(max, frame.triangles.size() / 2);
+		max = std::max(max, frame.triangles.size());
 	}
 	return max;
 }
