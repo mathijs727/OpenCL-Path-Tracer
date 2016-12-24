@@ -48,6 +48,9 @@ void raytracer::Mesh::addSubMesh(
 	if (in_mesh->mNumVertices == 0 || in_mesh->mNumFaces == 0)
 		return;
 
+	std::cout << "Loading " << in_mesh->mNumVertices << " vertices" << std::endl;
+	std::cout << "Loading " << in_mesh->mNumFaces << " triangles" << std::endl;
+
 	// process the materials
 	u32 materialId = _materials.size();
 	aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
@@ -117,6 +120,9 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
+
+	if (scene == nullptr || scene->mRootNode == nullptr)
+		std::cout << "Mesh not found: " << file << std::endl;
 
 	if (scene != nullptr && scene->mFlags != AI_SCENE_FLAGS_INCOMPLETE && scene->mRootNode != nullptr) {
 		std::stack<StackElement> stack;
