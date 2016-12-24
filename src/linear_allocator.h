@@ -17,6 +17,7 @@ namespace raytracer
 		void* data();
 		size_t size();
 
+		T& operator[](u32 handle) { return get(handle); }
 		T& get(u32 handle);
 	private:
 		u32 _poolPtr;
