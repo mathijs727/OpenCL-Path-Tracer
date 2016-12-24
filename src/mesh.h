@@ -36,7 +36,7 @@ public:
 	u32 maxNumBvhNodes() const override { return _bvh_nodes.size(); };
 	void buildBvh() override { };// Only necessary for dynamic objects
 private:
-	void addSubMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix);
+	void addSubMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix, const char* texturePath);
 private:
 	std::vector<VertexSceneData> _vertices;
 	std::vector<TriangleSceneData> _triangles;

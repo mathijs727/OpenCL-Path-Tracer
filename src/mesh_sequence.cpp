@@ -5,6 +5,7 @@
 #include <stack>
 #include <iostream>
 #include <fstream>
+#include <string>
 #include "template/includes.h"// Includes opencl
 #include "template/surface.h"
 #include "binned_bvh.h"
@@ -33,6 +34,13 @@ inline bool file_exists(const char* name) {
 	return f.good();
 }
 
+// http://stackoverflow.com/questions/3071665/getting-a-directory-name-from-a-filename
+inline std::string getPath(const std::string& str)
+{
+	size_t found;
+	found = str.find_last_of("/\\");
+	return str.substr(0, found) + "/";
+}
 
 
 
@@ -111,7 +119,8 @@ void raytracer::MeshSequence::addSubMesh(
 	const glm::mat4 & transform_matrix,
 	std::vector<VertexSceneData>& vertices,
 	std::vector<TriangleSceneData>& triangles,
-	std::vector<Material>& materials)
+	std::vector<Material>& materials,
+	const char* texturePath)
 {
 	aiMesh* in_mesh = scene->mMeshes[mesh_index];
 
@@ -126,7 +135,9 @@ void raytracer::MeshSequence::addSubMesh(
 	if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 		aiString path;
 		material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
-		materials.push_back(Material::Diffuse(Texture(path.C_Str()), ai2glm(colour)));
+		std::string textureFile = texturePath;
+		textureFile += path.C_Str();
+		materials.push_back(Material::Diffuse(Texture(textureFile.c_str()), ai2glm(colour)));
 	}
 	else {
 		materials.push_back(Material::Diffuse(ai2glm(colour)));
@@ -172,7 +183,7 @@ void raytracer::MeshSequence::addSubMesh(
 	}
 }
 
-void raytracer::MeshSequence::loadFile(const char* file, const Transform & offset)
+void raytracer::MeshSequence::loadFile(const char* file, const Transform& offset)
 {
 	struct StackElement
 	{
@@ -183,6 +194,8 @@ void raytracer::MeshSequence::loadFile(const char* file, const Transform & offse
 
 	_frames.emplace_back();
 	MeshFrame& frame = _frames.back();
+
+	std::string path = getPath(file);
 
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
@@ -200,7 +213,8 @@ void raytracer::MeshSequence::loadFile(const char* file, const Transform & offse
 					cur_transform,
 					frame.vertices,
 					frame.triangles,
-					frame.materials);
+					frame.materials,
+					path.c_str());
 				//if (!success) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
 				//else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
 				//out_vec.push_back(mesh);

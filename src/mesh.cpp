@@ -7,6 +7,7 @@
 #include <iostream>
 #include "template/includes.h"// Includes opencl
 #include "template/surface.h"
+#include <string>
 
 using namespace raytracer;
 
@@ -27,7 +28,21 @@ inline glm::mat4 normal_matrix(const glm::mat4& mat)
 	return glm::transpose(glm::inverse(mat));
 }
 
-void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix) {
+// http://stackoverflow.com/questions/3071665/getting-a-directory-name-from-a-filename
+inline std::string getPath(const std::string& str)
+{
+	size_t found;
+	found = str.find_last_of("/\\");
+	return str.substr(0, found) + "/";
+}
+
+
+
+void raytracer::Mesh::addSubMesh(
+	const aiScene* scene,
+	uint mesh_index,
+	const glm::mat4& transform_matrix,
+	const char* texturePath) {
 	aiMesh* in_mesh = scene->mMeshes[mesh_index];
 
 	if (in_mesh->mNumVertices == 0 || in_mesh->mNumFaces == 0)
@@ -41,7 +56,9 @@ void raytracer::Mesh::addSubMesh(const aiScene* scene, uint mesh_index, const gl
 	if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 		aiString path;
 		material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
-		_materials.push_back(Material::Diffuse(Texture(path.C_Str()), ai2glm(colour)));
+		std::string textureFile = texturePath;
+		textureFile += path.C_Str();
+		_materials.push_back(Material::Diffuse(Texture(textureFile.c_str()), ai2glm(colour)));
 	}
 	else {
 		_materials.push_back(Material::Diffuse(ai2glm(colour)));
@@ -96,6 +113,8 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 		StackElement(aiNode* node, const glm::mat4& transform = glm::mat4()) : node(node), transform(transform) {}
 	};
 
+	std::string path = getPath(file);
+
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
 
@@ -107,7 +126,7 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 			stack.pop();
 			glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
 			for (uint i = 0; i < current.node->mNumMeshes; ++i) {
-				addSubMesh(scene, current.node->mMeshes[i], cur_transform);
+				addSubMesh(scene, current.node->mMeshes[i], cur_transform, path.c_str());
 				//if (!success) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
 				//else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
 				//out_vec.push_back(mesh);

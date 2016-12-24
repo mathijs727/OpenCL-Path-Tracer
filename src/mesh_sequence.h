@@ -39,7 +39,8 @@ namespace raytracer
 			const glm::mat4& transform_matrix,
 			std::vector<VertexSceneData>& vertices,
 			std::vector<TriangleSceneData>& triangles,
-			std::vector<Material>& materials);
+			std::vector<Material>& materials,
+			const char* texturePath);
 		void loadFile(const char* file, const Transform& offset = Transform());
 	private:
 		struct MeshFrame
