@@ -100,6 +100,8 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 	// Use pointer because references are not reassignable (we need to reassign after allocation)
 	auto* node = &(*_bvh_nodes)[nodeId];
 
+	float maxSah = node->triangleCount * node->bounds.surfaceArea();
+
 	// Split along the widest axis
 	uint axis = -1;
 	float minAxisWidth = 0.0;
@@ -128,9 +130,12 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 	SpatialSplit spatialSplits[BVH_SPLITS];
 	//doSpatialSelection(node, axis, bestSpatialSplit, bestSpatialSah, spatialSplits);
 	
+	bool binnedSplitGood = bestBinnedSplit != -1 && bestBinnedSah < maxSah;
+	bool spatialSplitGood = bestSpatialSplit != -1 && bestSpatialSah < maxSah;
+
 	u32 leftCount, rightCount;
 	AABB leftBounds, rightBounds;
-	if (bestBinnedSplit != -1 && (bestSpatialSplit == -1 || bestSpatialSah >= bestBinnedSah)) {
+	if (binnedSplitGood && (!spatialSplitGood  || bestSpatialSah >= bestBinnedSah)) {
 		// Partition the array around the bin pivot
 		// http://www.inf.fh-flensburg.de/lang/algorithmen/sortieren/quick/quicken.htm
 		u32 i = localFirstTriangleIndex;
@@ -183,7 +188,7 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 				leftBounds.fit(objectBins[bin].bounds);
 		}
 	}
-	else if (bestSpatialSplit != -1) {
+	else if (spatialSplitGood) {
 		// allocate enough memory to hold the new faces of this node
 		leftCount = 0;
 		rightCount = 0;
@@ -300,7 +305,7 @@ bool raytracer::SbvhBuilder::doObjectSelection(SubBvhNode* node, u32 axis, u32& 
 	}
 
 	// Determine for which bin the SAH is the lowest
-	float bestSAH = std::numeric_limits<float>::lowest();
+	float bestSAH = std::numeric_limits<float>::max();
 	int bestSplit = -1;
 	for (int split = 1; split < BVH_SPLITS; split++)
 	{
@@ -315,8 +320,7 @@ bool raytracer::SbvhBuilder::doObjectSelection(SubBvhNode* node, u32 axis, u32& 
 				if (bins[leftBin].triangleCount > 0)
 					leftAABB.fit(bins[leftBin].bounds);
 			}
-			glm::vec3 extents = leftAABB.max - leftAABB.min;
-			surfaceAreaLeft = 2.0f * (extents.x * extents.y + extents.y * extents.z + extents.z * extents.x);
+			surfaceAreaLeft = leftAABB.surfaceArea();
 		}
 
 		// Calculate the triangle count and surface area of the AABB to the right of the possible split
@@ -330,12 +334,11 @@ bool raytracer::SbvhBuilder::doObjectSelection(SubBvhNode* node, u32 axis, u32& 
 				if (bins[rightBin].triangleCount > 0)
 					rightAABB.fit(bins[rightBin].bounds);
 			}
-			glm::vec3 extents = rightAABB.max - rightAABB.min;
-			surfaceAreaRight = 2.0f * (extents.x * extents.y + extents.y * extents.z + extents.z * extents.x);
+			surfaceAreaRight = rightAABB.surfaceArea();
 		}
 
 		float SAH = triangleCountLeft * surfaceAreaLeft + triangleCountRight * surfaceAreaRight;
-		if (SAH > bestSAH && triangleCountLeft > 0 && triangleCountRight > 0)
+		if (SAH < bestSAH && triangleCountLeft > 0 && triangleCountRight > 0)
 		{
 			bestSAH = SAH;
 			bestSplit = split;
@@ -400,7 +403,7 @@ bool raytracer::SbvhBuilder::doSpatialSelection(SubBvhNode* node, u32 axis, u32&
 	}
 
 	// Determine for which bin the SAH is the lowest
-	float bestSAH = std::numeric_limits<float>::lowest();
+	float bestSAH = std::numeric_limits<float>::max();
 	int bestSplit = -1;
 	for (int split = 1; split < BVH_SPLITS; split++)
 	{
@@ -416,7 +419,7 @@ bool raytracer::SbvhBuilder::doSpatialSelection(SubBvhNode* node, u32 axis, u32&
 					leftAABB.fit(spatialSplits[leftBin].bounds);
 			}
 			glm::vec3 extents = leftAABB.max - leftAABB.min;
-			surfaceAreaLeft = 2.0f * (extents.x * extents.y + extents.y * extents.z + extents.z * extents.x);
+			surfaceAreaLeft = leftAABB.surfaceArea();
 		}
 
 		// Calculate the triangle count and surface area of the AABB to the right of the possible split
@@ -430,12 +433,11 @@ bool raytracer::SbvhBuilder::doSpatialSelection(SubBvhNode* node, u32 axis, u32&
 				if (spatialSplits[rightBin].refs.size() > 0)
 					rightAABB.fit(spatialSplits[rightBin].bounds);
 			}
-			glm::vec3 extents = rightAABB.max - rightAABB.min;
-			surfaceAreaRight = 2.0f * (extents.x * extents.y + extents.y * extents.z + extents.z * extents.x);
+			surfaceAreaRight = rightAABB.surfaceArea();
 		}
 
 		float SAH = triangleCountLeft * surfaceAreaLeft + triangleCountRight * surfaceAreaRight;
-		if (SAH > bestSAH && triangleCountLeft > 0 && triangleCountRight > 0)
+		if (SAH < bestSAH && triangleCountLeft > 0 && triangleCountRight > 0)
 		{
 			bestSAH = SAH;
 			bestSplit = split;
