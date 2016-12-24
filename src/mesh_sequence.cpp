@@ -55,6 +55,46 @@ void raytracer::MeshSequence::goToNextFrame()
 	_current_frame = (_current_frame + 1) % _frames.size();
 }
 
+u32 raytracer::MeshSequence::maxNumVertices() const
+{
+	u32 max = 0;
+	for (auto& frame : _frames)
+	{
+		max = std::max(max, frame.vertices.size());
+	}
+	return max;
+}
+
+u32 raytracer::MeshSequence::maxNumTriangles() const
+{
+	u32 max = 0;
+	for (auto& frame : _frames)
+	{
+		max = std::max(max, frame.triangles.size());
+	}
+	return max;
+}
+
+u32 raytracer::MeshSequence::maxNumMaterials() const
+{
+	u32 max = 0;
+	for (auto& frame : _frames)
+	{
+		max = std::max(max, frame.materials.size());
+	}
+	return max;
+}
+
+u32 raytracer::MeshSequence::maxNumBvhNodes() const
+{
+	u32 max = 0;
+	for (auto& frame : _frames)
+	{
+		max = std::max(max, frame.triangles.size() / 2);
+	}
+	return max;
+}
+
 void raytracer::MeshSequence::buildBvh()
 {
 	MeshFrame& frame = _frames[_current_frame];
@@ -151,7 +191,6 @@ void raytracer::MeshSequence::loadFile(const char* file, const Transform & offse
 		std::stack<StackElement> stack;
 		stack.push(StackElement(scene->mRootNode, offset.matrix()));
 		while (!stack.empty()) {
-			std::cout << "loading .obj node..." << std::endl;
 			auto current = stack.top();
 			stack.pop();
 			glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);

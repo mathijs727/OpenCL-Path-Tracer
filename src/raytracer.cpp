@@ -234,8 +234,6 @@ void raytracer::RayTracer::InitBuffers(
 void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 {
 	_scene = scene;
-	_bvhBuilder = std::make_unique<TopLevelBvhBuilder>(*scene.get());
-	//_bvhBuilder->build();
 
 	// Initialize buffers
 	_num_static_vertices = 0;
@@ -243,17 +241,37 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 	_num_static_materials = 0;
 	_num_static_bvh_nodes = 0;
 	_num_lights = scene->get_lights().size();
+
+	u32 numVertices = 0;
+	u32 numTriangles= 0;
+	u32 numMaterials = 0;
+	u32 numBvhNodes = 0;
 	for (auto& meshBvhPair : scene->get_meshes())
 	{
 		auto mesh = meshBvhPair.mesh;
-		_num_static_vertices += mesh->getVertices().size();
-		_num_static_triangles += mesh->getTriangles().size();
-		_num_static_materials += mesh->getMaterials().size();
-		_num_static_bvh_nodes += mesh->getBvhNodes().size();
+
+		if (mesh->isDynamic())
+		{
+			numVertices += mesh->maxNumVertices();
+			numTriangles += mesh->maxNumTriangles();
+			numMaterials += mesh->maxNumMaterials();
+			numBvhNodes += mesh->maxNumBvhNodes();
+		}
+		else {
+			numVertices += mesh->getVertices().size();
+			numTriangles += mesh->getTriangles().size();
+			numMaterials += mesh->getMaterials().size();
+			numBvhNodes += mesh->getBvhNodes().size();
+
+			_num_static_vertices += mesh->getVertices().size();
+			_num_static_triangles += mesh->getTriangles().size();
+			_num_static_materials += mesh->getMaterials().size();
+			_num_static_bvh_nodes += mesh->getBvhNodes().size();
+		}
 	}
 
-	InitBuffers(_num_static_vertices, _num_static_triangles, _num_static_materials,
-		_num_static_bvh_nodes, scene->get_meshes().size() * 2, scene->get_lights().size());
+	InitBuffers(numVertices, numTriangles, numMaterials,
+		numBvhNodes, scene->get_meshes().size() * 2, scene->get_lights().size());
 	
 
 
@@ -475,7 +493,8 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 
 		// Update the top level BVH and copy it to the GPU on a seperate copy queue
 		_top_bvh_nodes_host.clear();
-		_top_bvh_root_node[copyBuffers] = _bvhBuilder->build(_sub_bvh_nodes_host, _top_bvh_nodes_host);
+		auto bvhBuilder = TopLevelBvhBuilder(*_scene.get());
+		_top_bvh_root_node[copyBuffers] = bvhBuilder.build(_sub_bvh_nodes_host, _top_bvh_nodes_host);
 
 		writeToBuffer(_copyQueue, _top_bvh[copyBuffers], _top_bvh_nodes_host, 0, waitEvents);
 

@@ -102,7 +102,6 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 		std::stack<StackElement> stack;
 		stack.push(StackElement(scene->mRootNode, offset.matrix()));
 		while (!stack.empty()) {
-			std::cout << "loading .obj node..." << std::endl;
 			auto current = stack.top();
 			stack.pop();
 			glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);

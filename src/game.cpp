@@ -6,6 +6,8 @@
 #include "raytracer.h"
 #include "timer.h"
 #include "gloutput.h"
+#include "mesh.h"
+#include "mesh_sequence.h"
 #include <iostream>
 
 using namespace raytracer;
@@ -40,18 +42,25 @@ void Game::Init()
 	//Mesh cornell_box;
 	//cornell_box.loadFromFile("assets/obj/CornellBox-Empty-RG.obj");
 
-	auto monkey = std::make_shared<Mesh>();
-	monkey->loadFromFile("assets/obj/monkey.obj");
+	//auto monkey = std::make_shared<Mesh>();
+	//monkey->loadFromFile("assets/obj/monkey.obj");
 
 	//Mesh cube;
 	//cube.loadFromFile( "assets/obj/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
 
-	auto plane = std::make_shared<Mesh>();
-	plane->loadFromFile("assets/obj/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
+	/*auto heli = std::make_shared<MeshSequence>();
+	heli->loadFromFiles("assets/obj/heli/Helicopter_UH60_%04d.obj");*/
+	auto heli = std::make_shared<Mesh>();
+	heli->loadFromFile("assets/obj/heli/Helicopter_UH60_0000.obj");
+
+	//auto plane = std::make_shared<Mesh>();
+	//plane->loadFromFile("assets/obj/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
+
 
 	//_scene->add_node(cornell_box, Transform(glm::vec3(0.f,-0.5f,0.f)));
-	_monkey_scene_node = &_scene->add_node(monkey, Transform(glm::vec3(0.0f, 0.0f, 0.0f)));
-	_scene->add_node(plane);
+	//_monkey_scene_node = &_scene->add_node(monkey, Transform(glm::vec3(0.0f, 0.0f, 0.0f)));
+	//_scene->add_node(plane);
+	_scene->add_node(heli);
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
@@ -86,7 +95,7 @@ void Game::Tick( float dt )
 	if (t > 2 * PI)
 		t -= 2 * PI;
 
-	_monkey_scene_node->transform.orientation = glm::angleAxis(t, glm::vec3(0,1,0));
+	//_monkey_scene_node->transform.orientation = glm::angleAxis(t, glm::vec3(0,1,0));
 
 	_ray_tracer->RayTrace(*_camera);
 	_out.Render();

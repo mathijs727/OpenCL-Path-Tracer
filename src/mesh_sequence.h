@@ -25,10 +25,13 @@ namespace raytracer
 		const std::vector<Material>& getMaterials() const override { return _frames[_current_frame].materials; }
 		const std::vector<SubBvhNode>& getBvhNodes() const override { return _frames[_current_frame].bvh_nodes; }
 
-
 		u32 getBvhRootNode() const override { return _frames[_current_frame].bvh_root_node; };
 
 		bool isDynamic() const override { return true; };
+		u32 maxNumVertices() const override;
+		u32 maxNumTriangles() const override;
+		u32 maxNumMaterials() const override;
+		u32 maxNumBvhNodes() const override;
 		void buildBvh() override;
 	private:
 		void addSubMesh(const aiScene* scene,

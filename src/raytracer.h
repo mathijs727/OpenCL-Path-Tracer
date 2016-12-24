@@ -39,7 +39,6 @@ private:
 	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
 private:
 	std::shared_ptr<Scene> _scene;
-	std::unique_ptr<TopLevelBvhBuilder> _bvhBuilder;
 
 	cl_uint _scr_width, _scr_height;
 
