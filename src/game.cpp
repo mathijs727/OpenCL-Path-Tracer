@@ -6,6 +6,8 @@
 #include "raytracer.h"
 #include "timer.h"
 #include "gloutput.h"
+#include "mesh.h"
+#include "mesh_sequence.h"
 #include <iostream>
 
 using namespace raytracer;
@@ -16,7 +18,8 @@ using namespace Tmpl8;
 // -----------------------------------------------------------
 void Game::Init()
 {
-	_scene = std::make_unique<Scene>();
+	_scene = std::make_shared<Scene>();
+
 	Transform camera_transform;
 	_camera_euler.y = -1.5f;
 	camera_transform.orientation = glm::quat(_camera_euler); // identity
@@ -36,41 +39,25 @@ void Game::Init()
 		_scene->add_light(light);
 	}
 
-	Mesh cornell_box;
-	cornell_box.loadFromFile("assets/obj/CornellBox-Empty-RG.obj");
+	auto plane = std::make_shared<Mesh>();
+	plane->loadFromFile("assets/3dmodels/plane/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
 
-	Mesh monkey;
-	monkey.loadFromFile("assets/obj/monkey.obj");
+	auto cube = std::make_shared<Mesh>();
+	cube->loadFromFile( "assets/3dmodels/cube/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
 
-	Mesh cube;
-	cube.loadFromFile( "assets/obj/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
+	Transform enlargeTransform;
+	enlargeTransform.scale = glm::vec3(10);
 
-	Mesh plane;
-	plane.loadFromFile("assets/obj/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
+	auto bunny = std::make_shared<Mesh>();
+	bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply", enlargeTransform);
 
-	//_scene->add_node(cornell_box, Transform(glm::vec3(0.f,-0.5f,0.f)));
-	_scene->add_node(plane);
-	_monkey_scene_node = &_scene->add_node(monkey, Transform(glm::vec3(0.0f, 0.0f, 0.0f)));
+	//_scene->add_node(plane);
+	_scene->add_node(bunny);
 
-	/*for (int x = 0; x < 20; x+=2)
-	{
-		for (int y = 0; y < 20; y+=2)
-		{
-			_scene->add_node(cube, Transform(glm::vec3(-x, 1.0f, -y)));
-		}
-	}*/
-
-	/*Timer timer;
-	raytrace(*_camera, *_scene, *_screen);
-	auto elapsedMs = timer.elapsed() * 1000.0f;// Miliseconds
-	std::cout << "Time to compute: " << elapsedMs << " ms" << std::endl;*/
-
-#ifdef OPENCL
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
-	_ray_tracer->SetScene(*_scene);
+	_ray_tracer->SetScene(_scene);
 	_ray_tracer->SetTarget(_out.GetGLTexture());
-#endif
 
 }
 
@@ -100,7 +87,8 @@ void Game::Tick( float dt )
 	if (t > 2 * PI)
 		t -= 2 * PI;
 
-	_monkey_scene_node->transform.orientation = glm::angleAxis(t, glm::vec3(0,1,0));
+	//_monkey_scene_node->transform.orientation = glm::angleAxis(t, glm::vec3(0,1,0));
+	//_heli->goToNextFrame();
 
 	_ray_tracer->RayTrace(*_camera);
 	_out.Render();

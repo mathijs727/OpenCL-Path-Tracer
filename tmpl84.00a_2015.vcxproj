@@ -19,9 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\allocator_singletons.cpp" />
     <ClCompile Include="src\binned_bvh.cpp" />
-    <ClCompile Include="src\sbvh.cpp" />
+    <ClCompile Include="src\mesh_sequence.cpp" />
     <ClCompile Include="src\top_bvh.cpp" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\game.cpp" />
@@ -37,10 +36,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\aabb.h" />
-    <ClInclude Include="src\allocator_singletons.h" />
-    <ClInclude Include="src\linear_allocator.h" />
     <ClInclude Include="src\binned_bvh.h" />
-    <ClInclude Include="src\sbvh.h" />
+    <ClInclude Include="src\imesh.h" />
+    <ClInclude Include="src\mesh_sequence.h" />
     <ClInclude Include="src\top_bvh.h" />
     <ClInclude Include="src\bvh_nodes.h" />
     <ClInclude Include="src\camera.h" />

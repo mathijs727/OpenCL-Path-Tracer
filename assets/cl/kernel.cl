@@ -1,4 +1,5 @@
 #define COUNT_TRAVERSAL// Define here so it can be accessed by include files
+#define NO_SHADOWS
 
 #include "shapes.cl"
 #include "material.cl"
