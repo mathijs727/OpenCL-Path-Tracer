@@ -2,7 +2,7 @@
 #define __SHAPES_CL
 #include "ray.cl"
 
-#define EPSILON 0.00001f
+#define EPSILON FLT_MIN
 #define PI 3.14159265359f
 
 typedef struct

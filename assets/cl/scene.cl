@@ -18,8 +18,8 @@ typedef struct
 	const __global Material* meshMaterials;
 	const __global Light* lights;
 
-	const __global ThinBvhNode* thinBvh;
-	const __global FatBvhNode* topLevelBvh;
+	const __global SubBvhNode* subBvh;
+	const __global TopBvhNode* topLevelBvh;
 	int topLevelBvhRoot;
 
 	float refractiveIndex;
@@ -39,9 +39,9 @@ void loadScene(
 	const __global Material* materials,
 	int numLights,
 	const __global Light* lights,
-	const __global ThinBvhNode* thinBvh,
+	const __global SubBvhNode* subBvh,
 	int topLevelBvhRoot,
-	const __global FatBvhNode* topLevelBvh,
+	const __global TopBvhNode* topLevelBvh,
 	Scene* scene) {
 	scene->refractiveIndex =  1.000277f;
 	
@@ -54,7 +54,7 @@ void loadScene(
 	scene->vertices = vertices;
 	scene->lights = lights;
 
-	scene->thinBvh = thinBvh;
+	scene->subBvh = subBvh;
 	scene->topLevelBvh = topLevelBvh;
 	scene->topLevelBvhRoot = topLevelBvhRoot;
 }
@@ -63,7 +63,7 @@ typedef struct
 {
 	unsigned int nodeIndex;
 	const __global float* invTransform;
-} ThinBvhStackItem;
+} SubBvhStackItem;
 
 bool traceRay(
 	const Scene* scene,
@@ -89,10 +89,10 @@ bool traceRay(
 	if (count) *count = 0;
 #endif
 	// Check mesh intersection using BVH traversal
-	ThinBvhStackItem thinBvhStack[128];
-	int thinBvhStackPtr = 0;
+	SubBvhStackItem subBvhStack[128];
+	int subBvhStackPtr = 0;
 
-	// Traverse top level BVH and add relevant sub-BVH's to the "thin BVH" stacks
+	// Traverse top level BVH and add relevant sub-BVH's to the "sub BVH" stacks
 	unsigned int topLevelBvhStack[16];
 	unsigned int topLevelBvhStackPtr = 0;
 	topLevelBvhStack[topLevelBvhStackPtr++] = scene->topLevelBvhRoot;
@@ -107,8 +107,8 @@ bool traceRay(
 #ifdef COUNT_TRAVERSAL
 			if (count) *count = *count + 1;
 #endif
-			const __global FatBvhNode* node = &scene->topLevelBvh[topLevelBvhStack[--topLevelBvhStackPtr]];
-			if (!intersectRayFatBvh(ray, node, closestT))
+			const __global TopBvhNode* node = &scene->topLevelBvh[topLevelBvhStack[--topLevelBvhStackPtr]];
+			if (!intersectRayTopBvh(ray, node, closestT))
 				continue;
 
 			if (node->isLeaf)
@@ -117,10 +117,10 @@ bool traceRay(
 				transformedRay.origin = matrixMultiply(node.invTransform, (float4)(ray->origin, 1.0f)).xyz;
 				transformedRay.direction = normalize(matrixMultiply(node.invTransform, (float4)(ray->direction, 0.0f)).xyz);*/
 
-				thinBvhStack[thinBvhStackPtr].nodeIndex = node->thinBvh;
-				thinBvhStack[thinBvhStackPtr].invTransform = node->invTransform;
-				thinBvhStackPtr++;
-				break;// Stop top lvl traversal and check out this thin bvh
+				subBvhStack[subBvhStackPtr].nodeIndex = node->subBvh;
+				subBvhStack[subBvhStackPtr].invTransform = node->invTransform;
+				subBvhStackPtr++;
+				break;// Stop top lvl traversal and check out this sub bvh
 			} else {
 				// Calculate which childs' AABB centre is closer to the ray's origin
 				float3 leftMin = scene->topLevelBvh[node->leftChildIndex].min;
@@ -142,10 +142,10 @@ bool traceRay(
 			}
 		}
 
-		while (thinBvhStackPtr > 0)
+		while (subBvhStackPtr > 0)
 		{
-			ThinBvhStackItem item = thinBvhStack[--thinBvhStackPtr];
-			ThinBvhNode node = scene->thinBvh[item.nodeIndex];
+			SubBvhStackItem item = subBvhStack[--subBvhStackPtr];
+			SubBvhNode node = scene->subBvh[item.nodeIndex];
 
 			Ray transformedRay;
 			transformedRay.origin = matrixMultiply(item.invTransform, (float4)(ray->origin, 1.0f)).xyz;
@@ -155,7 +155,7 @@ bool traceRay(
 			if (count) *count = *count + 1;
 #endif
 
-			if (!intersectRayThinBvh(&transformedRay, &node, closestT))
+			if (!intersectRaySubBvh(&transformedRay, &node, closestT))
 				continue;
 
 			if (node.triangleCount != 0)// isLeaf()
@@ -181,9 +181,9 @@ bool traceRay(
 				}
 			} else {
 				// Ordered traversal
-				ThinBvhNode left, right;
-				left = scene->thinBvh[node.leftChildIndex + 0];
-				right = scene->thinBvh[node.leftChildIndex + 1];
+				SubBvhNode left, right;
+				left = scene->subBvh[node.leftChildIndex + 0];
+				right = scene->subBvh[node.leftChildIndex + 1];
 
 				float3 leftVec = (left.min + left.max) / 2.0f - transformedRay.origin;
 				float3 rightVec = (right.min + right.max) / 2.0f - transformedRay.origin;
@@ -191,30 +191,30 @@ bool traceRay(
 				if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
 				{
 					// Right child;
-					thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 1;
-					thinBvhStack[thinBvhStackPtr].invTransform = item.invTransform;
-					thinBvhStackPtr++;
+					subBvhStack[subBvhStackPtr].nodeIndex = node.leftChildIndex + 1;
+					subBvhStack[subBvhStackPtr].invTransform = item.invTransform;
+					subBvhStackPtr++;
 
 					// Left child
-					thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 0;
-					thinBvhStack[thinBvhStackPtr].invTransform = item.invTransform;
-					thinBvhStackPtr++;
+					subBvhStack[subBvhStackPtr].nodeIndex = node.leftChildIndex + 0;
+					subBvhStack[subBvhStackPtr].invTransform = item.invTransform;
+					subBvhStackPtr++;
 				} else {
 					// Left child
-					thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 0;
-					thinBvhStack[thinBvhStackPtr].invTransform = item.invTransform;
-					thinBvhStackPtr++;
+					subBvhStack[subBvhStackPtr].nodeIndex = node.leftChildIndex + 0;
+					subBvhStack[subBvhStackPtr].invTransform = item.invTransform;
+					subBvhStackPtr++;
 
 					// Right child;
-					thinBvhStack[thinBvhStackPtr].nodeIndex = node.leftChildIndex + 1;
-					thinBvhStack[thinBvhStackPtr].invTransform = item.invTransform;
-					thinBvhStackPtr++;
+					subBvhStack[subBvhStackPtr].nodeIndex = node.leftChildIndex + 1;
+					subBvhStack[subBvhStackPtr].invTransform = item.invTransform;
+					subBvhStackPtr++;
 				}// Ordered of traversal
 			}// If/else node contains triangles
-		}// Thin bvh traversal
+		}// Sub bvh traversal
 	}// Traversal
 
-	if (closestT != maxT)// We did not hit anything
+	if (closestT != maxT)// We did not hit anysubg
 	{
 		*outTriangleIndex = triangleIndex;
 		*outT = closestT;

@@ -40,20 +40,24 @@ void Game::Init()
 		_scene->add_light(light);
 	}
 
-	auto plane = std::make_shared<Mesh>();
+	/*auto plane = std::make_shared<Mesh>();
 	plane->loadFromFile("assets/3dmodels/plane/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
 	_scene->add_node(plane);
 
-	/*auto cube = std::make_shared<Mesh>();
+	auto cube = std::make_shared<Mesh>();
 	cube->loadFromFile( "assets/3dmodels/cube/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
 	_scene->add_node(cube);*/
 
 	Transform enlargeTransform;
 	enlargeTransform.scale = glm::vec3(10);
-	enlargeTransform.location = glm::vec3(0, 0, -3);
+	enlargeTransform.location = glm::vec3(0, 0, 0);
 	auto bunny = std::make_shared<Mesh>();
 	bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply", enlargeTransform);
 	_scene->add_node(bunny);
+
+	/*auto sponza = std::make_shared<Mesh>();
+	sponza->loadFromFile("assets/3dmodels/sponza/sponza.obj");
+	_scene->add_node(sponza);*/
 
 
 	/*BvhTester bvhTest = BvhTester(plane);

@@ -13,7 +13,7 @@ typedef struct
 		unsigned int firstTriangleIndex;
 	};
 	unsigned int triangleCount;
-} ThinBvhNode;
+} SubBvhNode;
 
 typedef struct
 {
@@ -28,12 +28,12 @@ typedef struct
 			unsigned int leftChildIndex;
 			unsigned int rightChildIndex;
 		};
-		unsigned int thinBvh;
+		unsigned int subBvh;
 	};
 	unsigned int isLeaf;
-} FatBvhNode;
+} TopBvhNode;
 
-bool intersectRayFatBvh(const Ray* ray, const __global FatBvhNode* node, float nearestT)
+bool intersectRayTopBvh(const Ray* ray, const __global TopBvhNode* node, float nearestT)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
 	float3 aabbMin = node->min;
@@ -72,7 +72,7 @@ bool intersectRayFatBvh(const Ray* ray, const __global FatBvhNode* node, float n
 	return tmax >= tmin && tmax >= 0 && tmin < nearestT;
 }
 
-bool intersectLineFatBvh(const Line* line, const FatBvhNode* node)
+bool intersectLineTopBvh(const Line* line, const TopBvhNode* node)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
 	float3 aabbMin = node->min;
@@ -120,7 +120,7 @@ bool intersectLineFatBvh(const Line* line, const FatBvhNode* node)
 }
 
 // https://tavianator.com/fast-branchless-raybounding-box-intersections/
-bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node, float nearestT)
+bool intersectRaySubBvh(const Ray* ray, const SubBvhNode* node, float nearestT)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
 	float3 aabbMin = node->min;
@@ -159,7 +159,7 @@ bool intersectRayThinBvh(const Ray* ray, const ThinBvhNode* node, float nearestT
 	return tmax >= tmin && tmax >= 0 && tmin < nearestT;
 }
 
-bool intersectLineThinBvh(const Line* line, const ThinBvhNode* node)
+bool intersectLineSubBvh(const Line* line, const SubBvhNode* node)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
 	float3 aabbMin = node->min;

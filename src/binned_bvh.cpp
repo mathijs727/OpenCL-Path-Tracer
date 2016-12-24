@@ -117,7 +117,7 @@ bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
 	}
 
 	// Determine for which bin the SAH is the lowest
-	float bestSAH = std::numeric_limits<float>::lowest();
+	float bestSAH = std::numeric_limits<float>::max();
 	int bestSplit = -1;
 	for (int split = 1; split < BVH_SPLITS; split++)
 	{
@@ -152,7 +152,7 @@ bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
 		}
 
 		float SAH = triangleCountLeft * surfaceAreaLeft + triangleCountRight * surfaceAreaRight;
-		if (SAH > bestSAH && triangleCountLeft > 0 && triangleCountRight > 0)
+		if (SAH < bestSAH && triangleCountLeft > 0 && triangleCountRight > 0)
 		{
 			bestSAH = SAH;
 			bestSplit = split;
