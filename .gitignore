@@ -8,6 +8,8 @@ build_make/
 *.sublime-project
 *.DS_Store
 
+assets/3dmodels/
+
 ipch/
 
 ## Ignore Visual Studio temporary files, build results, and
