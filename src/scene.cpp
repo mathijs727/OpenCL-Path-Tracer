@@ -13,7 +13,7 @@ raytracer::SceneNode& raytracer::Scene::add_node(std::shared_ptr<IMesh> primitiv
 	SceneNode& newChildRef = *newChild.get();
 	newChild->transform = transform;
 	newChild->parent = parent;	
-	newChild->mesh = _meshes.size();
+	newChild->mesh = (u32)_meshes.size();
 	_meshes.emplace_back(primitive, 0);
 	parent->children.push_back(std::move(newChild));
 	return newChildRef;

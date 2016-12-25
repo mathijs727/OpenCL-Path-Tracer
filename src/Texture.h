@@ -18,8 +18,8 @@ namespace raytracer
 		static Tmpl8::Surface* getSurface(int id) { return s_textures[id].get(); };
 		static size_t getNumUniqueSurfaces() { return s_textures.size(); };
 	public:
-		static const uint TEXTURE_WIDTH = 1024;
-		static const uint TEXTURE_HEIGHT = 1024;
+		static const uint TEXTURE_WIDTH = 512;
+		static const uint TEXTURE_HEIGHT = 512;
 	private:
 		static std::unordered_map<const char*, int> s_texturesMap;
 		static std::vector<std::unique_ptr<Tmpl8::Surface>> s_textures;

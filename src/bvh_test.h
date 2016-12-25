@@ -15,7 +15,8 @@ namespace raytracer
 
 		void test();
 	private:
-		u32 traverse(u32 node);
+		u32 countNodes(u32 node);
+		u32 countDepth(u32 node);
 	private:
 		u32 _root_node;
 		const std::vector<VertexSceneData>& _vertices;

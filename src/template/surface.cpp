@@ -35,17 +35,23 @@ Surface::Surface( const char* a_File, int width, int height, bool linearColorSpa
 	m_Buffer( NULL ),
 	m_Width( 0 ), m_Height( 0 )
 {
+	std::string copyFileName(a_File);
+
 	FILE* f = fopen( a_File, "rb" );
 	if (!f) 
 	{
 		char t[128];
 		sprintf( t, "File not found: %s", a_File );
 		NotifyUser( t ); 
+
+		m_Width = width;
+		m_Height = height;
+		m_Buffer = (Pixel*)MALLOC64(m_Width * m_Height * sizeof(Pixel));
+		memset(m_Buffer, 0, m_Width * m_Height * sizeof(Pixel));
 		return;
     }
 	else fclose( f );
 
-	std::string copyFileName(a_File);
 	LoadImage( &copyFileName[0], width, height, linearColorSpace );
 }
 

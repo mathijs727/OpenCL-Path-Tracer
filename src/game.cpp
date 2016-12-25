@@ -24,7 +24,7 @@ void Game::Init()
 	Transform camera_transform;
 	_camera_euler.y = -1.5f;
 	camera_transform.orientation = glm::quat(_camera_euler); // identity
-	camera_transform.location = glm::vec3(8, 1, 0);
+	camera_transform.location = glm::vec3(2.5f, 2.0f, 0.0f);
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.f);
 
 	{
@@ -52,18 +52,17 @@ void Game::Init()
 	enlargeTransform.scale = glm::vec3(10);
 	enlargeTransform.location = glm::vec3(0, 0, 0);
 	auto bunny = std::make_shared<Mesh>();
-	bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply", enlargeTransform);
-	_scene->add_node(bunny);
+	bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
+	//_scene->add_node(bunny, enlargeTransform);
 
-	/*auto sponza = std::make_shared<Mesh>();
-	sponza->loadFromFile("assets/3dmodels/sponza/sponza.obj");
-	_scene->add_node(sponza);*/
+	auto sponza = std::make_shared<Mesh>();
+	sponza->loadFromFile("assets/3dmodels/sponza-dabrovic/sponza.obj");
+	_scene->add_node(sponza);
 
-
-	/*BvhTester bvhTest = BvhTester(bunny);
+	BvhTester bvhTest = BvhTester(sponza);
 	bvhTest.test();
 	system("PAUSE");
-	exit(EXIT_SUCCESS);*/
+	//exit(EXIT_SUCCESS);
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);

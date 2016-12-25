@@ -49,7 +49,7 @@ void raytracer::Mesh::addSubMesh(
 		return;
 
 	// process the materials
-	u32 materialId = _materials.size();
+	u32 materialId = (u32)_materials.size();
 	aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
 	aiColor3D colour; 
 	material->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
@@ -58,7 +58,8 @@ void raytracer::Mesh::addSubMesh(
 		material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
 		std::string textureFile = texturePath;
 		textureFile += path.C_Str();
-		_materials.push_back(Material::Diffuse(Texture(textureFile.c_str()), ai2glm(colour)));
+		_materials.push_back(Material::Diffuse(ai2glm(colour)));
+		//_materials.push_back(Material::Diffuse(Texture(textureFile.c_str()), ai2glm(colour)));
 	}
 	else {
 		_materials.push_back(Material::Diffuse(ai2glm(colour)));
@@ -66,7 +67,7 @@ void raytracer::Mesh::addSubMesh(
 
 	// add all of the vertex data
 	glm::mat4 normalMatrix = normal_matrix(transform_matrix);
-	u32 vertexOffset = _vertices.size();
+	u32 vertexOffset = (u32)_vertices.size();
 	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
 		glm::vec4 position = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
 		glm::vec4 normal = normalMatrix * glm::vec4(ai2glm(in_mesh->mNormals[v]), 1);

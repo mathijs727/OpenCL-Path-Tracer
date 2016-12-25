@@ -36,7 +36,7 @@ void NotifyUser( char* s )
 #ifdef _WIN32
 	HWND hApp = FindWindow( NULL, "Template" );
 	MessageBox( hApp, s, "ERROR", MB_OK );
-	exit( 0 );
+	//exit( 0 );
 #else
     std::cout << "ERROR: " << s << std::endl;
 #endif

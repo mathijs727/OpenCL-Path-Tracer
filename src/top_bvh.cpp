@@ -37,7 +37,7 @@ u32 raytracer::TopLevelBvhBuilder::build(
 
 		if (_scene.get_meshes()[sceneNode->mesh].mesh > 0)
 		{
-			u32 nodeId = outTopNodes.size();
+			u32 nodeId = (u32)outTopNodes.size();
 			outTopNodes.push_back(createNode(sceneNode, transform));
 			list.push_back(nodeId);
 		}
@@ -60,7 +60,7 @@ u32 raytracer::TopLevelBvhBuilder::build(
 			list.erase(newEndB);
 			
 			// A = new Node(A, B);
-			u32 nodeId = _top_bvh_nodes->size();
+			u32 nodeId = (u32)_top_bvh_nodes->size();
 			_top_bvh_nodes->push_back(mergeNodes(nodeA, nodeB));
 			nodeA = nodeId;
 
@@ -73,7 +73,7 @@ u32 raytracer::TopLevelBvhBuilder::build(
 		}
 	}
 
-	return outTopNodes.size() - 1;// Root node is at the end
+	return (u32)outTopNodes.size() - 1;// Root node is at the end
 }
 
 u32 raytracer::TopLevelBvhBuilder::findBestMatch(const std::vector<u32>& list, u32 nodeId)

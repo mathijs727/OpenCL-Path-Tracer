@@ -223,7 +223,7 @@ void raytracer::RayTracer::InitBuffers(
 	_material_textures = cl::Image2DArray(_context,
 		CL_MEM_READ_ONLY,
 		cl::ImageFormat(CL_BGRA, CL_UNORM_INT8),
-		std::max(1u, Texture::getNumUniqueSurfaces()),
+		std::max((u32)1u, (u32)Texture::getNumUniqueSurfaces()),
 		Texture::TEXTURE_WIDTH,
 		Texture::TEXTURE_HEIGHT,
 		0, 0, NULL,// Unused host_ptr
@@ -240,7 +240,7 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 	_num_static_triangles = 0;
 	_num_static_materials = 0;
 	_num_static_bvh_nodes = 0;
-	_num_lights = scene->get_lights().size();
+	_num_lights = (u32)scene->get_lights().size();
 
 	u32 numVertices = 0;
 	u32 numTriangles= 0;
@@ -258,20 +258,20 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 			numBvhNodes += mesh->maxNumBvhNodes();
 		}
 		else {
-			numVertices += mesh->getVertices().size();
-			numTriangles += mesh->getTriangles().size();
-			numMaterials += mesh->getMaterials().size();
-			numBvhNodes += mesh->getBvhNodes().size();
+			numVertices += (u32)mesh->getVertices().size();
+			numTriangles += (u32)mesh->getTriangles().size();
+			numMaterials += (u32)mesh->getMaterials().size();
+			numBvhNodes += (u32)mesh->getBvhNodes().size();
 
-			_num_static_vertices += mesh->getVertices().size();
-			_num_static_triangles += mesh->getTriangles().size();
-			_num_static_materials += mesh->getMaterials().size();
-			_num_static_bvh_nodes += mesh->getBvhNodes().size();
+			_num_static_vertices += (u32)mesh->getVertices().size();
+			_num_static_triangles += (u32)mesh->getTriangles().size();
+			_num_static_materials += (u32)mesh->getMaterials().size();
+			_num_static_bvh_nodes += (u32)mesh->getBvhNodes().size();
 		}
 	}
 
 	InitBuffers(numVertices, numTriangles, numMaterials,
-		numBvhNodes, scene->get_meshes().size() * 2, scene->get_lights().size());
+		numBvhNodes, (u32)scene->get_meshes().size() * 2, (u32)scene->get_lights().size());
 	
 
 
@@ -283,19 +283,19 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 			continue;
 
 		// TODO: use memcpy instead of looping over vertices (faster?)
-		u32 startVertex = _vertices_host.size();
+		u32 startVertex = (u32)_vertices_host.size();
 		for (auto& vertex : mesh->getVertices())
 		{
 			_vertices_host.push_back(vertex);
 		}
 
-		u32 startMaterial = _materials_host.size();
+		u32 startMaterial = (u32)_materials_host.size();
 		for (auto& material : mesh->getMaterials())
 		{
 			_materials_host.push_back(material);
 		}
 
-		u32 startTriangle = _triangles_host.size();
+		u32 startTriangle = (u32)_triangles_host.size();
 		for (auto& triangle : mesh->getTriangles())
 		{
 			_triangles_host.push_back(triangle);
@@ -303,7 +303,7 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 			_triangles_host.back().material_index += startMaterial;
 		}
 
-		u32 startBvhNode = _sub_bvh_nodes_host.size();
+		u32 startBvhNode = (u32)_sub_bvh_nodes_host.size();
 		for (auto& bvhNode : mesh->getBvhNodes())
 		{
 			_sub_bvh_nodes_host.push_back(bvhNode);
@@ -449,19 +449,19 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 				mesh->buildBvh();
 
 				// TODO: use memcpy instead of looping over vertices (faster?)
-				u32 startVertex = _vertices_host.size();
+				u32 startVertex = (u32)_vertices_host.size();
 				for (auto& vertex : mesh->getVertices())
 				{
 					_vertices_host.push_back(vertex);
 				}
 
-				u32 startMaterial = _materials_host.size();
+				u32 startMaterial = (u32)_materials_host.size();
 				for (auto& material : mesh->getMaterials())
 				{
 					_materials_host.push_back(material);
 				}
 
-				u32 startTriangle = _triangles_host.size();
+				u32 startTriangle = (u32)_triangles_host.size();
 				for (auto& triangle : mesh->getTriangles())
 				{
 					_triangles_host.push_back(triangle);
@@ -469,7 +469,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 					_triangles_host.back().material_index += startMaterial;
 				}
 
-				u32 startBvhNode = _sub_bvh_nodes_host.size();
+				u32 startBvhNode = (u32)_sub_bvh_nodes_host.size();
 				for (auto& bvhNode : mesh->getBvhNodes())
 				{
 					_sub_bvh_nodes_host.push_back(bvhNode);

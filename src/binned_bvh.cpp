@@ -2,8 +2,9 @@
 #include <array>
 #include <numeric>
 #include <algorithm>
+#include <iostream>
 
-#define BVH_SPLITS 8
+#define BVH_SPLITS 32
 
 using namespace raytracer;
 
@@ -84,7 +85,7 @@ bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
 
 	// Split along the widest axis
 	uint axis = -1;
-	float minAxisWidth = 0.0;
+	float minAxisWidth = 0.0f;
 	glm::vec3 extents = node->bounds.max - node->bounds.min;
 	for (int i = 0; i < 3; i++)
 	{
@@ -94,6 +95,55 @@ bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
 			axis = i;
 		}
 	}
+
+	/*if (minAxisWidth < 0.01f)
+	{
+		std::cout << "Trying to extremely small BVH node with " << node->triangleCount << " triangles" << std::endl;
+		std::vector<std::pair<VertexSceneData, u32>> visited;
+		// Check if vertices fit the AABB
+		for (u32 i = node->firstTriangleIndex; i < node->firstTriangleIndex + node->triangleCount; i++)
+		{
+			std::array<VertexSceneData, 3> vertices;
+			vertices[0] = (*_vertices)[(*_triangles)[i].indices[0]];
+			vertices[1] = (*_vertices)[(*_triangles)[i].indices[1]];
+			vertices[2] = (*_vertices)[(*_triangles)[i].indices[2]];
+
+			int j = 0;
+			for (auto& vertex : vertices)
+			{
+				bool duplicate = false;
+				for (auto& other : visited)
+				{
+					auto& otherVertex = other.first;
+					if (vertex.vertex.x == otherVertex.vertex.x &&
+						vertex.vertex.y == otherVertex.vertex.y &&
+						vertex.vertex.z == otherVertex.vertex.z)
+					{
+						duplicate = true;
+						std::cout << "It contained a similar vertex" << std::endl;
+					}
+				}
+				if (!duplicate)
+					visited.push_back(std::make_pair(vertex, (*_triangles)[i].indices[j]));
+				j++;
+			}
+
+			for (auto& vertex : vertices)
+			{
+				if (!(vertex.vertex.x >= node->bounds.min.x &&
+					  vertex.vertex.x <= node->bounds.max.x &&
+					  vertex.vertex.y >= node->bounds.min.y &&
+					  vertex.vertex.y <= node->bounds.max.y &&
+					  vertex.vertex.z >= node->bounds.min.z &&
+					  vertex.vertex.z <= node->bounds.max.z))
+				{
+					std::cout << "Vertex (" << vertex.vertex.x << ", " << vertex.vertex.y << ", " << vertex.vertex.z << ")" << std::endl;
+					std::cout << "Did not fit in AABB: ( (" << node->bounds.min.x << ", " << node->bounds.min.y << ", " << node->bounds.min.z << "), (" << \
+						node->bounds.max.x << ", " << node->bounds.max.y << ", " << node->bounds.max.z << ") )" << std::endl;
+				}
+			}
+		}
+	}*/
 
 	std::array<uint, BVH_SPLITS> binTriangleCount;
 	std::array<AABB, BVH_SPLITS> binAABB;

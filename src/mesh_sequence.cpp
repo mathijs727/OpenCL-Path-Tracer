@@ -68,7 +68,7 @@ u32 raytracer::MeshSequence::maxNumVertices() const
 	u32 max = 0;
 	for (auto& frame : _frames)
 	{
-		max = std::max(max, frame.vertices.size());
+		max = std::max(max, (u32)frame.vertices.size());
 	}
 	return max;
 }
@@ -78,7 +78,7 @@ u32 raytracer::MeshSequence::maxNumTriangles() const
 	u32 max = 0;
 	for (auto& frame : _frames)
 	{
-		max = std::max(max, frame.triangles.size());
+		max = std::max(max, (u32)frame.triangles.size());
 	}
 	return max;
 }
@@ -88,7 +88,7 @@ u32 raytracer::MeshSequence::maxNumMaterials() const
 	u32 max = 0;
 	for (auto& frame : _frames)
 	{
-		max = std::max(max, frame.materials.size());
+		max = std::max(max, (u32)frame.materials.size());
 	}
 	return max;
 }
@@ -98,7 +98,7 @@ u32 raytracer::MeshSequence::maxNumBvhNodes() const
 	u32 max = 0;
 	for (auto& frame : _frames)
 	{
-		max = std::max(max, frame.triangles.size());
+		max = std::max(max, (u32)frame.triangles.size());
 	}
 	return max;
 }
@@ -128,7 +128,7 @@ void raytracer::MeshSequence::addSubMesh(
 		return;
 
 	// process the materials
-	u32 materialId = materials.size();
+	u32 materialId = (u32)materials.size();
 	aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
 	aiColor3D colour;
 	material->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
@@ -145,7 +145,7 @@ void raytracer::MeshSequence::addSubMesh(
 
 	// add all of the vertex data
 	glm::mat4 normalMatrix = normal_matrix(transform_matrix);
-	u32 vertexOffset = vertices.size();
+	u32 vertexOffset = (u32)vertices.size();
 	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
 		glm::vec4 position = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
 		glm::vec4 normal = normalMatrix * glm::vec4(ai2glm(in_mesh->mNormals[v]), 1);
