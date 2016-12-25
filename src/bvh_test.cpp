@@ -34,11 +34,9 @@ u32 raytracer::BvhTester::traverse(u32 nodeId)
 	auto& node = _bvhNodes[nodeId];
 	if (node.triangleCount == 0)
 	{
-		std::cout << nodeId << " inner" << std::endl;
 		return traverse(node.leftChildIndex) + traverse(node.leftChildIndex + 1) + 1;
 	}
 	else {
-		std::cout << nodeId << " leaf" << std::endl;
 		return 1;
 	}
 }

@@ -482,7 +482,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 				meshBvhPair.bvh_offset = startBvhNode;
 			}
 
-			if (_vertices_host.size() > _num_static_vertices)// Dont copy if we dont have any dynamic geometry
+			if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices))// Dont copy if we dont have any dynamic geometry
 			{
 				writeToBuffer(_copyQueue, _vertices[copyBuffers], _vertices_host, _num_static_vertices, waitEvents);
 				writeToBuffer(_copyQueue, _triangles[copyBuffers], _triangles_host, _num_static_triangles, waitEvents);
@@ -526,7 +526,7 @@ void raytracer::RayTracer::InitOpenCL()
 
 	// Get platforms.
 	cl_uint lNbPlatformId = 0;
-	clGetPlatformIDs(0, 0, &lNbPlatformId);
+	clGetPlatformIDs(0, nullptr, &lNbPlatformId);
 
 	if (lNbPlatformId == 0)
 	{

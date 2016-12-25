@@ -43,9 +43,6 @@
     <ClCompile Include="src\bvh_test.cpp">
       <Filter>bvh</Filter>
     </ClCompile>
-    <ClCompile Include="src\sbvh.cpp">
-      <Filter>bvh</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
@@ -103,9 +100,6 @@
       <Filter>model</Filter>
     </ClInclude>
     <ClInclude Include="src\bvh_test.h">
-      <Filter>bvh</Filter>
-    </ClInclude>
-    <ClInclude Include="src\sbvh.h">
       <Filter>bvh</Filter>
     </ClInclude>
   </ItemGroup>

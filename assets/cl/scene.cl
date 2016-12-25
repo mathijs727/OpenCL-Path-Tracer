@@ -59,12 +59,6 @@ void loadScene(
 	scene->topLevelBvhRoot = topLevelBvhRoot;
 }
 
-typedef struct
-{
-	unsigned int nodeIndex;
-	const __global float* invTransform;
-} SubBvhStackItem;
-
 bool traceRay(
 	const Scene* scene,
 	const Ray* ray,
@@ -89,7 +83,7 @@ bool traceRay(
 	if (count) *count = 0;
 #endif
 	// Check mesh intersection using BVH traversal
-	SubBvhStackItem subBvhStack[128];
+	unsigned int subBvhStack[64];
 	int subBvhStackPtr = 0;
 
 	// Traverse top level BVH and add relevant sub-BVH's to the "sub BVH" stacks
@@ -99,13 +93,15 @@ bool traceRay(
 
 	while (true)
 	{
-		if (topLevelBvhStackPtr == 0)
-			break;
-
+		unsigned int subBvhNodeId = -1;
+		const __global float* invTransform;
+		Ray transformedRay;
+		
 		while (topLevelBvhStackPtr > 0)
 		{
+
 #ifdef COUNT_TRAVERSAL
-			if (count) *count = *count + 1;
+	if (count) *count += 1;
 #endif
 			const __global TopBvhNode* node = &scene->topLevelBvh[topLevelBvhStack[--topLevelBvhStackPtr]];
 			if (!intersectRayTopBvh(ray, node, closestT))
@@ -113,14 +109,12 @@ bool traceRay(
 
 			if (node->isLeaf)
 			{
-				/*Ray transformedRay;
-				transformedRay.origin = matrixMultiply(node.invTransform, (float4)(ray->origin, 1.0f)).xyz;
-				transformedRay.direction = normalize(matrixMultiply(node.invTransform, (float4)(ray->direction, 0.0f)).xyz);*/
-
-				subBvhStack[subBvhStackPtr].nodeIndex = node->subBvh;
-				subBvhStack[subBvhStackPtr].invTransform = node->invTransform;
-				subBvhStackPtr++;
-				break;// Stop top lvl traversal and check out this sub bvh
+				//Ray transformedRay;
+				transformedRay.origin = matrixMultiply(node->invTransform, (float4)(ray->origin, 1.0f)).xyz;
+				transformedRay.direction = normalize(matrixMultiply(node->invTransform, (float4)(ray->direction, 0.0f)).xyz);
+				invTransform = node->invTransform;
+				subBvhNodeId = node->subBvh;
+				break;
 			} else {
 				// Calculate which childs' AABB centre is closer to the ray's origin
 				float3 leftMin = scene->topLevelBvh[node->leftChildIndex].min;
@@ -139,24 +133,16 @@ bool traceRay(
 					topLevelBvhStack[topLevelBvhStackPtr++] = node->leftChildIndex;
 					topLevelBvhStack[topLevelBvhStackPtr++] = node->rightChildIndex;
 				}
+				topLevelBvhStack[topLevelBvhStackPtr++] = node->rightChildIndex;
 			}
 		}
 
-		while (subBvhStackPtr > 0)
+		if (subBvhNodeId == -1)
+			break;
+
+		while (true)
 		{
-			SubBvhStackItem item = subBvhStack[--subBvhStackPtr];
-			SubBvhNode node = scene->subBvh[item.nodeIndex];
-
-			Ray transformedRay;
-			transformedRay.origin = matrixMultiply(item.invTransform, (float4)(ray->origin, 1.0f)).xyz;
-			transformedRay.direction = normalize(matrixMultiply(item.invTransform, (float4)(ray->direction, 0.0f)).xyz);
-
-#ifdef COUNT_TRAVERSAL
-			if (count) *count = *count + 1;
-#endif
-
-			if (!intersectRaySubBvh(&transformedRay, &node, closestT))
-				continue;
+			SubBvhNode node = scene->subBvh[subBvhNodeId];
 
 			if (node.triangleCount != 0)// isLeaf()
 			{
@@ -168,48 +154,64 @@ bool traceRay(
 					VertexData vertices[3];
 					TriangleData triangle = scene->triangles[node.firstTriangleIndex + i];
 					getVertices(vertices, triangle.indices, scene);
+#ifdef COUNT_TRAVERSAL
+					//if (count) *count += 1;
+#endif
 					if (intersectRayTriangle(&transformedRay, vertices, &t, &uv) && t < closestT)
 					{
 						if (hitAny)
 							return true;
 
+#ifdef COUNT_TRAVERSAL
+						if (count) *count += 500;
+#endif
+
 						triangleIndex = node.firstTriangleIndex + i;
 						closestT = t;
 						closestUV = uv;
-						closestMatrix = item.invTransform;
+						closestMatrix = invTransform;
 					}
 				}
+
+				if (subBvhStackPtr > 0)
+					subBvhNodeId = subBvhStack[--subBvhStackPtr];// Pop
+				else
+					break;
 			} else {
 				// Ordered traversal
-				SubBvhNode left, right;
-				left = scene->subBvh[node.leftChildIndex + 0];
-				right = scene->subBvh[node.leftChildIndex + 1];
+				SubBvhNode left = scene->subBvh[node.leftChildIndex + 0];
+				SubBvhNode right = scene->subBvh[node.leftChildIndex + 1];
 
-				float3 leftVec = (left.min + left.max) / 2.0f - transformedRay.origin;
-				float3 rightVec = (right.min + right.max) / 2.0f - transformedRay.origin;
-
-				if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
+#ifdef COUNT_TRAVERSAL
+	if (count) *count += 2;
+#endif
+				bool leftVis = intersectRaySubBvh(&transformedRay, &left, closestT);
+				bool rightVis = intersectRaySubBvh(&transformedRay, &right, closestT);
+				if (leftVis && rightVis)
 				{
-					// Right child;
-					subBvhStack[subBvhStackPtr].nodeIndex = node.leftChildIndex + 1;
-					subBvhStack[subBvhStackPtr].invTransform = item.invTransform;
-					subBvhStackPtr++;
+					float3 leftVec = (left.min + left.max) / 2.0f - transformedRay.origin;
+					float3 rightVec = (right.min + right.max) / 2.0f - transformedRay.origin;
 
-					// Left child
-					subBvhStack[subBvhStackPtr].nodeIndex = node.leftChildIndex + 0;
-					subBvhStack[subBvhStackPtr].invTransform = item.invTransform;
-					subBvhStackPtr++;
+					if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
+					{
+						subBvhStack[subBvhStackPtr++] = node.leftChildIndex + 1;
+						subBvhNodeId = node.leftChildIndex + 0;
+					} else {
+						subBvhStack[subBvhStackPtr++] = node.leftChildIndex + 0;
+						subBvhNodeId = node.leftChildIndex + 1;
+					}// Ordered of traversal
+				} else if (leftVis)
+				{
+					subBvhNodeId = node.leftChildIndex;
+				} else if (rightVis)
+				{
+					subBvhNodeId = node.leftChildIndex + 1;
 				} else {
-					// Left child
-					subBvhStack[subBvhStackPtr].nodeIndex = node.leftChildIndex + 0;
-					subBvhStack[subBvhStackPtr].invTransform = item.invTransform;
-					subBvhStackPtr++;
-
-					// Right child;
-					subBvhStack[subBvhStackPtr].nodeIndex = node.leftChildIndex + 1;
-					subBvhStack[subBvhStackPtr].invTransform = item.invTransform;
-					subBvhStackPtr++;
-				}// Ordered of traversal
+					if (subBvhStackPtr > 0)
+						subBvhNodeId = subBvhStack[--subBvhStackPtr];// Pop
+					else
+						break;
+				}
 			}// If/else node contains triangles
 		}// Sub bvh traversal
 	}// Traversal

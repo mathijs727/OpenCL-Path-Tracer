@@ -60,7 +60,7 @@ void Game::Init()
 	_scene->add_node(sponza);*/
 
 
-	/*BvhTester bvhTest = BvhTester(plane);
+	/*BvhTester bvhTest = BvhTester(bunny);
 	bvhTest.test();
 	system("PAUSE");
 	exit(EXIT_SUCCESS);*/
