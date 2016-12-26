@@ -29,14 +29,18 @@ void Game::Init()
 
 	{
 		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(0, 5, 3));
-		//_scene->add_light(light);
+		_scene->add_light(light);
 	}
 	{
 		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(5, 1,0));
-		//_scene->add_light(light);
+		_scene->add_light(light);
 	}
 	{
-		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(-1, -1, 0));
+		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(-1, -1, -1));
+		_scene->add_light(light);
+	}
+	{
+		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(1, 1, 1));
 		_scene->add_light(light);
 	}
 
@@ -48,7 +52,7 @@ void Game::Init()
 	cube->loadFromFile( "assets/3dmodels/cube/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
 	_scene->add_node(cube);*/
 
-	Transform enlargeTransform;
+	/*Transform enlargeTransform;
 	enlargeTransform.scale = glm::vec3(10);
 	enlargeTransform.location = glm::vec3(0, 0, 0);
 	auto bunny = std::make_shared<Mesh>();
@@ -57,11 +61,17 @@ void Game::Init()
 
 	auto sponza = std::make_shared<Mesh>();
 	sponza->loadFromFile("assets/3dmodels/sponza-dabrovic/sponza.obj");
-	_scene->add_node(sponza);
+	_scene->add_node(sponza);*/
 
-	BvhTester bvhTest = BvhTester(sponza);
+	Transform flipTransform;
+	flipTransform.scale.x = -1.0f;
+	auto car = std::make_shared<Mesh>();
+	car->loadFromFile("assets/3dmodels/aventador/Avent.obj", flipTransform);
+	_scene->add_node(car);
+
+	BvhTester bvhTest = BvhTester(car);
 	bvhTest.test();
-	system("PAUSE");
+	//system("PAUSE");
 	//exit(EXIT_SUCCESS);
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);

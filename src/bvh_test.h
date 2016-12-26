@@ -15,8 +15,12 @@ namespace raytracer
 
 		void test();
 	private:
-		u32 countNodes(u32 node);
-		u32 countDepth(u32 node);
+		u32 countNodes(u32 nodeId);
+		u32 countDepth(u32 nodeId);
+		u32 countTriangles(u32 nodeId);
+		u32 countLeafs(u32 nodeId);
+		u32 maxTrianglesPerLeaf(u32 nodeId);
+		u32 countTrianglesLessThen(u32 nodeId, u32 maxCount);
 	private:
 		u32 _root_node;
 		const std::vector<VertexSceneData>& _vertices;
