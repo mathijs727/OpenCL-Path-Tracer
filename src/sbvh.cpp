@@ -99,36 +99,48 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 {
 	// Use pointer because references are not reassignable (we need to reassign after allocation)
 	auto* node = &(*_bvh_nodes)[nodeId];
-
 	float maxSah = node->triangleCount * node->bounds.surfaceArea();
-
-	// Split along the widest axis
-	uint axis = -1;
-	float minAxisWidth = 0.0;
 	glm::vec3 size = node->bounds.max - node->bounds.min;
-	for (int i = 0; i < 3; i++)
-	{
-		if (size[i] > minAxisWidth)
-		{
-			minAxisWidth = size[i];
-			axis = i;
-		}
-	}
 	
 	u32 localFirstTriangleIndex = node->firstTriangleIndex;
 	// Loop through the triangles and calculate bin dimensions and triangle count
 	const u32 end = localFirstTriangleIndex + node->triangleCount;
-	float k1 = BVH_SPLITS / size[axis] * 0.999999f;// Prevents the bin out of bounds (if centroid on the right bound)
 
 	u32 bestBinnedSplit = -1;
-	float bestBinnedSah;
+	u32 bestBinnedAxis = -1;
+	float bestBinnedSah = std::numeric_limits<float>::max();
 	std::array<ObjectBin, BVH_SPLITS> objectBins;
-	doObjectSelection(node, axis, bestBinnedSplit, bestBinnedSah, objectBins.data());
-
+	
+	for (u32 ax = 0; ax < 3; ++ax) {
+		float sah = std::numeric_limits<float>::max();
+		u32 split = -1;
+		std::array<ObjectBin, BVH_SPLITS> bins;
+		if (doObjectSelection(node, ax, split, sah, bins.data()) && sah < bestBinnedSah) {
+			bestBinnedSplit = split;
+			bestBinnedAxis = ax;
+			bestBinnedSah = sah;
+			objectBins = bins;
+		}
+	}
+	
 	u32 bestSpatialSplit = -1;
-	float bestSpatialSah;
+	u32 bestSpatialAxis = -1;
+	float bestSpatialSah = std::numeric_limits<float>::max();
 	std::array<SpatialSplit, BVH_SPLITS> spatialSplits;
-	doSpatialSelection(node, axis, bestSpatialSplit, bestSpatialSah, spatialSplits.data());
+
+	for (u32 ax = 0; ax < 3; ++ax) {
+		float sah = std::numeric_limits<float>::max();
+		u32 split = -1;
+		std::array<SpatialSplit, BVH_SPLITS> splits;
+		if (doSpatialSelection(node, ax, split, sah, splits.data()) && sah < bestSpatialSah) {
+			bestSpatialSplit = split;
+			bestSpatialAxis = ax;
+			bestSpatialSah = sah;
+			spatialSplits = splits;
+		}
+	}
+
+	
 	
 	bool binnedSplitGood = bestBinnedSplit != -1 && bestBinnedSah < maxSah;
 	bool spatialSplitGood = bestSpatialSplit != -1 && bestSpatialSah < maxSah;
@@ -136,6 +148,8 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 	u32 leftCount, rightCount;
 	AABB leftBounds, rightBounds;
 	if (binnedSplitGood && (!spatialSplitGood  || bestSpatialSah >= bestBinnedSah)) {
+		u32 axis = bestBinnedAxis;
+		float k1 = BVH_SPLITS / size[axis] * 0.999999f;// Prevents the bin out of bounds (if centroid on the right bound)
 		// Partition the array around the bin pivot
 		// http://www.inf.fh-flensburg.de/lang/algorithmen/sortieren/quick/quicken.htm
 		u32 i = localFirstTriangleIndex;
@@ -189,6 +203,9 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 		}
 	}
 	else if (spatialSplitGood) {
+		u32 axis = bestSpatialAxis;
+		float k1 = BVH_SPLITS / size[axis] * 0.999999f;// Prevents the bin out of bounds (if centroid on the right bound)
+
 		// allocate enough memory to hold the new faces of this node
 		leftCount = 0;
 		rightCount = 0;
@@ -348,7 +365,7 @@ bool raytracer::SbvhBuilder::doObjectSelection(SubBvhNode* node, u32 axis, u32& 
 	outBestSah = bestSAH;
 	outBestSplit = bestSplit;
 
-	return bestSplit != 1;
+	return bestSplit != -1;
 }
 
 bool raytracer::SbvhBuilder::doSpatialSelection(SubBvhNode* node, u32 axis, u32& outBestSplit, float& outBestSah, SpatialSplit* spatialSplits)
