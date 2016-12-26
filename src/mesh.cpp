@@ -7,6 +7,7 @@
 #include <iostream>
 #include "template/includes.h"// Includes opencl
 #include "template/surface.h"
+#include "sbvh.h"
 #include <string>
 
 using namespace raytracer;
@@ -142,6 +143,6 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 	}
 
 	// Create a BVH for the mesh
-	BinnedBvhBuilder bvhBuilder;
+	SbvhBuilder bvhBuilder;
 	_bvh_root_node = bvhBuilder.build(_vertices, _triangles, _bvh_nodes);
 }

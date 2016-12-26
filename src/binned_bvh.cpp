@@ -182,8 +182,7 @@ bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
 				if (binTriangleCount[leftBin] > 0)
 					leftAABB.fit(binAABB[leftBin]);
 			}
-			glm::vec3 extents = leftAABB.max - leftAABB.min;
-			surfaceAreaLeft = 2.0f * (extents.x * extents.y + extents.y * extents.z + extents.z * extents.x);
+			surfaceAreaLeft = leftAABB.surfaceArea();
 		}
 
 		// Calculate the triangle count and surface area of the AABB to the right of the possible split
@@ -197,8 +196,7 @@ bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
 				if (binTriangleCount[rightBin] > 0)
 					rightAABB.fit(binAABB[rightBin]);
 			}
-			glm::vec3 extents = rightAABB.max - rightAABB.min;
-			surfaceAreaRight = 2.0f * (extents.x * extents.y + extents.y * extents.z + extents.z * extents.x);
+			surfaceAreaRight = rightAABB.surfaceArea();
 		}
 
 		float SAH = triangleCountLeft * surfaceAreaLeft + triangleCountRight * surfaceAreaRight;

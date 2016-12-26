@@ -12,9 +12,10 @@ namespace raytracer
 		~LinearAllocator() { }
 		
 		u32 allocate();
+		u32 allocateInPlace(u32 position, u32 amount);
 		void clear();
 
-		void* data();
+		T* data();
 		size_t size();
 
 		T& operator[](u32 handle) { return get(handle); }
@@ -40,7 +41,7 @@ namespace raytracer
 	}
 
 	template<typename T>
-	inline void * LinearAllocator<T>::data()
+	inline T * LinearAllocator<T>::data()
 	{
 		return _memory.data();
 	}
@@ -49,6 +50,13 @@ namespace raytracer
 	inline size_t LinearAllocator<T>::size()
 	{
 		return _poolPtr;
+	}
+
+	template<typename T>
+	inline u32 LinearAllocator<T>::allocateInPlace(u32 position, u32 amount = 1) {
+		_memory.insert(_memory.begin() + position, amount, T{});
+		_poolPtr += amount;
+		return position;
 	}
 
 	template<typename T>
