@@ -128,7 +128,7 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 	u32 bestSpatialSplit = -1;
 	float bestSpatialSah;
 	SpatialSplit spatialSplits[BVH_SPLITS];
-	//doSpatialSelection(node, axis, bestSpatialSplit, bestSpatialSah, spatialSplits);
+	doSpatialSelection(node, axis, bestSpatialSplit, bestSpatialSah, spatialSplits);
 	
 	bool binnedSplitGood = bestBinnedSplit != -1 && bestBinnedSah < maxSah;
 	bool spatialSplitGood = bestSpatialSplit != -1 && bestSpatialSah < maxSah;
@@ -381,23 +381,71 @@ bool raytracer::SbvhBuilder::doSpatialSelection(SubBvhNode* node, u32 axis, u32&
 		else {
 			// add the triangle to the required bins
 			for (int j = bin_min; j <= bin_max; ++j) {
-				// TODO: implement better clipping, this is rather imprecise
-				AABB triangleBounds = _aabbs[_secondaryIndexBuffer[i]];
-				triangleBounds.min[axis] = glm::max(k1 * j, triangleBounds.min[axis]);
-				triangleBounds.max[axis] = glm::min(k1 * (j + 1), triangleBounds.min[axis]);
+				glm::vec3 clipped_vertices[9];
+				u32 n_clipped_vertices = 0;
+
+				glm::vec3 v[3]; // base triangle vertices
+				v[0] = (glm::vec3) (*_vertices)[(*_triangles)[_secondaryIndexBuffer[i]].indices[0]].vertex;
+				v[1] = (glm::vec3) (*_vertices)[(*_triangles)[_secondaryIndexBuffer[i]].indices[1]].vertex;
+				v[2] = (glm::vec3) (*_vertices)[(*_triangles)[_secondaryIndexBuffer[i]].indices[2]].vertex;
+
+				for (auto& vertex : v) {
+					int v_bin = static_cast<int>(k1 * (vertex[axis] - node->bounds.min[axis]));
+					if (v_bin == j) {
+						// add the vertex to the temporary vertex buffer
+						clipped_vertices[n_clipped_vertices] = vertex;
+						n_clipped_vertices++;
+					}
+				}
+
+				glm::vec3 e[3]; // base triangle edges
+				e[0] = v[1] - v[0];
+				e[1] = v[2] - v[1];
+				e[2] = v[0] - v[2];
+
+				// every segment is represented as v[i] + e[i] * t. We find t.
+				for (u32 i = 0; i < 3; ++i) {
+					// do line plane intersection
+					glm::vec3 plane_center_min(0);
+					glm::vec3 plane_center_max(0);
+					glm::vec3 plane_normal(0);
+					plane_center_min[axis] = k1 * j + node->bounds.min[axis];
+					plane_center_max[axis] = k1 * (j+1) + node->bounds.min[axis];
+					plane_normal[axis] = 1.f;
+
+					float denom = glm::dot(plane_normal, e[i]);
+					if (abs(denom) > 0.0001f)
+					{
+						float t;
+						t = glm::dot(plane_center_min - v[i], plane_normal) / denom;
+						if (t >= 0.f && t <= 1.f) {
+							auto new_v = v[0] + e[0] * t;
+							clipped_vertices[n_clipped_vertices] = new_v;
+							++n_clipped_vertices;
+						}
+						t = glm::dot(plane_center_max - v[i], plane_normal) / denom;
+						if (t >= 0.f && t <= 1.f) {
+							auto new_v = v[0] + e[0] * t;
+							clipped_vertices[n_clipped_vertices] = new_v;
+							++n_clipped_vertices;
+						}
+					}
+				}
+
+				AABB triangleBounds;
+				triangleBounds.min = glm::vec3(std::numeric_limits<float>::max());
+				triangleBounds.max = glm::vec3(std::numeric_limits<float>::min());
+
+				for (u32 i = 0; i < n_clipped_vertices; ++i) {
+					triangleBounds.min = glm::min(triangleBounds.min, clipped_vertices[i]);
+					triangleBounds.max = glm::max(triangleBounds.max, clipped_vertices[i]);
+				}
 
 				SpatialSplitRef newRef;
 				newRef.triangleIndex = _secondaryIndexBuffer[i];
 				newRef.clippedBounds = triangleBounds;
 				spatialSplits[j].refs.push_back(newRef);
-				spatialSplits[j].bounds.fit(triangleBounds);
-				/*
-				auto v1 = vertices[faces[_secondaryIndexBuffer[i]].indices[0]].vertex;
-				auto v2 = vertices[faces[_secondaryIndexBuffer[i]].indices[1]].vertex;
-				auto v3 = vertices[faces[_secondaryIndexBuffer[i]].indices[2]].vertex;
-				auto e1 = v2 - v1;
-				auto e2 = v3 - v2;
-				auto e3 = v1 - v3;*/
+				spatialSplits[j].bounds.fit(triangleBounds);				
 			}
 		}
 	}

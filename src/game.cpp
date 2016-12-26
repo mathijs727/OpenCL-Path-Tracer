@@ -48,11 +48,18 @@ void Game::Init()
 	Transform enlargeTransform;
 	enlargeTransform.scale = glm::vec3(10);
 
+	auto monkey = std::make_shared<Mesh>();
+	monkey->loadFromFile("assets/3dmodels/monkey.obj");
+		
 	auto bunny = std::make_shared<Mesh>();
 	bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply", enlargeTransform);
 
-	//_scene->add_node(plane);
+	_scene->add_node(plane);
 	_scene->add_node(bunny);
+	_scene->add_node(bunny, Transform(glm::vec3(2.f, 0.f, 2.f)));
+	_scene->add_node(bunny, Transform(glm::vec3(-2.f, 0.f, 2.f)));
+	_scene->add_node(bunny, Transform(glm::vec3(-2.f, 0.f, -2.f)));
+	_scene->add_node(bunny, Transform(glm::vec3(2.f, 0.f, -2.f)));
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
