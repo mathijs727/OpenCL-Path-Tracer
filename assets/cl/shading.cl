@@ -9,7 +9,7 @@
 
 __constant sampler_t sampler =
 	CLK_NORMALIZED_COORDS_TRUE |
-	CLK_ADDRESS_CLAMP_TO_EDGE |
+	CLK_ADDRESS_REPEAT |
 	CLK_FILTER_LINEAR;
 
 float3 diffuseShade(
