@@ -298,7 +298,7 @@ bool raytracer::SbvhBuilder::doObjectSelection(SubBvhNode* node, u32 axis, u32& 
 	{
 		// Calculate the bin ID as described in the paper
 		float x = k1 * (_centres[_secondaryIndexBuffer[i]][axis] - node->bounds.min[axis]);
-		int bin = static_cast<int>(x);
+		int bin = glm::min(glm::max(static_cast<int>(x), 0), BVH_SPLITS-1);
 
 		bins[bin].triangleCount++;
 		bins[bin].bounds.fit(_aabbs[_secondaryIndexBuffer[i]]);
