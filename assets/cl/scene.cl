@@ -10,6 +10,8 @@
 // At least on AMD, this is not defined
 #define NULL 0
 
+#define USE_BVH
+
 typedef struct
 {
 	int numLights, numVertices, numTriangles;
@@ -78,6 +80,8 @@ bool traceRay(
 	float closestT = maxT;
 	float2 closestUV;
 	const __global float* closestMatrix;
+
+#ifdef USE_BVH
 
 #ifdef COUNT_TRAVERSAL
 	if (count) *count = 0;
@@ -155,16 +159,12 @@ bool traceRay(
 					TriangleData triangle = scene->triangles[node.firstTriangleIndex + i];
 					getVertices(vertices, triangle.indices, scene);
 #ifdef COUNT_TRAVERSAL
-					//if (count) *count += 1;
+					if (count) *count += 1;
 #endif
 					if (intersectRayTriangle(&transformedRay, vertices, &t, &uv) && t < closestT)
 					{
 						if (hitAny)
 							return true;
-
-#ifdef COUNT_TRAVERSAL
-						if (count) *count += 500;
-#endif
 
 						triangleIndex = node.firstTriangleIndex + i;
 						closestT = t;
@@ -215,6 +215,28 @@ bool traceRay(
 			}// If/else node contains triangles
 		}// Sub bvh traversal
 	}// Traversal
+
+#else// USE_BVH
+	for (unsigned int i = 0; i < scene->numTriangles; i++)
+	{
+		float t;
+		float2 uv;
+
+		VertexData vertices[3];
+		TriangleData triangle = scene->triangles[i];
+		getVertices(vertices, triangle.indices, scene);
+		if (intersectRayTriangle(ray, vertices, &t, &uv) && t < closestT)
+		{
+			if (hitAny)
+				return true;
+
+			triangleIndex = i;
+			closestT = t;
+			closestUV = uv;
+			closestMatrix = &scene->topLevelBvh[scene->topLevelBvhRoot].invTransform;
+		}
+	}
+#endif// USE_BVH
 
 	if (closestT != maxT)// We did not hit anysubg
 	{
