@@ -23,8 +23,10 @@ void Game::Init()
 
 	Transform camera_transform;
 	_camera_euler.y = -1.5f;
-	camera_transform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
-	camera_transform.location = glm::vec3(6.425, 0.695, -3.218);
+	camera_transform.orientation = glm::quat(_camera_euler); // identity
+	camera_transform.location = glm::vec3(2.5f, 2.0f, 0.0f);
+	//camera_transform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
+	//camera_transform.location = glm::vec3(6.425, 0.695, -3.218);
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.f);
 
 	{
@@ -44,13 +46,13 @@ void Game::Init()
 		_scene->add_light(light);
 	}
 
-	/*auto plane = std::make_shared<Mesh>();
+	auto plane = std::make_shared<Mesh>();
 	plane->loadFromFile("assets/3dmodels/plane/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
 	_scene->add_node(plane);
 
 	auto cube = std::make_shared<Mesh>();
 	cube->loadFromFile( "assets/3dmodels/cube/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
-	_scene->add_node(cube);*/
+	_scene->add_node(cube);
 
 	/*Transform enlargeTransform;
 	enlargeTransform.scale = glm::vec3(10);
@@ -68,9 +70,9 @@ void Game::Init()
 	//BvhTester bvhTest = BvhTester(sponza);
 	//bvhTest.test();
 
-	_animatedHeli = std::make_shared<MeshSequence>();
+	/*_animatedHeli = std::make_shared<MeshSequence>();
 	_animatedHeli->loadFromFiles("assets/3dmodels/heli/Helicopter_UH60_%04d.obj", true);
-	_scene->add_node(_animatedHeli);
+	_scene->add_node(_animatedHeli);*/
 	//_animatedHeli->goToNextFrame();
 
 	/*auto heli = std::make_shared<Mesh>();

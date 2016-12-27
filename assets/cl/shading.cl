@@ -30,7 +30,7 @@ float3 diffuseShade(
 		Ray ray;
 		float maxT;
 		getShadowRay(&light, intersection, &ray, &maxT);
-
+		ray.origin += normal * RAYTRACER_EPSILON;
 #ifdef NO_SHADOWS
 		lightVisible = true;
 #else

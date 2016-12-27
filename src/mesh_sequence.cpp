@@ -124,7 +124,6 @@ void raytracer::MeshSequence::buildBvh()
 	MeshFrame& frame = _frames[_current_frame];
 	if (_refitting)
 	{
-		auto& f0 = _frames[0];
 		RefittingBvhBuilder bvhUpdater;
 		bvhUpdater.update(frame.vertices, frame.triangles, _bvh_nodes);
 	}
