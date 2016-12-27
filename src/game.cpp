@@ -24,7 +24,7 @@ void Game::Init()
 	Transform camera_transform;
 	_camera_euler.y = -1.5f;
 	camera_transform.orientation = glm::quat(_camera_euler); // identity
-	camera_transform.location = glm::vec3(2.5f, 2.0f, 0.0f);
+	camera_transform.location = glm::vec3(2.5f, 2.0f, 0.01f);
 	//camera_transform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
 	//camera_transform.location = glm::vec3(6.425, 0.695, -3.218);
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.f);
@@ -39,10 +39,10 @@ void Game::Init()
 	}
 	{
 		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(-1, -1, -1));
-		//_scene->add_light(light);
+		_scene->add_light(light);
 	}
 	{
-		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(1, -1, 1));
+		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(0, -1, 0));
 		_scene->add_light(light);
 	}
 

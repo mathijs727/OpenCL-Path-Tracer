@@ -1,5 +1,10 @@
-//#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
 //#define NO_SHADOWS
+
+// When a ray is parallel to axis, the intersection tests are really slow
+#define NO_PARALLEL_RAYS
+
+#define USE_BVH
+//#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
 
 #include "shapes.cl"
 #include "material.cl"

@@ -10,8 +10,6 @@
 // At least on AMD, this is not defined
 #define NULL 0
 
-#define USE_BVH
-
 typedef struct
 {
 	int numLights, numVertices, numTriangles;
@@ -118,6 +116,23 @@ bool traceRay(
 				transformedRay.direction = matrixMultiply(node->invTransform, (float4)(ray->direction, 0.0f)).xyz;
 				invTransform = node->invTransform;
 				subBvhNodeId = node->subBvh;
+
+#ifdef NO_PARALLEL_RAYS
+				if (transformedRay.direction.x == 0.0f)
+					transformedRay.direction.x = FLT_MIN;
+				if (transformedRay.direction.y == 0.0f)
+					transformedRay.direction.y = FLT_MIN;
+				if (transformedRay.direction.z == 0.0f)
+					transformedRay.direction.z = FLT_MIN;
+
+				if (transformedRay.origin.x == 0.0f)
+					transformedRay.origin.x = -FLT_MIN;
+				if (transformedRay.origin.y == 0.0f)
+					transformedRay.origin.y = -FLT_MIN;
+				if (transformedRay.origin.z == 0.0f)
+					transformedRay.origin.z = -FLT_MIN;
+#endif
+
 				break;
 			} else {
 				// Calculate which childs' AABB centre is closer to the ray's origin
