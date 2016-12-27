@@ -69,8 +69,9 @@ void Game::Init()
 	//bvhTest.test();
 
 	_animatedHeli = std::make_shared<MeshSequence>();
-	_animatedHeli->loadFromFiles("assets/3dmodels/heli/Helicopter_UH60_%04d.obj", false);
+	_animatedHeli->loadFromFiles("assets/3dmodels/heli/Helicopter_UH60_%04d.obj", true);
 	_scene->add_node(_animatedHeli);
+	//_animatedHeli->goToNextFrame();
 
 	/*auto heli = std::make_shared<Mesh>();
 	heli->loadFromFile("assets/3dmodels/heli/Helicopter_UH60_0000.obj");
@@ -112,7 +113,7 @@ void Game::Tick( float dt )
 	//_monkey_scene_node->transform.orientation = glm::angleAxis(t, glm::vec3(0,1,0));
 	if (t > 1.0f)
 	{
-		_animatedHeli->goToNextFrame();
+		//_animatedHeli->goToNextFrame();
 		t -= 1.0f;
 	}
 

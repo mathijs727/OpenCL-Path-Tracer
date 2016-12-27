@@ -18,6 +18,8 @@
 //#include <OpenGL/wglew.h>
 #include "template/includes.h"
 
+//#define PROFILE_OPENCL
+
 struct KernelData
 {
 	// Camera
@@ -73,6 +75,8 @@ cl_float3 glmToCl(const glm::vec3& vec);
 	}
 #endif
 
+
+
 template<typename T>
 inline void writeToBuffer(
 	cl::CommandQueue& queue,
@@ -115,6 +119,21 @@ inline void writeToBuffer(
 	events.push_back(ev);
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 }
+
+inline void timeOpenCL(cl::Event& ev, const char* operationName)
+{
+#ifdef PROFILE_OPENCL
+	ev.wait();
+	cl_ulong startTime, stopTime;
+	ev.getProfilingInfo(CL_PROFILING_COMMAND_START, &startTime);
+	ev.getProfilingInfo(CL_PROFILING_COMMAND_END, &stopTime);
+	double totalTime = stopTime - startTime;
+	std::cout << "Timing (" << operationName << "): " << (totalTime / 1000000.0) << "ms" << std::endl;
+#endif
+}
+
+
+
 
 raytracer::RayTracer::RayTracer(int width, int height)
 {
@@ -401,7 +420,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	_queue.enqueueAcquireGLObjects(&images);
 
 	cl_int err;
-	cl::Event event;
+	cl::Event kernelEvent;
 	_helloWorldKernel.setArg(0, _output_image);
 	_helloWorldKernel.setArg(1, _kernel_data);
 	_helloWorldKernel.setArg(2, _vertices[_active_buffers]);
@@ -418,7 +437,7 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 		cl::NDRange(_scr_width, _scr_height),
 		cl::NullRange,
 		NULL,
-		&event);
+		&kernelEvent);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 	
 	{
@@ -498,10 +517,24 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 
 		writeToBuffer(_copyQueue, _top_bvh[copyBuffers], _top_bvh_nodes_host, 0, waitEvents);
 
+		if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices))
+		{
+			timeOpenCL(waitEvents[0], "vertex upload");
+			timeOpenCL(waitEvents[1], "triangle upload");
+			timeOpenCL(waitEvents[2], "material upload");
+			timeOpenCL(waitEvents[3], "sub bvh upload");
+			timeOpenCL(waitEvents[4], "top bvh upload");
+		}
+		else {
+			timeOpenCL(waitEvents[0], "top bvh upload");
+		}
+
 		// Make sure the main queue waits for the copy to finish
 		err = _queue.enqueueBarrierWithWaitList(&waitEvents);
 		checkClErr(err, "CommandQueue::enqueueBarrierWithWaitList");
 	}
+
+
 
 	// Before returning the objects to OpenGL, we sync to make sure OpenCL is done.
 	err = _queue.finish();
@@ -627,9 +660,14 @@ void raytracer::RayTracer::InitOpenCL()
 	// Create a command queue.
 	_context = lContext;
 	_devices.push_back(cl::Device(lDeviceId));
-	_queue = clCreateCommandQueue(lContext, lDeviceId, 0, &lError);
+#ifdef PROFILE_OPENCL
+	cl_command_queue_properties props = CL_QUEUE_PROFILING_ENABLE;
+#else
+	cl_command_queue_properties props = 0;
+#endif
+	_queue = clCreateCommandQueue(lContext, lDeviceId, props, &lError);
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
-	_copyQueue = clCreateCommandQueue(lContext, lDeviceId, 0, &lError);
+	_copyQueue = clCreateCommandQueue(lContext, lDeviceId, props, &lError);
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
 }
 
