@@ -23,8 +23,8 @@ void Game::Init()
 
 	Transform camera_transform;
 	_camera_euler.y = -1.5f;
-	camera_transform.orientation = glm::quat(_camera_euler); // identity
-	camera_transform.location = glm::vec3(2.5f, 2.0f, 0.0f);
+	camera_transform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
+	camera_transform.location = glm::vec3(6.425, 0.695, -3.218);
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.f);
 
 	{
@@ -59,23 +59,22 @@ void Game::Init()
 	bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
 	//_scene->add_node(bunny, enlargeTransform);*/
 
-	Transform smallTransform;
+	/*Transform smallTransform;
 	smallTransform.scale = glm::vec3(0.005f);
 	auto sponza = std::make_shared<Mesh>();
 	sponza->loadFromFile("assets/3dmodels/sponza-crytek/sponza.obj");
-	_scene->add_node(sponza, smallTransform);
+	_scene->add_node(sponza, smallTransform);*/
+
 	//BvhTester bvhTest = BvhTester(sponza);
 	//bvhTest.test();
 
-	/*Transform flipTransform;
-	flipTransform.scale.x = -1.0f;
-	auto car = std::make_shared<Mesh>();
-	car->loadFromFile("assets/3dmodels/aventador/Avent.obj", flipTransform);
-	_scene->add_node(car);
-	BvhTester bvhTest = BvhTester(car);
-	bvhTest.test();*/
-	//system("PAUSE");
-	//exit(EXIT_SUCCESS);
+	_animatedHeli = std::make_shared<MeshSequence>();
+	_animatedHeli->loadFromFiles("assets/3dmodels/heli/Helicopter_UH60_%04d.obj", false);
+	_scene->add_node(_animatedHeli);
+
+	/*auto heli = std::make_shared<Mesh>();
+	heli->loadFromFile("assets/3dmodels/heli/Helicopter_UH60_0000.obj");
+	_scene->add_node(heli);*/
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
@@ -107,11 +106,15 @@ void Game::Tick( float dt )
 	HandleInput(dt);
 
 	t += dt;
-	if (t > 2 * PI)
-		t -= 2 * PI;
+	/*if (t > 2 * PI)
+		t -= 2 * PI;*/
 
 	//_monkey_scene_node->transform.orientation = glm::angleAxis(t, glm::vec3(0,1,0));
-	//_heli->goToNextFrame();
+	if (t > 1.0f)
+	{
+		_animatedHeli->goToNextFrame();
+		t -= 1.0f;
+	}
 
 	_ray_tracer->RayTrace(*_camera);
 	_out.Render();

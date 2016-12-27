@@ -9,6 +9,8 @@
 #include "template/includes.h"// Includes opencl
 #include "template/surface.h"
 #include "binned_bvh.h"
+#include "sbvh.h"
+#include "refit_bvh.h"
 
 using namespace raytracer;
 
@@ -44,8 +46,10 @@ inline std::string getPath(const std::string& str)
 
 
 
-void raytracer::MeshSequence::loadFromFiles(const char* fileFormat, const Transform & offset)
+void raytracer::MeshSequence::loadFromFiles(const char* fileFormat, bool refitting, const Transform& offset)
 {
+	_refitting = refitting;
+
 	auto filename = std::make_unique<char[]>(strlen(fileFormat) + 10);
 	for (int i = 0; true; i++)
 	{
@@ -56,11 +60,19 @@ void raytracer::MeshSequence::loadFromFiles(const char* fileFormat, const Transf
 		std::cout << "Reading mesh: " << filename.get() << std::endl;
 		loadFile(filename.get(), offset);
 	}
+
+	if (_refitting)
+	{
+		auto& f0 = _frames[0];
+		SbvhBuilder builder;
+		_bvh_root_node = builder.build(f0.vertices, f0.triangles, _bvh_nodes);
+	}
 }
 
 void raytracer::MeshSequence::goToNextFrame()
 {
 	_current_frame = (_current_frame + 1) % _frames.size();
+	_bvh_needs_update = true;
 }
 
 u32 raytracer::MeshSequence::maxNumVertices() const
@@ -105,12 +117,25 @@ u32 raytracer::MeshSequence::maxNumBvhNodes() const
 
 void raytracer::MeshSequence::buildBvh()
 {
-	MeshFrame& frame = _frames[_current_frame];
-	frame.bvh_nodes.clear();
+	if (!_bvh_needs_update)
+		return;
+	_bvh_needs_update = false;
 
-	// Create a BVH for the mesh
-	BinnedBvhBuilder bvhBuilder;
-	frame.bvh_root_node = bvhBuilder.build(frame.vertices, frame.triangles, frame.bvh_nodes);
+	MeshFrame& frame = _frames[_current_frame];
+	if (_refitting)
+	{
+		auto& f0 = _frames[0];
+		RefittingBvhBuilder bvhUpdater;
+		bvhUpdater.update(frame.vertices, frame.triangles, _bvh_nodes);
+	}
+	else {
+		// Clear bvh nodes list
+		_bvh_nodes.clear();
+
+		// Create a new bvh using the fast binned builder
+		BinnedBvhBuilder bvhBuilder;
+		_bvh_root_node = bvhBuilder.build(frame.vertices, frame.triangles, _bvh_nodes);
+	}
 }
 
 void raytracer::MeshSequence::addSubMesh(

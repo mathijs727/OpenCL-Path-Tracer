@@ -41,7 +41,7 @@ private:
 	glm::vec3 _camera_euler;
 
 	float t = 0.0f;
-	std::shared_ptr<raytracer::MeshSequence> _heli;
+	std::shared_ptr<raytracer::MeshSequence> _animatedHeli;
 	raytracer::SceneNode* _monkey_scene_node;
 
 	std::unique_ptr<raytracer::RayTracer> _ray_tracer;

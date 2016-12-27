@@ -161,7 +161,7 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 			{
 				int bin = static_cast<int>(k1 * (_centres[_secondaryIndexBuffer[i]][axis] - node->bounds.min[axis]));
 				bin = glm::min(glm::max(0, bin), BVH_SPLITS - 1); // need to clamp because some points might be outside of the bounding box because of how sbvh works
-				if (bin < bestBinnedSplit && i < end - 1)
+				if (bin < (int)bestBinnedSplit && i < end - 1)
 					i++;
 				else
 					break;
@@ -171,7 +171,7 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 			{
 				int bin = static_cast<int>(k1 * (_centres[_secondaryIndexBuffer[j]][axis] - node->bounds.min[axis]));
 				bin = glm::min(glm::max(0, bin), BVH_SPLITS - 1);
-				if (bin >= bestBinnedSplit && j > 0)
+				if (bin >= (int)bestBinnedSplit && j > 0)
 					j--;
 				else
 					break;
@@ -195,7 +195,7 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 				rightBounds.fit(objectBins[bin].bounds);
 		}
 
-		for (int bin = 0; bin < bestBinnedSplit; bin++)
+		for (int bin = 0; bin < (int)bestBinnedSplit; bin++)
 		{
 			leftCount += objectBins[bin].triangleCount;
 			if (objectBins[bin].triangleCount > 0)

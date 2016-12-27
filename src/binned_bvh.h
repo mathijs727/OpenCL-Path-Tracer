@@ -4,7 +4,7 @@
 #include "types.h"
 #include "template/includes.h"
 #include "bvh_nodes.h"
-#include "linear_allocator.h"
+#include "aabb.h"
 #include "vertices.h"
 
 namespace raytracer {
