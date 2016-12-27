@@ -495,7 +495,8 @@ bool raytracer::SbvhBuilder::doSpatialSelection(SubBvhNode* node, u32 axis, Fina
 			}
 		}
 
-		// unsplitting
+		// unsplitting 
+		
 		for (u32 splittedId : splitTriangles) {
 			float costSplit = right.bounds.surfaceArea() * right.triangles.size() + left.bounds.surfaceArea() * left.triangles.size();
 			// we have to clip the unsplitted triangle again because if it has been split in a parent node it might be bigger than the node bounds.
@@ -507,7 +508,7 @@ bool raytracer::SbvhBuilder::doSpatialSelection(SubBvhNode* node, u32 axis, Fina
 			float costLeft = leftBounds.surfaceArea() * (left.triangles.size() - 1) + right.bounds.surfaceArea() * right.triangles.size();
 			float costRight = rightBounds.surfaceArea() * (right.triangles.size() - 1) + left.bounds.surfaceArea() * left.triangles.size();
 
-			if (costSplit > costLeft && costSplit > costRight) {
+			if (costSplit < costLeft && costSplit < costRight) {
 				continue;
 			}
 			else if (costLeft < costRight) {
