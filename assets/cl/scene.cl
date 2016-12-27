@@ -185,14 +185,13 @@ bool traceRay(
 #ifdef COUNT_TRAVERSAL
 	if (count) *count += 2;
 #endif
-				bool leftVis = intersectRaySubBvh(&transformedRay, &left, closestT);
-				bool rightVis = intersectRaySubBvh(&transformedRay, &right, closestT);
+				float leftDist, rightDist;
+				bool leftVis = intersectRaySubBvh(&transformedRay, &left, closestT, &leftDist);
+				bool rightVis = intersectRaySubBvh(&transformedRay, &right, closestT, &rightDist);
+
 				if (leftVis && rightVis)
 				{
-					float3 leftVec = (left.min + left.max) / 2.0f - transformedRay.origin;
-					float3 rightVec = (right.min + right.max) / 2.0f - transformedRay.origin;
-
-					if (dot(leftVec, leftVec) < dot(rightVec, rightVec))
+					if (leftDist < rightDist)
 					{
 						subBvhStack[subBvhStackPtr++] = node.leftChildIndex + 1;
 						subBvhNodeId = node.leftChildIndex + 0;

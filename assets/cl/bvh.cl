@@ -120,7 +120,7 @@ bool intersectLineTopBvh(const Line* line, const TopBvhNode* node)
 }
 
 // https://tavianator.com/fast-branchless-raybounding-box-intersections/
-bool intersectRaySubBvh(const Ray* ray, const SubBvhNode* node, float nearestT)
+bool intersectRaySubBvh(const Ray* ray, const SubBvhNode* node, float nearestT, float* outT)
 {
 	float tmin = -INFINITY, tmax = INFINITY;
 	float3 aabbMin = node->min;
@@ -152,6 +152,8 @@ bool intersectRaySubBvh(const Ray* ray, const SubBvhNode* node, float nearestT)
 		tmin = max(tmin, min(tz1, tz2));
 		tmax = min(tmax, max(tz1, tz2));
 	}
+
+	*outT = tmin;
 
 	// tmax >= 0: prevent boxes before the starting position from being hit
 	// See the comment section at:
