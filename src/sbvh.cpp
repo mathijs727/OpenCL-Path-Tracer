@@ -7,6 +7,7 @@
 #include "aabb.h"
 
 #define BVH_SPLITS 8
+#define ALPHA 0.01f
 
 u32 raytracer::SbvhBuilder::build(
 	std::vector<VertexSceneData>& vertices,
@@ -103,11 +104,11 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 	std::array<ObjectBin, BVH_SPLITS> objectBinsForEachAxis[3];
 	int bestObjectSplit = -1;
 
-	for (u32 ax = 0; ax < 3; ++ax) {
-		auto& localObjectBins = objectBinsForEachAxis[ax];
-		makeObjectBins(node, ax, localObjectBins.data());
+	for (u32 axis = 0; axis < 3; ++axis) {
+		auto& localObjectBins = objectBinsForEachAxis[axis];
+		makeObjectBins(node, axis, localObjectBins.data());
 		std::array<SpatialSplit, BVH_SPLITS> spatialBins;
-		makeSpatialBins(node, ax, spatialBins.data());
+		makeSpatialBins(node, axis, spatialBins.data());
 
 		u32 bestLocalObjectSplit = -1;
 		FinalSplit localLeft;
@@ -116,27 +117,50 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 			float objectSah;
 			float spatialSah;
 			
-			bool objectSplitGood = doSingleObjectSplit(node, ax, split, objectSah, localObjectBins.data()) && objectSah < bestSah;
-			FinalSplit left, right;
-			bool spatialSplitGood = doSingleSpatialSplit(node, ax, split, spatialSah, left, right, spatialBins.data()) && spatialSah < bestSah;
+			bool objectSplitGood = doSingleObjectSplit(node, axis, split, objectSah, localObjectBins.data()) && objectSah < bestSah;
+			
+			AABB leftBounds, rightBounds;
+			for (int bin = 0; bin < BVH_SPLITS; ++bin) {
+				if (bin < bestLocalObjectSplit) {
+					leftBounds.fit(localObjectBins[bin].bounds);
+				}
+				else {
+					rightBounds.fit(localObjectBins[bin].bounds);
+				}
+			}
 
+			AABB intersection;
+			bool intersect = true;
+			for (u32 ax = 0; ax < 3; ++ax) {
+				intersection.min[ax] = glm::max(leftBounds.min[ax], rightBounds.min[ax]);
+				intersection.max[ax] = glm::min(leftBounds.max[ax], rightBounds.max[ax]);
+				if (intersection.min[ax] > intersection.max[ax]) intersect = false;
+			}
+			bool doSpatialSplit = true;
+			if (intersect) {
+				float heuristic = intersection.surfaceArea() / node->bounds.surfaceArea();
+				doSpatialSplit = heuristic > ALPHA;
+			}
+
+			FinalSplit left, right;
+			bool spatialSplitGood = doSpatialSplit && doSingleSpatialSplit(node, axis, split, spatialSah, left, right, spatialBins.data()) && spatialSah < bestSah;
 			if (objectSplitGood && (!spatialSplitGood || objectSah < spatialSah)) {
 				bestSah = objectSah;
 				bestLocalObjectSplit = split;
 				spatialSplit = false;
-				bestAxis = ax;
+				bestAxis = axis;
 			}
 			else if (spatialSplitGood) {
 				bestSah = spatialSah;
 				spatialSplit = true;
 				localLeft = std::move(left);
 				localRight = std::move(right);
-				bestAxis = ax;
+				bestAxis = axis;
 			}
 		}
 
 		// copy results
-		if (bestAxis == ax) {
+		if (bestAxis == axis) {
 			if (spatialSplit) {
 				bestLeft = std::move(localLeft);
 				bestRight = std::move(localRight);
