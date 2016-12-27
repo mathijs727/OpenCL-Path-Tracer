@@ -1,12 +1,12 @@
-#include "Texture.h"
+#include "texture.h"
 #include "template/surface.h"
 #include "types.h"
 #include <vector>
 #include <unordered_map>
 #include <iostream>
 
-std::unordered_map<const char*, int> raytracer::Texture::s_texturesMap =
-	std::unordered_map<const char*, int>();
+std::unordered_map<std::string, int> raytracer::Texture::s_texturesMap =
+	std::unordered_map<std::string, int>();
 std::vector<std::unique_ptr<Tmpl8::Surface>> raytracer::Texture::s_textures =
 	std::vector<std::unique_ptr<Tmpl8::Surface>>();
 
@@ -25,6 +25,7 @@ raytracer::Texture::Texture(const char* fileName)
 		s_texturesMap.insert(std::pair<const char*, int>(fileName, texId));
 	}
 	else {
+		//std::cout << "Reusing texture: " << fileName << std::endl;
 		texId = res->second;
 	}
 

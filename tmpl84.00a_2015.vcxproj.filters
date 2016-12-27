@@ -27,7 +27,6 @@
     <ClCompile Include="src\raytracer.cpp" />
     <ClCompile Include="src\light.cpp" />
     <ClCompile Include="src\gloutput.cpp" />
-    <ClCompile Include="src\Texture.cpp" />
     <ClCompile Include="src\mesh.cpp">
       <Filter>model</Filter>
     </ClCompile>
@@ -46,6 +45,7 @@
     <ClCompile Include="src\sbvh.cpp">
       <Filter>bvh</Filter>
     </ClCompile>
+    <ClCompile Include="src\texture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
@@ -74,7 +74,6 @@
     <ClInclude Include="src\template\includes.h">
       <Filter>template code</Filter>
     </ClInclude>
-    <ClInclude Include="src\Texture.h" />
     <ClInclude Include="src\mesh.h">
       <Filter>model</Filter>
     </ClInclude>
@@ -108,5 +107,6 @@
     <ClInclude Include="src\sbvh.h">
       <Filter>bvh</Filter>
     </ClInclude>
+    <ClInclude Include="src\texture.h" />
   </ItemGroup>
 </Project>

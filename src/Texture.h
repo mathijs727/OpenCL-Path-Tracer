@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <string>
 
 namespace raytracer
 {
@@ -21,7 +22,7 @@ namespace raytracer
 		static const uint TEXTURE_WIDTH = 512;
 		static const uint TEXTURE_HEIGHT = 512;
 	private:
-		static std::unordered_map<const char*, int> s_texturesMap;
+		static std::unordered_map<std::string, int> s_texturesMap;
 		static std::vector<std::unique_ptr<Tmpl8::Surface>> s_textures;
 
 		int _tex_id;

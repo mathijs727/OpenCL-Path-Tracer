@@ -57,20 +57,23 @@ void Game::Init()
 	enlargeTransform.location = glm::vec3(0, 0, 0);
 	auto bunny = std::make_shared<Mesh>();
 	bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
-	//_scene->add_node(bunny, enlargeTransform);
+	//_scene->add_node(bunny, enlargeTransform);*/
 
+	Transform smallTransform;
+	smallTransform.scale = glm::vec3(0.005f);
 	auto sponza = std::make_shared<Mesh>();
-	sponza->loadFromFile("assets/3dmodels/sponza-dabrovic/sponza.obj");
-	_scene->add_node(sponza);*/
+	sponza->loadFromFile("assets/3dmodels/sponza-crytek/sponza.obj");
+	_scene->add_node(sponza, smallTransform);
+	//BvhTester bvhTest = BvhTester(sponza);
+	//bvhTest.test();
 
-	Transform flipTransform;
+	/*Transform flipTransform;
 	flipTransform.scale.x = -1.0f;
 	auto car = std::make_shared<Mesh>();
 	car->loadFromFile("assets/3dmodels/aventador/Avent.obj", flipTransform);
 	_scene->add_node(car);
-
 	BvhTester bvhTest = BvhTester(car);
-	bvhTest.test();
+	bvhTest.test();*/
 	//system("PAUSE");
 	//exit(EXIT_SUCCESS);
 

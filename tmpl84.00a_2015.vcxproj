@@ -34,7 +34,7 @@
     <ClCompile Include="src\template\surface.cpp" />
     <ClCompile Include="src\template\template.cpp" />
     <ClCompile Include="src\template\threads.cpp" />
-    <ClCompile Include="src\Texture.cpp" />
+    <ClCompile Include="src\texture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\aabb.h" />
@@ -61,7 +61,7 @@
     <ClInclude Include="src\template\surface.h" />
     <ClInclude Include="src\template\template.h" />
     <ClInclude Include="src\template\threads.h" />
-    <ClInclude Include="src\Texture.h" />
+    <ClInclude Include="src\texture.h" />
     <ClInclude Include="src\transform.h" />
     <ClInclude Include="src\types.h" />
     <ClInclude Include="src\vertices.h" />
