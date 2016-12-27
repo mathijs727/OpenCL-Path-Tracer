@@ -115,7 +115,7 @@ bool traceRay(
 			{
 				//Ray transformedRay;
 				transformedRay.origin = matrixMultiply(node->invTransform, (float4)(ray->origin, 1.0f)).xyz;
-				transformedRay.direction = normalize(matrixMultiply(node->invTransform, (float4)(ray->direction, 0.0f)).xyz);
+				transformedRay.direction = matrixMultiply(node->invTransform, (float4)(ray->direction, 0.0f)).xyz;
 				invTransform = node->invTransform;
 				subBvhNodeId = node->subBvh;
 				break;
