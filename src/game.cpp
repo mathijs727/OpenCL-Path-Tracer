@@ -30,20 +30,20 @@ void Game::Init()
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.f);
 
 	{
-		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(0, 5, 3));
-		//_scene->add_light(light);
+		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(-3, 1, 0));
+		_scene->add_light(light);
 	}
 	{
 		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(5, 1,0));
-		//_scene->add_light(light);
+		_scene->add_light(light);
 	}
 	{
 		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(-1, -1, -1));
-		_scene->add_light(light);
+		//_scene->add_light(light);
 	}
 	{
 		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(0, -1, 0));
-		_scene->add_light(light);
+		//_scene->add_light(light);
 	}
 
 	/*Transform smallTransform;
