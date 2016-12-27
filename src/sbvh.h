@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include <vector>
+#include <unordered_set>
 #include "aabb.h"
 #include "vertices.h"
 
@@ -29,6 +30,11 @@ namespace raytracer {
 			std::vector<SpatialSplitRef> refs;
 		};
 
+		struct FinalSplit {
+			AABB bounds;
+			std::unordered_set<u32> triangles;
+		};
+
 	public:
 		SbvhBuilder() { };
 		~SbvhBuilder() { };
@@ -53,6 +59,7 @@ namespace raytracer {
 		std::vector<AABB> _aabbs;
 		std::vector<u32> _secondaryIndexBuffer;
 		bool doObjectSelection(SubBvhNode* node, u32 axis, u32& outBestSplit, float& outBestSah, ObjectBin* bins);
-		bool doSpatialSelection(SubBvhNode* node, u32 axis, u32& outBestSplit, float& outBestSah, SpatialSplit* bins);
+		raytracer::AABB clipTriangleBounds(u32 axis, float left, float right, u32 triangleId);
+		bool doSpatialSelection(SubBvhNode* node, u32 axis, FinalSplit& outLeft, FinalSplit& outRight, float& outBestSah);
 	};
 }

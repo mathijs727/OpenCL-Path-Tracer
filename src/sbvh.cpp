@@ -4,6 +4,7 @@
 #include <stack>
 #include "bvh_nodes.h"
 #include <xutility>
+#include "aabb.h"
 
 #define BVH_SPLITS 8
 
@@ -126,22 +127,22 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 	u32 bestSpatialSplit = -1;
 	u32 bestSpatialAxis = -1;
 	float bestSpatialSah = std::numeric_limits<float>::max();
-	std::array<SpatialSplit, BVH_SPLITS> spatialSplits;
-
+	FinalSplit bestLeft;
+	FinalSplit bestRight;
 	for (u32 ax = 0; ax < 3; ++ax) {
 		float sah = std::numeric_limits<float>::max();
 		u32 split = -1;
-		std::array<SpatialSplit, BVH_SPLITS> splits;
-		if (doSpatialSelection(node, ax, split, sah, splits.data()) && sah < bestSpatialSah) {
+		FinalSplit left;
+		FinalSplit right;
+		if (doSpatialSelection(node, ax, left, right, sah) && sah < bestSpatialSah) {
 			bestSpatialSplit = split;
 			bestSpatialAxis = ax;
 			bestSpatialSah = sah;
-			spatialSplits = splits;
+			bestLeft = std::move(left);
+			bestRight = std::move(right);
 		}
 	}
 
-	
-	
 	bool binnedSplitGood = bestBinnedSplit != -1 && bestBinnedSah < maxSah;
 	bool spatialSplitGood = bestSpatialSplit != -1 && bestSpatialSah < maxSah;
 
@@ -210,20 +211,8 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 		leftCount = 0;
 		rightCount = 0;
 		std::vector<u32> newTriangles;
-		for (u32 splitn = 0; splitn < BVH_SPLITS; ++splitn) {
-			auto& split = spatialSplits[splitn];
-			for (auto ref : split.refs) {
-				newTriangles.push_back(ref.triangleIndex);
-			}
-			if (splitn < bestSpatialSplit) {
-				leftCount+= split.refs.size();
-				leftBounds.fit(split.bounds);
-			}
-			else {
-				rightCount+= split.refs.size();
-				rightBounds.fit(split.bounds);
-			}
-		}
+		newTriangles.insert(newTriangles.end(), bestLeft.triangles.begin(), bestLeft.triangles.end());
+		newTriangles.insert(newTriangles.end(), bestRight.triangles.begin(), bestRight.triangles.end());
 		u32 nodeTriangleCount = node->triangleCount;
 		_ASSERT(newTriangles.size() >= nodeTriangleCount);
 		u32 previousSize = _secondaryIndexBuffer.size();
@@ -368,13 +357,76 @@ bool raytracer::SbvhBuilder::doObjectSelection(SubBvhNode* node, u32 axis, u32& 
 	return bestSplit != -1;
 }
 
-bool raytracer::SbvhBuilder::doSpatialSelection(SubBvhNode* node, u32 axis, u32& outBestSplit, float& outBestSah, SpatialSplit* spatialSplits)
+raytracer::AABB raytracer::SbvhBuilder::clipTriangleBounds(u32 axis, float left, float right, u32 triangleId) {
+	glm::vec3 clipped_vertices[9];
+	u32 n_clipped_vertices = 0;
+
+	glm::vec3 v[3]; // base triangle vertices
+	v[0] = (glm::vec3) (*_vertices)[(*_triangles)[triangleId].indices[0]].vertex;
+	v[1] = (glm::vec3) (*_vertices)[(*_triangles)[triangleId].indices[1]].vertex;
+	v[2] = (glm::vec3) (*_vertices)[(*_triangles)[triangleId].indices[2]].vertex;
+
+	for (auto& vertex : v) {
+		if (vertex[axis] >= left && vertex[axis] < right) {
+			// add the vertex to the temporary vertex buffer
+			clipped_vertices[n_clipped_vertices] = vertex;
+			n_clipped_vertices++;
+		}
+	}
+
+	glm::vec3 e[3]; // base triangle edges
+	e[0] = v[1] - v[0];
+	e[1] = v[2] - v[1];
+	e[2] = v[0] - v[2];
+
+	// every segment is represented as v[i] + e[i] * t. We find t.
+	for (u32 i = 0; i < 3; ++i) {
+		// do line plane intersection
+		glm::vec3 plane_center_min(0);
+		glm::vec3 plane_center_max(0);
+		glm::vec3 plane_normal(0);
+		plane_center_min[axis] = left;
+		plane_center_max[axis] = right;
+		plane_normal[axis] = 1.f;
+
+		float denom = glm::dot(plane_normal, e[i]);
+		if (abs(denom) > 0.0001f)
+		{
+			float t;
+			t = glm::dot(plane_center_min - v[i], plane_normal) / denom;
+			if (t >= 0.f && t <= 1.f) {
+				auto new_v = v[0] + e[0] * t;
+				clipped_vertices[n_clipped_vertices] = new_v;
+				++n_clipped_vertices;
+			}
+			t = glm::dot(plane_center_max - v[i], plane_normal) / denom;
+			if (t >= 0.f && t <= 1.f) {
+				auto new_v = v[0] + e[0] * t;
+				clipped_vertices[n_clipped_vertices] = new_v;
+				++n_clipped_vertices;
+			}
+		}
+	}
+
+	AABB triangleBounds;
+	triangleBounds.min = glm::vec3(std::numeric_limits<float>::max());
+	triangleBounds.max = glm::vec3(std::numeric_limits<float>::min());
+
+	for (u32 i = 0; i < n_clipped_vertices; ++i) {
+		triangleBounds.min = glm::min(triangleBounds.min, clipped_vertices[i]);
+		triangleBounds.max = glm::max(triangleBounds.max, clipped_vertices[i]);
+	}
+	return triangleBounds;
+}
+
+bool raytracer::SbvhBuilder::doSpatialSelection(SubBvhNode* node, u32 axis, FinalSplit& outBestSplitLeft, FinalSplit& outBestSplitRight, float& outBestSah)
 {
 	glm::vec3 size = node->bounds.max - node->bounds.min;
 	u32 localFirstTriangleIndex = node->firstTriangleIndex;
 	const u32 end = localFirstTriangleIndex + node->triangleCount;
 	float k1 = BVH_SPLITS / size[axis] * 0.999999f;// Prevents the bin out of bounds (if centroid on the right bound)
-
+	
+	std::array<SpatialSplit, BVH_SPLITS> spatialSplits;
 	// build the bins
 	for (u32 i = localFirstTriangleIndex; i < end; i++)
 	{
@@ -398,66 +450,7 @@ bool raytracer::SbvhBuilder::doSpatialSelection(SubBvhNode* node, u32 axis, u32&
 		else {
 			// add the triangle to the required bins
 			for (int j = bin_min; j <= bin_max; ++j) {
-				glm::vec3 clipped_vertices[9];
-				u32 n_clipped_vertices = 0;
-
-				glm::vec3 v[3]; // base triangle vertices
-				v[0] = (glm::vec3) (*_vertices)[(*_triangles)[_secondaryIndexBuffer[i]].indices[0]].vertex;
-				v[1] = (glm::vec3) (*_vertices)[(*_triangles)[_secondaryIndexBuffer[i]].indices[1]].vertex;
-				v[2] = (glm::vec3) (*_vertices)[(*_triangles)[_secondaryIndexBuffer[i]].indices[2]].vertex;
-
-				for (auto& vertex : v) {
-					int v_bin = static_cast<int>(k1 * (vertex[axis] - node->bounds.min[axis]));
-					if (v_bin == j) {
-						// add the vertex to the temporary vertex buffer
-						clipped_vertices[n_clipped_vertices] = vertex;
-						n_clipped_vertices++;
-					}
-				}
-
-				glm::vec3 e[3]; // base triangle edges
-				e[0] = v[1] - v[0];
-				e[1] = v[2] - v[1];
-				e[2] = v[0] - v[2];
-
-				// every segment is represented as v[i] + e[i] * t. We find t.
-				for (u32 i = 0; i < 3; ++i) {
-					// do line plane intersection
-					glm::vec3 plane_center_min(0);
-					glm::vec3 plane_center_max(0);
-					glm::vec3 plane_normal(0);
-					plane_center_min[axis] = k1 * j + node->bounds.min[axis];
-					plane_center_max[axis] = k1 * (j+1) + node->bounds.min[axis];
-					plane_normal[axis] = 1.f;
-
-					float denom = glm::dot(plane_normal, e[i]);
-					if (abs(denom) > 0.0001f)
-					{
-						float t;
-						t = glm::dot(plane_center_min - v[i], plane_normal) / denom;
-						if (t >= 0.f && t <= 1.f) {
-							auto new_v = v[0] + e[0] * t;
-							clipped_vertices[n_clipped_vertices] = new_v;
-							++n_clipped_vertices;
-						}
-						t = glm::dot(plane_center_max - v[i], plane_normal) / denom;
-						if (t >= 0.f && t <= 1.f) {
-							auto new_v = v[0] + e[0] * t;
-							clipped_vertices[n_clipped_vertices] = new_v;
-							++n_clipped_vertices;
-						}
-					}
-				}
-
-				AABB triangleBounds;
-				triangleBounds.min = glm::vec3(std::numeric_limits<float>::max());
-				triangleBounds.max = glm::vec3(std::numeric_limits<float>::min());
-
-				for (u32 i = 0; i < n_clipped_vertices; ++i) {
-					triangleBounds.min = glm::min(triangleBounds.min, clipped_vertices[i]);
-					triangleBounds.max = glm::max(triangleBounds.max, clipped_vertices[i]);
-				}
-
+				AABB triangleBounds = clipTriangleBounds(axis, k1 * j + node->bounds.min[axis], k1 * (j+1) + node->bounds.min[axis], _secondaryIndexBuffer[i]);
 				SpatialSplitRef newRef;
 				newRef.triangleIndex = _secondaryIndexBuffer[i];
 				newRef.clippedBounds = triangleBounds;
@@ -468,49 +461,74 @@ bool raytracer::SbvhBuilder::doSpatialSelection(SubBvhNode* node, u32 axis, u32&
 	}
 
 	// Determine for which bin the SAH is the lowest
-	float bestSAH = std::numeric_limits<float>::max();
+	outBestSah = std::numeric_limits<float>::max();
 	int bestSplit = -1;
 	for (int split = 1; split < BVH_SPLITS; split++)
 	{
+		std::unordered_set<u32> splitTriangles;
+		FinalSplit left;
 		// Calculate the triangle count and surface area of the AABB to the left of the possible split
-		int triangleCountLeft = 0;
-		float surfaceAreaLeft = 0.0f;
 		{
-			AABB leftAABB;
 			for (int leftBin = 0; leftBin < split; leftBin++)
 			{
-				triangleCountLeft += spatialSplits[leftBin].refs.size();
+				for (SpatialSplitRef& ref : spatialSplits[leftBin].refs) {
+					left.triangles.insert(ref.triangleIndex);
+				}
 				if (spatialSplits[leftBin].refs.size() > 0)
-					leftAABB.fit(spatialSplits[leftBin].bounds);
+					left.bounds.fit(spatialSplits[leftBin].bounds);
 			}
-			glm::vec3 extents = leftAABB.max - leftAABB.min;
-			surfaceAreaLeft = leftAABB.surfaceArea();
 		}
 
+		FinalSplit right;
 		// Calculate the triangle count and surface area of the AABB to the right of the possible split
-		int triangleCountRight = 0;
-		float surfaceAreaRight = 0.0f;
 		{
-			AABB rightAABB;
 			for (int rightBin = split; rightBin < BVH_SPLITS; rightBin++)
 			{
-				triangleCountRight += spatialSplits[rightBin].refs.size();
+				for (SpatialSplitRef& ref : spatialSplits[rightBin].refs) {
+					right.triangles.insert(ref.triangleIndex);
+					if (left.triangles.find(ref.triangleIndex) != left.triangles.end()) {
+						splitTriangles.insert(ref.triangleIndex);
+					}
+				}
 				if (spatialSplits[rightBin].refs.size() > 0)
-					rightAABB.fit(spatialSplits[rightBin].bounds);
+					right.bounds.fit(spatialSplits[rightBin].bounds);
 			}
-			surfaceAreaRight = rightAABB.surfaceArea();
 		}
 
-		float SAH = triangleCountLeft * surfaceAreaLeft + triangleCountRight * surfaceAreaRight;
-		if (SAH < bestSAH && triangleCountLeft > 0 && triangleCountRight > 0)
+		// unsplitting
+		for (u32 splittedId : splitTriangles) {
+			float costSplit = right.bounds.surfaceArea() * right.triangles.size() + left.bounds.surfaceArea() * left.triangles.size();
+			// we have to clip the unsplitted triangle again because if it has been split in a parent node it might be bigger than the node bounds.
+			AABB triangleBounds = clipTriangleBounds(axis, node->bounds.min[axis], node->bounds.max[axis], _secondaryIndexBuffer[splittedId]);
+			AABB leftBounds = left.bounds;
+			left.bounds.fit(triangleBounds);
+			AABB rightBounds = right.bounds;
+			rightBounds.fit(triangleBounds);
+			float costLeft = leftBounds.surfaceArea() * (left.triangles.size() - 1) + right.bounds.surfaceArea() * right.triangles.size();
+			float costRight = rightBounds.surfaceArea() * (right.triangles.size() - 1) + left.bounds.surfaceArea() * left.triangles.size();
+
+			if (costSplit > costLeft && costSplit > costRight) {
+				continue;
+			}
+			else if (costLeft > costRight) {
+				right.triangles.erase(right.triangles.find(splittedId));
+				left.bounds = leftBounds;
+			}
+			else {
+				left.triangles.erase(left.triangles.find(splittedId));
+				right.bounds = rightBounds;
+			}
+		}
+
+		float SAH = right.triangles.size() * right.bounds.surfaceArea() + left.triangles.size() * left.bounds.surfaceArea();
+		if (SAH < outBestSah && left.triangles.size() > 0 && right.triangles.size() > 0)
 		{
-			bestSAH = SAH;
+			outBestSah = SAH;
 			bestSplit = split;
+			outBestSplitLeft = std::move(left);
+			outBestSplitRight = std::move(right);
 		}
 	}
-
-	outBestSah = bestSAH;
-	outBestSplit = bestSplit;
 
 	return bestSplit != -1;
 }
