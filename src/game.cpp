@@ -24,13 +24,13 @@ void Game::Init()
 	Transform camera_transform;
 	_camera_euler.y = -1.5f;
 	camera_transform.orientation = glm::quat(_camera_euler); // identity
-	camera_transform.location = glm::vec3(2.5f, 2.0f, 0.0f);
+	camera_transform.location = glm::vec3(2.5f, 2.0f, 0.01f);
 	//camera_transform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
 	//camera_transform.location = glm::vec3(6.425, 0.695, -3.218);
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.f);
 
 	{
-		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(0, 5, 3));
+		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(-3, 1, 0));
 		_scene->add_light(light);
 	}
 	{
@@ -39,20 +39,22 @@ void Game::Init()
 	}
 	{
 		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(-1, -1, -1));
-		_scene->add_light(light);
+		//_scene->add_light(light);
 	}
 	{
-		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(1, 1, 1));
-		_scene->add_light(light);
+		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(0, -1, 0));
+		//_scene->add_light(light);
 	}
 
+	/*Transform smallTransform;
+	smallTransform.scale = glm::vec3(0.5f);
 	auto plane = std::make_shared<Mesh>();
-	plane->loadFromFile("assets/3dmodels/plane/plane.obj", Transform(glm::vec3(-7.0f, -1.5f, -7.0f)));
-	_scene->add_node(plane);
+	plane->loadFromFile("assets/3dmodels/plane/plane.obj", Transform(glm::vec3(-7.0f, -0.5f, -7.0f)));
+	_scene->add_node(plane, smallTransform);
 
 	auto cube = std::make_shared<Mesh>();
 	cube->loadFromFile( "assets/3dmodels/cube/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
-	_scene->add_node(cube);
+	_scene->add_node(cube, smallTransform);*/
 
 	/*Transform enlargeTransform;
 	enlargeTransform.scale = glm::vec3(10);
@@ -61,11 +63,11 @@ void Game::Init()
 	bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
 	//_scene->add_node(bunny, enlargeTransform);*/
 
-	/*Transform smallTransform;
+	Transform smallTransform;
 	smallTransform.scale = glm::vec3(0.005f);
 	auto sponza = std::make_shared<Mesh>();
 	sponza->loadFromFile("assets/3dmodels/sponza-crytek/sponza.obj");
-	_scene->add_node(sponza, smallTransform);*/
+	_scene->add_node(sponza, smallTransform);
 
 	//BvhTester bvhTest = BvhTester(sponza);
 	//bvhTest.test();
