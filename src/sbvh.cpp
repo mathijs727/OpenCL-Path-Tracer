@@ -8,6 +8,8 @@
 
 #define BVH_SPLITS 8
 #define ALPHA 0.01f
+#define COST_INTERSECTION 1
+#define COST_TRAVERSAL 1
 
 u32 raytracer::SbvhBuilder::build(
 	std::vector<VertexSceneData>& vertices,
@@ -87,11 +89,12 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 {
 	// Use pointer because references are not reassignable (we need to reassign after allocation)
 	auto* node = &(*_bvh_nodes)[nodeId];
-	if (node->triangleCount < 4) return false;
+	//if (node->triangleCount < 4) return false;
 	
-	float maxSah = node->triangleCount * node->bounds.surfaceArea();
+	// termination criterion. If no sah can be found higher than this it will not split
+	float maxSah = (node->triangleCount - (float)COST_TRAVERSAL / COST_INTERSECTION) * node->bounds.surfaceArea();
+	
 	glm::vec3 size = node->bounds.max - node->bounds.min;
-	
 	u32 localFirstTriangleIndex = node->firstTriangleIndex;
 	// Loop through the triangles and calculate bin dimensions and triangle count
 	const u32 end = localFirstTriangleIndex + node->triangleCount;
@@ -103,7 +106,6 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 	FinalSplit bestRight;
 	std::array<ObjectBin, BVH_SPLITS> objectBinsForEachAxis[3];
 	int bestObjectSplit = -1;
-
 	for (u32 axis = 0; axis < 3; ++axis) {
 		auto& localObjectBins = objectBinsForEachAxis[axis];
 		makeObjectBins(node, axis, localObjectBins.data());
@@ -117,7 +119,7 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 			float objectSah;
 			float spatialSah;
 			
-			bool objectSplitGood = doSingleObjectSplit(node, axis, split, objectSah, localObjectBins.data()) && objectSah < bestSah;
+			bool objectSplitGood = doSingleObjectSplit(node, axis, split, objectSah, localObjectBins.data()) && (objectSah < bestSah);
 			
 			AABB leftBounds, rightBounds;
 			for (int bin = 0; bin < BVH_SPLITS; ++bin) {
@@ -143,7 +145,7 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 			}
 
 			FinalSplit left, right;
-			bool spatialSplitGood = doSpatialSplit && doSingleSpatialSplit(node, axis, split, spatialSah, left, right, spatialBins.data()) && spatialSah < bestSah;
+			bool spatialSplitGood = doSpatialSplit && doSingleSpatialSplit(node, axis, split, spatialSah, left, right, spatialBins.data()) && (spatialSah < bestSah);
 			if (objectSplitGood && (!spatialSplitGood || objectSah < spatialSah)) {
 				bestSah = objectSah;
 				bestLocalObjectSplit = split;
@@ -171,13 +173,15 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 		}
 	}
 
-	if (bestAxis < 0) return false;
-	
+	if (bestAxis < 0) {
+		return false;
+	}
 	auto& objectBins = objectBinsForEachAxis[bestAxis];
 
 	u32 leftCount, rightCount;
 	AABB leftBounds, rightBounds;
 	if (!spatialSplit) {
+		_ASSERT(bestObjectSplit > 0);
 		u32 axis = bestAxis;
 		float k1 = BVH_SPLITS / size[axis] * 0.999999f;// Prevents the bin out of bounds (if centroid on the right bound)
 		// Partition the array around the bin pivot
