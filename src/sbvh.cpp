@@ -510,7 +510,7 @@ bool raytracer::SbvhBuilder::doSpatialSelection(SubBvhNode* node, u32 axis, Fina
 			if (costSplit > costLeft && costSplit > costRight) {
 				continue;
 			}
-			else if (costLeft > costRight) {
+			else if (costLeft < costRight) {
 				right.triangles.erase(right.triangles.find(splittedId));
 				left.bounds = leftBounds;
 			}
