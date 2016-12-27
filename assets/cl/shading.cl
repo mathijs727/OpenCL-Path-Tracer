@@ -121,7 +121,7 @@ float3 whittedShading(
 		{
 			matColour = material->colour;
 		} else {
-			float4 texCoords3d = (float4)(1.0f - tex_coords.x, tex_coords.y, material->diffuse.tex_id, 0.0f);
+			float4 texCoords3d = (float4)(tex_coords.x, 1.0f - tex_coords.y, material->diffuse.tex_id, 0.0f);
 			float4 colourWithAlpha = read_imagef(
 				textures,
 				sampler,
