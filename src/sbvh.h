@@ -2,7 +2,7 @@
 
 #include "types.h"
 #include <vector>
-#include <unordered_set>
+#include <set>
 #include "aabb.h"
 #include "vertices.h"
 
@@ -32,7 +32,7 @@ namespace raytracer {
 
 		struct FinalSplit {
 			AABB bounds;
-			std::unordered_set<u32> triangles;
+			std::set<u32> triangles;
 		};
 
 	public:

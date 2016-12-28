@@ -37,6 +37,8 @@ namespace raytracer {
 			max = glm::max(max, other.max);
 		}
 
+		glm::vec3 size() { return max - min; }
+
 		float surfaceArea() {
 			glm::vec3 size = max - min;
 			return 2.0f * (size.x * size.y + size.y * size.z + size.z * size.x);
