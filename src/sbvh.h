@@ -25,7 +25,7 @@ namespace raytracer {
 			AABB clippedBounds;
 		};
 
-		struct SpatialSplit {
+		struct SpatialSplitBin {
 			AABB bounds;
 			std::vector<SpatialSplitRef> refs;
 		};
@@ -57,9 +57,9 @@ namespace raytracer {
 		std::vector<AABB> _aabbs;
 		std::vector<u32> _secondaryIndexBuffer;
 		void makeObjectBins(SubBvhNode* node, u32 axis, ObjectBin* bins);
-		void makeSpatialBins(SubBvhNode* node, u32 axis, SpatialSplit* bins);
+		void makeSpatialBins(SubBvhNode* node, u32 axis, SpatialSplitBin* bins);
 		bool doSingleObjectSplit(SubBvhNode* node, u32 axis, u32 split, float& sah, ObjectBin* bins);
-		bool doSingleSpatialSplit(SubBvhNode* node, u32 axis, u32 split, float& sah, FinalSplit& outLeft, FinalSplit& outRight, SpatialSplit* bins);
+		bool doSingleSpatialSplit(SubBvhNode* node, u32 axis, u32 split, float& sah, FinalSplit& outLeft, FinalSplit& outRight, SpatialSplitBin* bins);
 		raytracer::AABB clipTriangleBounds(u32 axis, float left, float right, u32 triangleId);
 	};
 }
