@@ -152,7 +152,6 @@ bool traceRay(
 					topLevelBvhStack[topLevelBvhStackPtr++] = node->leftChildIndex;
 					topLevelBvhStack[topLevelBvhStackPtr++] = node->rightChildIndex;
 				}
-				topLevelBvhStack[topLevelBvhStackPtr++] = node->rightChildIndex;
 			}
 		}
 
