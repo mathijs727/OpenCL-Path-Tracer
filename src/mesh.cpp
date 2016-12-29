@@ -129,13 +129,9 @@ void raytracer::Mesh::storeBvh(const char* fileName)
 	u32 numNodes = (u32)_bvh_nodes.size();
 	outFile.write((char*)&numNodes, 4);
 	outFile.write((char*)_bvh_nodes.data(), numNodes * sizeof(SubBvhNode));
-	std::cout << "Num nodes: " << numNodes << std::endl;
-	std::cout << "Size of data: " << numNodes * sizeof(SubBvhNode) << std::endl;
 
 	// Triangles
 	u32 numTriangles = (u32)_triangles.size();
-	std::cout << "Num triangles: " << numTriangles << std::endl;
-	std::cout << "Size of data: " << numTriangles * sizeof(TriangleSceneData) << std::endl;
 	outFile.write((char*)&numTriangles, 4);
 	outFile.write((char*)_triangles.data(), numTriangles * sizeof(TriangleSceneData));
 
@@ -147,8 +143,14 @@ bool raytracer::Mesh::loadBvh(const char* fileName)
 {
 	std::string line;
 	std::ifstream inFile;
-	inFile.open(fileName);
+	inFile.open(fileName, std::ios::binary);
 	
+	if (!inFile.is_open())
+	{
+		std::cout << "Cant open bvh file" << std::endl;
+		return false;
+	}
+
 	// Check file format version
 	u32 formatVersion;
 	inFile.read((char*)&formatVersion, 4);
@@ -168,7 +170,7 @@ bool raytracer::Mesh::loadBvh(const char* fileName)
 	u32 numTriangles;
 	inFile.read((char*)&numTriangles, 4);
 	_triangles.resize(numTriangles);
-	inFile.read((char*)_triangles.data(), numTriangles * sizeof(SubBvhNode));
+	inFile.read((char*)_triangles.data(), numTriangles * sizeof(TriangleSceneData));
 
 	inFile.close();
 	return true;
