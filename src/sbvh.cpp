@@ -8,10 +8,11 @@
 #include <glm/gtx/norm.hpp>
 
 #define BVH_SPLITS 8
-#define ALPHA 0.f
-#define COST_INTERSECTION 1
-#define COST_TRAVERSAL 1
-
+#define ALPHA 0.01f
+#define COST_INTERSECTION 1.f
+#define COST_TRAVERSAL 2.f
+#define HI_QUALITY_CLIPS
+//#define NO_UNSPLITTING
 
 template<typename Itr>
 bool checkRange(Itr begin, uint count) {
@@ -75,7 +76,7 @@ u32 raytracer::SbvhBuilder::build(
 	bool result = checkNode(rootIndex);
 	_ASSERT(result);
 	// Subdivide the root node
-	subdivide(rootIndex);
+	subdivide(rootIndex, 0);
 	std::vector<TriangleSceneData> newFaces;
 	std::stack<u32> nodesToVisit;
 	nodesToVisit.push(rootIndex);
@@ -100,18 +101,20 @@ u32 raytracer::SbvhBuilder::build(
 	return rootIndex;
 }
 
-void raytracer::SbvhBuilder::subdivide(u32 nodeId)
+void raytracer::SbvhBuilder::subdivide(u32 nodeId, u32 level)
 {
-	if ((*_bvh_nodes)[nodeId].triangleCount < 4)
+	if ((*_bvh_nodes)[nodeId].triangleCount <= 4)
 		return;
+
+	if (level > log2(_triangles->size())) return;
 
 	if (partition(nodeId)) {// Divides our triangles over our children and calculates their bounds
 		u32 leftIndex = (*_bvh_nodes)[nodeId].leftChildIndex;
 		_ASSERT(leftIndex > nodeId);
 		_ASSERT(checkNode(leftIndex));
-		subdivide(leftIndex);
+		subdivide(leftIndex, level+1);
 		_ASSERT(checkNode(leftIndex + 1));
-		subdivide(leftIndex + 1);
+		subdivide(leftIndex + 1, level+1);
 	}
 }
 
@@ -144,28 +147,29 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
  		for (u32 split = 0; split < BVH_SPLITS; split++) {
 			float objectSah;
 			bool objectSplitGood = doSingleObjectSplit(nodeId, axis, split, objectSah, localObjectBins.data()) && (objectSah < bestSah);
-			AABB leftBounds, rightBounds;
-			for (u32 bin = 0; bin < split; ++bin)				 leftBounds.fit(localObjectBins[bin].bounds);
-			for (u32 bin = split; bin < BVH_SPLITS; ++bin)		rightBounds.fit(localObjectBins[bin].bounds);
-
-			AABB intersection;
-			bool intersect = true;
-			for (u32 ax = 0; ax < 3; ++ax) {
-				if (leftBounds.min[axis] > rightBounds.max[axis] || rightBounds.min[axis] > leftBounds.max[axis]) {
-					intersect = false;
-					break;
-				}
-			}
-			if (intersect) {
+			bool doSpatialSplit = true;
+			if (objectSplitGood) {
+				AABB leftBounds, rightBounds;
+				for (u32 bin = 0; bin < split; ++bin)				 leftBounds.fit(localObjectBins[bin].bounds);
+				for (u32 bin = split; bin < BVH_SPLITS; ++bin)		rightBounds.fit(localObjectBins[bin].bounds);
+				AABB intersection;
+				bool intersect = true;
 				for (u32 ax = 0; ax < 3; ++ax) {
-					intersection.min[ax] = glm::max(leftBounds.min[ax], rightBounds.min[ax]);
-					intersection.max[ax] = glm::min(leftBounds.max[ax], rightBounds.max[ax]);
+					if (leftBounds.min[axis] > rightBounds.max[axis] || rightBounds.min[axis] > leftBounds.max[axis]) {
+						intersect = false;
+						break;
+					}
 				}
+				if (intersect) {
+					for (u32 ax = 0; ax < 3; ++ax) {
+						intersection.min[ax] = glm::max(leftBounds.min[ax], rightBounds.min[ax]);
+						intersection.max[ax] = glm::min(leftBounds.max[ax], rightBounds.max[ax]);
+					}
+				}
+				doSpatialSplit = intersect && ((intersection.surfaceArea() / node->bounds.surfaceArea()) > ALPHA);
 			}
-
 			FinalSplit left, right;
 			float spatialSah;
-			bool doSpatialSplit = intersect && ((intersection.surfaceArea() / node->bounds.surfaceArea()) > ALPHA);
 			bool spatialSplitGood = doSpatialSplit && doSingleSpatialSplit(nodeId, axis, split, spatialSah, left, right, spatialBins.data()) && (spatialSah < bestSah);
 
 			if (objectSplitGood && (!spatialSplitGood || objectSah < spatialSah)) {
@@ -373,11 +377,15 @@ void raytracer::SbvhBuilder::makeSpatialBins(u32 nodeId, u32 axis, SpatialSplitB
 			_ASSERT(bin_max > bin_min);
 			// add the triangle to the required bins
 			for (int j = bin_min; j <= bin_max; ++j) {
-				AABB triangleBounds = clipTriangleBounds(axis, j/k1 + node->bounds.min[axis], (j + 1)/k1 + node->bounds.min[axis], tri);
+				//AABB triangleBounds = clipTriangleBounds(axis, j/k1 + node->bounds.min[axis], (j + 1)/k1 + node->bounds.min[axis], tri);
 				AABB binBounds = node->bounds;
 				binBounds.max[axis] = (j + 1) / k1 + node->bounds.min[axis];
 				binBounds.min[axis] = (j) / k1 + node->bounds.min[axis];
-				triangleBounds = clipBounds(binBounds, node->bounds);
+#ifdef HI_QUALITY_CLIPS
+				AABB triangleBounds = clipTriangleBounds(binBounds, tri);
+#else
+				AABB triangleBounds = clipBounds(binBounds, bounds);
+#endif
 				SpatialSplitRef newRef;
 				newRef.triangleIndex = triangleId;
 				newRef.clippedBounds = triangleBounds;
@@ -426,9 +434,9 @@ bool raytracer::SbvhBuilder::doSingleObjectSplit(u32 nodeId, u32 axis, u32 split
 
 	outSah = triangleCountLeft * surfaceAreaLeft + triangleCountRight * surfaceAreaRight;
 	return triangleCountLeft > 0
-		&& triangleCountRight > 0;
-		//&& glm::length(leftAABB.size()) > 0
-		//&& glm::length(rightAABB.size()) > 0;
+		&& triangleCountRight > 0
+		&& glm::length(leftAABB.size()) > 0
+		&& glm::length(rightAABB.size()) > 0;
 }
 
 bool raytracer::SbvhBuilder::doSingleSpatialSplit(u32 nodeId, u32 axis, u32 split, float& sah, FinalSplit& outLeft, FinalSplit& outRight, SpatialSplitBin* spatialSplits)
@@ -466,7 +474,9 @@ bool raytracer::SbvhBuilder::doSingleSpatialSplit(u32 nodeId, u32 axis, u32 spli
 
 	// unsplitting
 	for (u32 tri : splitTriangles) {
+#ifdef NO_UNSPLITTING
 		continue;
+#endif
 		AABB triangleBounds = clipBounds(_aabbs[tri], node->bounds);
 		AABB leftBoundsUnsplit = left.bounds;
 		leftBoundsUnsplit.fit(triangleBounds);
@@ -493,14 +503,16 @@ bool raytracer::SbvhBuilder::doSingleSpatialSplit(u32 nodeId, u32 axis, u32 spli
 	for (u32 tri : _node_triangle_list[nodeId]) {
 		_ASSERT((left.triangles.find(tri) != left.triangles.end()) || (right.triangles.find(tri) != right.triangles.end()));
 	}
+
+	
 	_ASSERT(left.triangles.size() + right.triangles.size() >= node->triangleCount);
 	sah = right.triangles.size() * right.bounds.surfaceArea() + left.triangles.size() * left.bounds.surfaceArea();
 	outLeft = std::move(left);
 	outRight = std::move(right);
 	return outLeft.triangles.size() > 0
-		&& outRight.triangles.size() > 0;
-		//&& glm::length2(outLeft.bounds.size()) > 0
-		//&& glm::length2(outRight.bounds.size()) > 0;
+		&& outRight.triangles.size() > 0
+		&& glm::length2(outLeft.bounds.size()) > 0
+		&& glm::length2(outRight.bounds.size()) > 0;
 }
 
 raytracer::AABB raytracer::SbvhBuilder::clipTriangleBounds(u32 axis, float left, float right, u32 triangleId) {
@@ -572,3 +584,60 @@ bool raytracer::SbvhBuilder::checkNode(u32 nodeId)
 	return glm::length(node->bounds.size()) > 0; //&& checkRange(begin, node->triangleCount);
 }
 
+raytracer::AABB raytracer::SbvhBuilder::clipTriangleBounds(AABB bounds, u32 triangleId) {
+	std::vector<glm::vec3> v(3); // base triangle vertices
+	v[0] = (glm::vec3) (*_vertices)[(*_triangles)[triangleId].indices[0]].vertex;
+	v[1] = (glm::vec3) (*_vertices)[(*_triangles)[triangleId].indices[1]].vertex;
+	v[2] = (glm::vec3) (*_vertices)[(*_triangles)[triangleId].indices[2]].vertex;
+	std::vector<glm::vec3> newV;
+	// every segment is represented as v[i] + e[i] * t. We find t.
+	for (u32 axis = 0; axis < 3; ++axis) for (u32 p = 0; p < 2; ++p) {
+		bool minNotMax = p == 0;
+		glm::vec3 plane_normal(0);
+		plane_normal[axis] = 1.f;
+		std::vector<u8> insideV(v.size());
+		float left = bounds.min[axis];
+		float right = bounds.max[axis];
+		for (u32 i = 0; i < v.size(); ++i) {
+			if (minNotMax) {
+				insideV[i] = v[i][axis] >= left;
+			}
+			else {
+				insideV[i] = v[i][axis] <= right;
+			}
+		}
+		for (u32 i = 0; i < v.size(); ++i) {
+			int prevI = (i == 0) ? (v.size() - 1) : (i - 1);
+			if ((insideV[i] && !insideV[prevI]) || (insideV[prevI] && !insideV[i])) {
+				auto e = v[i] - v[prevI];
+				// do line plane intersection
+				float mag = glm::length(e);
+				auto normal = e / mag;
+				float denom = glm::dot(plane_normal, normal);
+				if (abs(denom) > 0)
+				{
+					float offset = minNotMax ? left : right;
+					float t = -(v[i][axis] - offset) / denom;
+					auto new_v = v[i] + normal * t;
+					_ASSERT(abs(new_v[axis] - offset) < 0.0001f);
+					newV.push_back(new_v);
+				}
+			}
+			if (insideV[i]) {
+				newV.push_back(v[i]);
+			}
+		}
+		v = std::move(newV);
+		newV.clear();
+	}
+	glm::vec3 min = glm::vec3(std::numeric_limits<float>::max());// Work around bug in glm
+	glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest());// Work around bug in glm
+	for (u32 i = 0; i < v.size(); ++i) for (u32 ax = 0; ax < 3; ++ax) {
+		min[ax] = glm::min(min[ax], v[i][ax]);
+		max[ax] = glm::max(max[ax], v[i][ax]);
+	}
+	AABB triangleBounds;
+	triangleBounds.min = min;
+	triangleBounds.max = max;
+	return triangleBounds;
+}

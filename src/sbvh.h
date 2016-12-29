@@ -44,7 +44,7 @@ namespace raytracer {
 			std::vector<TriangleSceneData>& triangles,
 			std::vector<SubBvhNode>& outBvhNodes);// BVH may change this
 	private:
-		void subdivide(u32 nodeId);
+		void subdivide(u32 nodeId, u32 level);
 		bool partition(u32 nodeId);
 		AABB createBounds(u32 triangleIndex);
 		u32 allocateNodePair();
@@ -53,6 +53,7 @@ namespace raytracer {
 		bool doSingleObjectSplit(u32 nodeId, u32 axis, u32 split, float& sah, ObjectBin* bins);
 		bool doSingleSpatialSplit(u32 nodeId, u32 axis, u32 split, float& sah, FinalSplit& outLeft, FinalSplit& outRight, SpatialSplitBin* bins);
 		raytracer::AABB clipTriangleBounds(u32 axis, float left, float right, u32 triangleId);
+		raytracer::AABB clipTriangleBounds(AABB bounds, u32 triangleId);
 		bool checkNode(u32 nodeId);
 	public:
 		u32 _totalSplits;
