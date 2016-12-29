@@ -280,7 +280,7 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 	// set this node as not a leaf anymore
 	node->triangleCount = 0;
 	node->leftChildIndex = leftIndex;
-	_node_triangle_list[nodeId].clear();
+	_node_triangle_list[nodeId];
 	_ASSERT((*_bvh_nodes)[nodeId].leftChildIndex == leftIndex);
 	_ASSERT(node->leftChildIndex > nodeId);
 
