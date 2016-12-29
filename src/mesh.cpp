@@ -142,7 +142,11 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 		}
 	}
 
+	std::cout << "starting bvh build..." << std::endl;
 	// Create a BVH for the mesh
 	SbvhBuilder bvhBuilder;
 	_bvh_root_node = bvhBuilder.build(_vertices, _triangles, _bvh_nodes);
+	std::cout << "bvh build finished!\ntotal nodes: " << bvhBuilder._totalNodes
+		<< "\ntotal splits: " << bvhBuilder._totalSplits
+		<< "\nspatial splits: " << bvhBuilder._spatialSplits << std::endl;
 }

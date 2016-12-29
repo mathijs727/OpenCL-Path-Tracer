@@ -48,19 +48,23 @@ namespace raytracer {
 		bool partition(u32 nodeId);
 		AABB createBounds(u32 triangleIndex);
 		u32 allocateNodePair();
+		void makeObjectBins(u32 nodeId, u32 axis, ObjectBin* bins);
+		void makeSpatialBins(u32 nodeId, u32 axis, SpatialSplitBin* bins);
+		bool doSingleObjectSplit(u32 nodeId, u32 axis, u32 split, float& sah, ObjectBin* bins);
+		bool doSingleSpatialSplit(u32 nodeId, u32 axis, u32 split, float& sah, FinalSplit& outLeft, FinalSplit& outRight, SpatialSplitBin* bins);
+		raytracer::AABB clipTriangleBounds(u32 axis, float left, float right, u32 triangleId);
+		bool checkNode(u32 nodeId);
+	public:
+		u32 _totalSplits;
+		u32 _spatialSplits;
+		u32 _totalNodes;
 	private:
 		// Used during binned BVH construction
 		std::vector<TriangleSceneData>* _triangles;
 		std::vector<VertexSceneData>* _vertices;
 		std::vector<SubBvhNode>* _bvh_nodes;
+		std::vector<std::vector<u32>> _node_triangle_list;
 		std::vector<glm::vec3> _centres;
 		std::vector<AABB> _aabbs;
-		std::vector<u32> _secondaryIndexBuffer;
-		void makeObjectBins(SubBvhNode* node, u32 axis, ObjectBin* bins);
-		void makeSpatialBins(SubBvhNode* node, u32 axis, SpatialSplitBin* bins);
-		bool doSingleObjectSplit(SubBvhNode* node, u32 axis, u32 split, float& sah, ObjectBin* bins);
-		bool doSingleSpatialSplit(SubBvhNode* node, u32 axis, u32 split, float& sah, FinalSplit& outLeft, FinalSplit& outRight, SpatialSplitBin* bins);
-		raytracer::AABB clipTriangleBounds(u32 axis, float left, float right, u32 triangleId);
-		bool checkNode(u32 nodeId);
 	};
 }
