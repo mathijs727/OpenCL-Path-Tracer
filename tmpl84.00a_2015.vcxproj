@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="src\binned_bvh.cpp" />
     <ClCompile Include="src\bvh_test.cpp" />
+    <ClCompile Include="src\fast_binned_bvh.cpp" />
     <ClCompile Include="src\mesh_sequence.cpp" />
     <ClCompile Include="src\refit_bvh.cpp" />
     <ClCompile Include="src\sbvh.cpp" />
@@ -41,6 +42,7 @@
     <ClInclude Include="src\aabb.h" />
     <ClInclude Include="src\binned_bvh.h" />
     <ClInclude Include="src\bvh_test.h" />
+    <ClInclude Include="src\fast_binned_bvh.h" />
     <ClInclude Include="src\imesh.h" />
     <ClInclude Include="src\mesh_sequence.h" />
     <ClInclude Include="src\refit_bvh.h" />

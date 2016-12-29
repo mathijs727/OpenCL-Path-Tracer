@@ -1,4 +1,4 @@
-#include "binned_bvh.h"
+#include "fast_binned_bvh.h"
 #include <array>
 #include <numeric>
 #include <algorithm>
@@ -8,7 +8,7 @@
 
 using namespace raytracer;
 
-u32 raytracer::BinnedBvhBuilder::build(
+u32 raytracer::FastBinnedBvhBuilder::build(
 	std::vector<VertexSceneData>& vertices,
 	std::vector<TriangleSceneData>& triangles,
 	std::vector<SubBvhNode>& outBvhNodes)
@@ -59,7 +59,7 @@ u32 raytracer::BinnedBvhBuilder::build(
 	return rootIndex;
 }
 
-u32 raytracer::BinnedBvhBuilder::allocateNodePair()
+u32 raytracer::FastBinnedBvhBuilder::allocateNodePair()
 {
 	u32 index = _bvh_nodes->size();
 	_bvh_nodes->emplace_back();
@@ -67,7 +67,7 @@ u32 raytracer::BinnedBvhBuilder::allocateNodePair()
 	return index;
 }
 
-void raytracer::BinnedBvhBuilder::subdivide(u32 nodeId)
+void raytracer::FastBinnedBvhBuilder::subdivide(u32 nodeId)
 {
 	if ((*_bvh_nodes)[nodeId].triangleCount < 4)
 		return;
@@ -78,92 +78,92 @@ void raytracer::BinnedBvhBuilder::subdivide(u32 nodeId)
 	}
 }
 
-bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
+bool raytracer::FastBinnedBvhBuilder::partition(u32 nodeId)
 {
 	// Use pointer because references are not reassignable (we need to reassign after allocation)
 	auto* node = &(*_bvh_nodes)[nodeId];
 
 	// Split along the widest axis
+	uint axis = -1;
+	float minAxisWidth = 0.0f;
 	glm::vec3 extents = node->bounds.max - node->bounds.min;
+	for (int i = 0; i < 3; i++)
+	{
+		if (extents[i] > minAxisWidth)
+		{
+			minAxisWidth = extents[i];
+			axis = i;
+		}
+	}
 
-	std::array<uint, BVH_SPLITS> binTriangleCount[3];
-	std::array<AABB, BVH_SPLITS> binAABB[3];
+	std::array<uint, BVH_SPLITS> binTriangleCount;
+	std::array<AABB, BVH_SPLITS> binAABB;
+
+	for (int i = 0; i < BVH_SPLITS; i++)
+		binTriangleCount[i] = 0;
 
 	u32 localFirstTriangleIndex = node->firstTriangleIndex;
-	const u32 end = localFirstTriangleIndex + node->triangleCount;
 
-	uint bestAxis = -1;
+	// Loop through the triangles and calculate bin dimensions and triangle count
+	const u32 end = localFirstTriangleIndex + node->triangleCount;
+	float k1 = BVH_SPLITS / extents[axis] * 0.9999f;// Prevents the bin out of bounds (if centroid on the right bound)
+	for (u32 i = localFirstTriangleIndex; i < end; i++)
+	{
+		// Calculate the bin ID as described in the paper
+		float x = k1 * (_centres[i][axis] - node->bounds.min[axis]);
+		int bin = static_cast<int>(x);
+
+		binTriangleCount[bin]++;
+		binAABB[bin].fit(_aabbs[i]);
+	}
+
+	// Determine for which bin the SAH is the lowest
 	float bestSAH = std::numeric_limits<float>::max();
 	int bestSplit = -1;
-	for (u32 axis = 0; axis < 3; ++axis)
+	for (int split = 1; split < BVH_SPLITS; split++)
 	{
-		if (extents[axis] < 0.001f) continue;
-
-		for (int i = 0; i < BVH_SPLITS; i++)
-			binTriangleCount[axis][i] = 0;
-
-		// Loop through the triangles and calculate bin dimensions and triangle count
-		float k1 = BVH_SPLITS / extents[axis] * 0.9999f;// Prevents the bin out of bounds (if centroid on the right bound)
-		for (u32 i = localFirstTriangleIndex; i < end; i++)
+		// Calculate the triangle count and surface area of the AABB to the left of the possible split
+		int triangleCountLeft = 0;
+		float surfaceAreaLeft = 0.0f;
 		{
-			// Calculate the bin ID as described in the paper
-			float x = k1 * (_centres[i][axis] - node->bounds.min[axis]);
-			int bin = static_cast<int>(x);
-
-			binTriangleCount[axis][bin]++;
-			binAABB[axis][bin].fit(_aabbs[i]);
+			AABB leftAABB;
+			for (int leftBin = 0; leftBin < split; leftBin++)
+			{
+				triangleCountLeft += binTriangleCount[leftBin];
+				if (binTriangleCount[leftBin] > 0)
+					leftAABB.fit(binAABB[leftBin]);
+			}
+			surfaceAreaLeft = leftAABB.surfaceArea();
 		}
 
-		// Determine for which bin the SAH is the lowest
-		
-		for (int split = 1; split < BVH_SPLITS; split++)
+		// Calculate the triangle count and surface area of the AABB to the right of the possible split
+		int triangleCountRight = 0;
+		float surfaceAreaRight = 0.0f;
 		{
-			// Calculate the triangle count and surface area of the AABB to the left of the possible split
-			int triangleCountLeft = 0;
-			float surfaceAreaLeft = 0.0f;
+			AABB rightAABB;
+			for (int rightBin = split; rightBin < BVH_SPLITS; rightBin++)
 			{
-				AABB leftAABB;
-				for (int leftBin = 0; leftBin < split; leftBin++)
-				{
-					triangleCountLeft += binTriangleCount[axis][leftBin];
-					if (binTriangleCount[axis][leftBin] > 0)
-						leftAABB.fit(binAABB[axis][leftBin]);
-				}
-				surfaceAreaLeft = leftAABB.surfaceArea();
+				triangleCountRight += binTriangleCount[rightBin];
+				if (binTriangleCount[rightBin] > 0)
+					rightAABB.fit(binAABB[rightBin]);
 			}
+			surfaceAreaRight = rightAABB.surfaceArea();
+		}
 
-			// Calculate the triangle count and surface area of the AABB to the right of the possible split
-			int triangleCountRight = 0;
-			float surfaceAreaRight = 0.0f;
-			{
-				AABB rightAABB;
-				for (int rightBin = split; rightBin < BVH_SPLITS; rightBin++)
-				{
-					triangleCountRight += binTriangleCount[axis][rightBin];
-					if (binTriangleCount[axis][rightBin] > 0)
-						rightAABB.fit(binAABB[axis][rightBin]);
-				}
-				surfaceAreaRight = rightAABB.surfaceArea();
-			}
-
-			float SAH = triangleCountLeft * surfaceAreaLeft + triangleCountRight * surfaceAreaRight;
-			if (SAH < bestSAH && triangleCountLeft > 0 && triangleCountRight > 0)
-			{
-				bestSAH = SAH;
-				bestSplit = split;
-				bestAxis = axis;
-			}
+		float SAH = triangleCountLeft * surfaceAreaLeft + triangleCountRight * surfaceAreaRight;
+		if (SAH < bestSAH && triangleCountLeft > 0 && triangleCountRight > 0)
+		{
+			bestSAH = SAH;
+			bestSplit = split;
 		}
 	}
 
 	// Dont split if we cannot find a split (if all triangles have there center in one bin for example)
-	if (bestAxis == -1)
+	if (bestSplit == -1)
 		return false;
 
-	u32 axis = bestAxis;
 	// Partition the array around the bin pivot
 	// http://www.inf.fh-flensburg.de/lang/algorithmen/sortieren/quick/quicken.htm
-	float k1 = BVH_SPLITS / extents[axis] * 0.9999f;
 	u32 i = localFirstTriangleIndex;
 	u32 j = end - 1;
 	while (i < j)
@@ -210,9 +210,9 @@ bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
 	lNode.bounds = AABB();
 	for (int bin = 0; bin < bestSplit; bin++)
 	{
-		lNode.triangleCount += binTriangleCount[axis][bin];
-		if (binTriangleCount[axis][bin] > 0)
-			lNode.bounds.fit(binAABB[axis][bin]);
+		lNode.triangleCount += binTriangleCount[bin];
+		if (binTriangleCount[bin] > 0)
+			lNode.bounds.fit(binAABB[bin]);
 	}
 
 	auto& rNode = (*_bvh_nodes)[leftIndex + 1];
@@ -221,8 +221,8 @@ bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
 	rNode.bounds = AABB();
 	for (int bin = bestSplit; bin < BVH_SPLITS; bin++)
 	{
-		if (binTriangleCount[axis][bin] > 0)
-			rNode.bounds.fit(binAABB[axis][bin]);
+		if (binTriangleCount[bin] > 0)
+			rNode.bounds.fit(binAABB[bin]);
 	}
 
 	// set this node as not a leaf anymore
@@ -232,7 +232,7 @@ bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
 	return true;// Yes we have split, in the future you may want to decide whether you split or not based on the SAH
 }
 
-AABB raytracer::BinnedBvhBuilder::createBounds(const TriangleSceneData& triangle)
+AABB raytracer::FastBinnedBvhBuilder::createBounds(const TriangleSceneData& triangle)
 {
 	glm::vec3 min = glm::vec3(std::numeric_limits<float>::max());// Work around bug in glm
 	glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest());// Work around bug in glm
@@ -252,3 +252,4 @@ AABB raytracer::BinnedBvhBuilder::createBounds(const TriangleSceneData& triangle
 	result.max = max;
 	return result;
 }
+

@@ -49,6 +49,9 @@
     <ClCompile Include="src\refit_bvh.cpp">
       <Filter>bvh</Filter>
     </ClCompile>
+    <ClCompile Include="src\fast_binned_bvh.cpp">
+      <Filter>bvh</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
@@ -112,6 +115,9 @@
     </ClInclude>
     <ClInclude Include="src\texture.h" />
     <ClInclude Include="src\refit_bvh.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fast_binned_bvh.h">
       <Filter>bvh</Filter>
     </ClInclude>
   </ItemGroup>
