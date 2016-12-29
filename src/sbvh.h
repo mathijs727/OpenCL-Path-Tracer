@@ -2,9 +2,24 @@
 
 #include "types.h"
 #include <vector>
-#include <set>
+#include <unordered_set>
+#include <unordered_map>
 #include "aabb.h"
 #include "vertices.h"
+
+namespace raytracer {
+	struct SpatialSplitRef {
+		u32 triangleIndex;
+		AABB clippedBounds;
+		bool operator == (const SpatialSplitRef& other) const { return triangleIndex == other.triangleIndex; }
+	};
+}
+
+namespace std {
+	template <> struct hash<raytracer::SpatialSplitRef> {
+		size_t operator() (const raytracer::SpatialSplitRef& x) const { return hash<int>()(x.triangleIndex); }
+	};
+}
 
 namespace raytracer {
 
@@ -12,28 +27,24 @@ namespace raytracer {
 	struct SceneNode;
 	struct SubBvhNode;
 
+	struct ObjectBin {
+		u32 triangleCount;
+		AABB bounds;
+		ObjectBin(u32 triangleCount = 0, AABB bounds = AABB()) : triangleCount(triangleCount), bounds(bounds) {}
+	};
+
+	struct SpatialSplitBin {
+		AABB bounds;
+		std::vector<SpatialSplitRef> refs;
+	};
+
+	struct FinalSplit {
+		AABB bounds;
+		std::unordered_map<u32, AABB> trianglesAABB;
+	};
+
 	class SbvhBuilder
 	{
-		struct ObjectBin {
-			u32 triangleCount;
-			AABB bounds;
-			ObjectBin(u32 triangleCount = 0, AABB bounds = AABB()) : triangleCount(triangleCount), bounds(bounds) {}
-		};
-
-		struct SpatialSplitRef {
-			u32 triangleIndex;
-			AABB clippedBounds;
-		};
-
-		struct SpatialSplitBin {
-			AABB bounds;
-			std::vector<SpatialSplitRef> refs;
-		};
-
-		struct FinalSplit {
-			AABB bounds;
-			std::set<u32> triangles;
-		};
 
 	public:
 		SbvhBuilder() { };
