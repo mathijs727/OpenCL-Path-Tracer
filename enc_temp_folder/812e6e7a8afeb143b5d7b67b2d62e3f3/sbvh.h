@@ -63,6 +63,7 @@ namespace raytracer {
 		void makeSpatialBins(u32 nodeId, u32 axis, SpatialSplitBin* bins);
 		bool doSingleObjectSplit(u32 nodeId, u32 axis, u32 split, float& sah, ObjectBin* bins);
 		bool doSingleSpatialSplit(u32 nodeId, u32 axis, u32 split, float& sah, FinalSplit& outLeft, FinalSplit& outRight, SpatialSplitBin* bins);
+		raytracer::AABB clipTriangleBounds(u32 axis, float left, float right, u32 triangleId);
 		raytracer::AABB clipTriangleBounds(AABB bounds, u32 triangleId);
 		bool checkNode(u32 nodeId);
 	public:

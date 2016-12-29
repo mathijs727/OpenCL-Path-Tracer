@@ -280,7 +280,7 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 	// set this node as not a leaf anymore
 	node->triangleCount = 0;
 	node->leftChildIndex = leftIndex;
-	_node_triangle_list[nodeId].clear();
+	_node_triangle_list[nodeId];
 	_ASSERT((*_bvh_nodes)[nodeId].leftChildIndex == leftIndex);
 	_ASSERT(node->leftChildIndex > nodeId);
 
@@ -513,6 +513,68 @@ bool raytracer::SbvhBuilder::doSingleSpatialSplit(u32 nodeId, u32 axis, u32 spli
 		&& outLeft.bounds.surfaceArea() > 0
 		&& outRight.bounds.surfaceArea() > 0;
 }
+
+raytracer::AABB raytracer::SbvhBuilder::clipTriangleBounds(u32 axis, float left, float right, u32 triangleId) {
+	_ASSERT(right >= left);
+	//
+	//AABB bounds = _aabbs[triangleId];
+	//bounds.min[axis] = glm::max(bounds.min[axis], left);
+	//bounds.max[axis] = glm::min(bounds.max[axis], right);
+	//return bounds;
+
+	std::vector<glm::vec3> clipped_vertices;
+
+	glm::vec3 v[3]; // base triangle vertices
+	v[0] = (glm::vec3) (*_vertices)[(*_triangles)[triangleId].indices[0]].vertex;
+	v[1] = (glm::vec3) (*_vertices)[(*_triangles)[triangleId].indices[1]].vertex;
+	v[2] = (glm::vec3) (*_vertices)[(*_triangles)[triangleId].indices[2]].vertex;
+
+	for (auto& vertex : v) {
+		if (vertex[axis] >= left && vertex[axis] <= right) clipped_vertices.push_back(vertex);
+	}
+
+	glm::vec3 e[3]; // base triangle edges
+	e[0] = v[1] - v[0];
+	e[1] = v[2] - v[1];
+	e[2] = v[0] - v[2];
+
+	// every segment is represented as v[i] + e[i] * t. We find t.
+	for (u32 i = 0; i < 3; ++i) {
+		// do line plane intersection
+		glm::vec3 plane_normal(0);
+		plane_normal[axis] = 1.f;
+		float mag = glm::length(e[i]);
+		auto normal = e[i] / mag;
+		float denom = glm::dot(plane_normal, normal);
+		if (abs(denom) > 0.0001f)
+		{
+			float t;
+			t = -(glm::dot(v[i], plane_normal) - left) / denom;
+			if (t >= 0.f && t <= mag) {
+				auto new_v = v[i] + normal * t;
+				//_ASSERT(new_v[axis] >= left - 0.0001f && new_v[axis] <= right + 0.0001f);
+				clipped_vertices.push_back(new_v);
+			}
+			t = -(glm::dot(v[i], plane_normal) - right) / denom;
+			if (t >= 0.f && t <= mag) {
+				auto new_v = v[i] + normal * t;
+				//_ASSERT(new_v[axis] >= left - 0.0001f && new_v[axis] <= right + 0.0001f);
+				clipped_vertices.push_back(new_v);
+			}
+		}
+	}
+	glm::vec3 min = glm::vec3(std::numeric_limits<float>::max());// Work around bug in glm
+	glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest());// Work around bug in glm
+	for (u32 i = 0; i < clipped_vertices.size(); ++i) {
+		min = glm::min(min, clipped_vertices[i]);
+		max = glm::max(max, clipped_vertices[i]);
+	}
+	AABB triangleBounds;
+	triangleBounds.min = min;
+	triangleBounds.max = max;
+	return triangleBounds;
+}
+
 
 bool raytracer::SbvhBuilder::checkNode(u32 nodeId)
 {
