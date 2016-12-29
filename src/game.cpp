@@ -31,22 +31,22 @@ void Game::Init()
 
 	{
 		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(-3, 1, 0));
-		//_scene->add_light(light);
+		_scene->add_light(light);
 	}
 	{
 		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(5, 1,0));
-		//_scene->add_light(light);
+		_scene->add_light(light);
 	}
 	{
 		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(-1, -1, -1));
-		_scene->add_light(light);
+		//_scene->add_light(light);
 	}
 	{
 		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(0, -1, 0));
-		_scene->add_light(light);
+		//_scene->add_light(light);
 	}
 
-	Transform smallTransform;
+	/*Transform smallTransform;
 	smallTransform.scale = glm::vec3(0.5f);
 	auto plane = std::make_shared<Mesh>();
 	plane->loadFromFile("assets/3dmodels/plane/plane.obj", Transform(glm::vec3(-7.0f, -0.5f, -7.0f)));
@@ -56,31 +56,34 @@ void Game::Init()
 	cube->loadFromFile( "assets/3dmodels/cube/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
 	_scene->add_node(cube, smallTransform);
 
-	auto monkey = std::make_shared<Mesh>();
-	monkey->loadFromFile("assets/3dmodels/monkey.obj");
-	_scene->add_node(monkey);
-
-	/*Transform enlargeTransform;
+	Transform enlargeTransform;
 	enlargeTransform.scale = glm::vec3(10);
 	enlargeTransform.location = glm::vec3(0, 0, 0);
 	auto bunny = std::make_shared<Mesh>();
 	bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
 	_scene->add_node(bunny, enlargeTransform);*/
 	
-	/*Transform smallTransform;
-	smallTransform.scale = glm::vec3(0.005f);
-	auto sponza = std::make_shared<Mesh>();
-	sponza->loadFromFile("assets/3dmodels/sponza-crytek/sponza.obj");
-	_scene->add_node(sponza, smallTransform);*/
+	{
+		Transform transform;
+		transform.scale = glm::vec3(0.005f);
+		auto sponza = std::make_shared<Mesh>();
+		sponza->loadFromFile("assets/3dmodels/sponza-crytek/sponza.obj");
+		_scene->add_node(sponza, transform);
+	}
+
+	{
+		Transform transform;
+		transform.scale = glm::vec3(0.5f);
+		transform.location = glm::vec3(0, 0.5f, 0);
+		auto cube = std::make_shared<Mesh>();
+		cube->loadFromFile("assets/3dmodels/cube/cube.obj");
+		_cube_scene_node = &_scene->add_node(cube, transform);
+	}
 	
 	/*_animatedHeli = std::make_shared<MeshSequence>();
 	_animatedHeli->loadFromFiles("assets/3dmodels/heli/Helicopter_UH60_%04d.obj", true);
 	_scene->add_node(_animatedHeli);
 	//_animatedHeli->goToNextFrame();*/
-
-	/*auto heli = std::make_shared<Mesh>();
-	heli->loadFromFile("assets/3dmodels/heli/Helicopter_UH60_0000.obj");
-	_scene->add_node(heli);*/
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
@@ -115,12 +118,13 @@ void Game::Tick( float dt )
 	/*if (t > 2 * PI)
 		t -= 2 * PI;*/
 
-	//_monkey_scene_node->transform.orientation = glm::angleAxis(t, glm::vec3(0,1,0));
-	if (t > 1.0f)
+	_cube_scene_node->transform.orientation = glm::angleAxis(t, glm::vec3(0,1,0));
+	
+	/*if (t > 1.0f)// Move to next animation frame every second
 	{
-		//_animatedHeli->goToNextFrame();
+		_animatedHeli->goToNextFrame();
 		t -= 1.0f;
-	}
+	}*/
 
 	_ray_tracer->RayTrace(*_camera);
 	_out.Render();

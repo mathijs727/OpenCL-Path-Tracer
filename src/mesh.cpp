@@ -40,7 +40,7 @@ inline std::string getPath(const std::string& str)
 
 inline bool fileExists(const std::string& name) {
 	std::ifstream f(name.c_str());
-	return f.good();
+	return f.good() && f.is_open();
 }
 
 
