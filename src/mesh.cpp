@@ -9,6 +9,7 @@
 #include "template/surface.h"
 #include "sbvh.h"
 #include <string>
+#include <fstream>
 
 using namespace raytracer;
 
@@ -37,6 +38,10 @@ inline std::string getPath(const std::string& str)
 	return str.substr(0, found) + "/";
 }
 
+inline bool fileExists(const std::string& name) {
+	std::ifstream f(name.c_str());
+	return f.good();
+}
 
 
 void raytracer::Mesh::addSubMesh(
@@ -107,6 +112,39 @@ void raytracer::Mesh::addSubMesh(
 	}
 }
 
+void raytracer::Mesh::storeBvh(const char* fileName)
+{
+	std::ofstream outFile;
+	outFile.open(fileName, std::ios::out | std::ios::binary);
+
+	outFile.write((char*)&_bvh_root_node, 4);
+
+	u32 numNodes = (u32)_bvh_nodes.size();
+	outFile.write((char*)&numNodes, 4);
+
+	outFile.write((char*)_bvh_nodes.data(), numNodes * sizeof(SubBvhNode));
+
+	outFile << std::endl;
+	outFile.close();
+}
+
+void raytracer::Mesh::loadBvh(const char* fileName)
+{
+	std::string line;
+	std::ifstream inFile;
+	inFile.open(fileName);
+	
+	inFile.read((char*)&_bvh_root_node, 4);
+
+	u32 numNodes;
+	inFile.read((char*)&numNodes, 4);
+	_bvh_nodes.resize(numNodes);
+	
+	inFile.read((char*)_bvh_nodes.data(), numNodes * sizeof(SubBvhNode));
+
+	inFile.close();
+}
+
 void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 	struct StackElement
 	{
@@ -142,11 +180,23 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 		}
 	}
 
-	std::cout << "starting bvh build..." << std::endl;
-	// Create a BVH for the mesh
-	SbvhBuilder bvhBuilder;
-	_bvh_root_node = bvhBuilder.build(_vertices, _triangles, _bvh_nodes);
-	std::cout << "bvh build finished!\ntotal nodes: " << bvhBuilder._totalNodes
-		<< "\ntotal splits: " << bvhBuilder._totalSplits
-		<< "\nspatial splits: " << bvhBuilder._spatialSplits << std::endl;
+	std::string bvhFileName = file;
+	bvhFileName += ".bvh";
+	if (fileExists(bvhFileName))
+	{
+		std::cout << "Loading bvh from file: " << bvhFileName << std::endl;
+		loadBvh(bvhFileName.c_str());
+	}
+	else {
+		std::cout << "Starting bvh build..." << std::endl;
+		// Create a BVH for the mesh
+		SbvhBuilder bvhBuilder;
+		_bvh_root_node = bvhBuilder.build(_vertices, _triangles, _bvh_nodes);
+		/*std::cout << "bvh build finished!\ntotal nodes: " << bvhBuilder._totalNodes
+			<< "\ntotal splits: " << bvhBuilder._totalSplits
+			<< "\nspatial splits: " << bvhBuilder._spatialSplits << std::endl;*/
+
+		std::cout << "Storing bvh in file: " << bvhFileName << std::endl;
+		storeBvh(bvhFileName.c_str());
+	}
 }
