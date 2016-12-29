@@ -75,7 +75,7 @@ namespace raytracer {
 		std::vector<TriangleSceneData>* _triangles;
 		std::vector<VertexSceneData>* _vertices;
 		std::vector<SubBvhNode>* _bvh_nodes;
-		std::vector<std::vector<u32>> _node_triangle_list;
+		std::vector<std::unordered_map<u32, AABB>> _node_triangle_list;
 		std::vector<glm::vec3> _centres;
 		std::vector<AABB> _aabbs;
 	};
