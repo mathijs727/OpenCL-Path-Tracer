@@ -31,19 +31,19 @@ void Game::Init()
 
 	{
 		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(-3, 1, 0));
-		_scene->add_light(light);
+		//_scene->add_light(light);
 	}
 	{
 		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(5, 1,0));
-		_scene->add_light(light);
+		//_scene->add_light(light);
 	}
 	{
 		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(-1, -1, -1));
-		//_scene->add_light(light);
+		_scene->add_light(light);
 	}
 	{
 		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(0, -1, 0));
-		//_scene->add_light(light);
+		_scene->add_light(light);
 	}
 
 	Transform smallTransform;
@@ -56,26 +56,27 @@ void Game::Init()
 	cube->loadFromFile( "assets/3dmodels/cube/cube.obj");// , Transform(glm::vec3(6.f, 0.f, 7.f)));
 	_scene->add_node(cube, smallTransform);
 
-	Transform enlargeTransform;
+	auto monkey = std::make_shared<Mesh>();
+	monkey->loadFromFile("assets/3dmodels/monkey.obj");
+	_scene->add_node(monkey);
+
+	/*Transform enlargeTransform;
 	enlargeTransform.scale = glm::vec3(10);
 	enlargeTransform.location = glm::vec3(0, 0, 0);
 	auto bunny = std::make_shared<Mesh>();
 	bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
-	_scene->add_node(bunny, enlargeTransform);
-	/*
-	Transform smallTransform;
+	_scene->add_node(bunny, enlargeTransform);*/
+	
+	/*Transform smallTransform;
 	smallTransform.scale = glm::vec3(0.005f);
 	auto sponza = std::make_shared<Mesh>();
 	sponza->loadFromFile("assets/3dmodels/sponza-crytek/sponza.obj");
-	_scene->add_node(sponza, smallTransform);
-	*/
-	//BvhTester bvhTest = BvhTester(sponza);
-	//bvhTest.test();
-
+	_scene->add_node(sponza, smallTransform);*/
+	
 	/*_animatedHeli = std::make_shared<MeshSequence>();
 	_animatedHeli->loadFromFiles("assets/3dmodels/heli/Helicopter_UH60_%04d.obj", true);
-	_scene->add_node(_animatedHeli);*/
-	//_animatedHeli->goToNextFrame();
+	_scene->add_node(_animatedHeli);
+	//_animatedHeli->goToNextFrame();*/
 
 	/*auto heli = std::make_shared<Mesh>();
 	heli->loadFromFile("assets/3dmodels/heli/Helicopter_UH60_0000.obj");

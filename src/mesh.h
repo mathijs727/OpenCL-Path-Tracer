@@ -39,7 +39,7 @@ private:
 	void addSubMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix, const char* texturePath);
 
 	void storeBvh(const char* fileName);
-	void loadBvh(const char* fileName);
+	bool loadBvh(const char* fileName);
 private:
 	std::vector<VertexSceneData> _vertices;
 	std::vector<TriangleSceneData> _triangles;

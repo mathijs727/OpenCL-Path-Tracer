@@ -112,37 +112,66 @@ void raytracer::Mesh::addSubMesh(
 	}
 }
 
+const u32 BVH_FILE_FORMAT_VERSION = 1;
+
 void raytracer::Mesh::storeBvh(const char* fileName)
 {
 	std::ofstream outFile;
 	outFile.open(fileName, std::ios::out | std::ios::binary);
 
+	// File format version
+	outFile.write((char*)&BVH_FILE_FORMAT_VERSION, 4);
+
+	// BVH root node index
 	outFile.write((char*)&_bvh_root_node, 4);
 
+	// BVH nodes
 	u32 numNodes = (u32)_bvh_nodes.size();
 	outFile.write((char*)&numNodes, 4);
-
 	outFile.write((char*)_bvh_nodes.data(), numNodes * sizeof(SubBvhNode));
+	std::cout << "Num nodes: " << numNodes << std::endl;
+	std::cout << "Size of data: " << numNodes * sizeof(SubBvhNode) << std::endl;
+
+	// Triangles
+	u32 numTriangles = (u32)_triangles.size();
+	std::cout << "Num triangles: " << numTriangles << std::endl;
+	std::cout << "Size of data: " << numTriangles * sizeof(TriangleSceneData) << std::endl;
+	outFile.write((char*)&numTriangles, 4);
+	outFile.write((char*)_triangles.data(), numTriangles * sizeof(TriangleSceneData));
 
 	outFile << std::endl;
 	outFile.close();
 }
 
-void raytracer::Mesh::loadBvh(const char* fileName)
+bool raytracer::Mesh::loadBvh(const char* fileName)
 {
 	std::string line;
 	std::ifstream inFile;
 	inFile.open(fileName);
 	
+	// Check file format version
+	u32 formatVersion;
+	inFile.read((char*)&formatVersion, 4);
+	if (formatVersion != BVH_FILE_FORMAT_VERSION)
+		return false;
+
+	// Read root BVH node index
 	inFile.read((char*)&_bvh_root_node, 4);
 
+	// Read BVH nodes
 	u32 numNodes;
 	inFile.read((char*)&numNodes, 4);
 	_bvh_nodes.resize(numNodes);
-	
 	inFile.read((char*)_bvh_nodes.data(), numNodes * sizeof(SubBvhNode));
 
+	// Read triangles
+	u32 numTriangles;
+	inFile.read((char*)&numTriangles, 4);
+	_triangles.resize(numTriangles);
+	inFile.read((char*)_triangles.data(), numTriangles * sizeof(SubBvhNode));
+
 	inFile.close();
+	return true;
 }
 
 void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
@@ -182,12 +211,20 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 
 	std::string bvhFileName = file;
 	bvhFileName += ".bvh";
+	bool buildBvh = true;
 	if (fileExists(bvhFileName))
 	{
 		std::cout << "Loading bvh from file: " << bvhFileName << std::endl;
-		loadBvh(bvhFileName.c_str());
+		if (loadBvh(bvhFileName.c_str()))
+		{
+			buildBvh = false;
+		}
+		else {
+			std::cout << "Unsuppored file format, need to regenerate BVH." << std::endl;
+		}
 	}
-	else {
+	
+	if (buildBvh) {
 		std::cout << "Starting bvh build..." << std::endl;
 		// Create a BVH for the mesh
 		SbvhBuilder bvhBuilder;
