@@ -504,7 +504,7 @@ bool raytracer::SbvhBuilder::doSingleSpatialSplit(u32 nodeId, u32 axis, u32 spli
 		else ++leftRef;
 	}
 	
-	_ASSERT(left.triangles.size() + right.triangles.size() >= node->triangleCount);
+	_ASSERT(left.trianglesAABB.size() + right.trianglesAABB.size() >= node->triangleCount);
 	sah = right.trianglesAABB.size() * right.bounds.surfaceArea() + left.trianglesAABB.size() * left.bounds.surfaceArea();
 	outLeft = std::move(left);
 	outRight = std::move(right);
