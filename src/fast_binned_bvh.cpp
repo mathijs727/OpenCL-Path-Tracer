@@ -39,7 +39,7 @@ u32 raytracer::FastBinnedBvhBuilder::build(
 	u32 rootIndex = allocateNodePair();
 	auto& root = (*_bvh_nodes)[rootIndex];
 	root.firstTriangleIndex = 0;
-	root.triangleCount = triangles.size();
+	root.triangleCount = (u32)triangles.size();
 
 	{// Calculate AABB of the root node
 		glm::vec3 min = glm::vec3(std::numeric_limits<float>::max());// Work around bug in glm
@@ -61,7 +61,7 @@ u32 raytracer::FastBinnedBvhBuilder::build(
 
 u32 raytracer::FastBinnedBvhBuilder::allocateNodePair()
 {
-	u32 index = _bvh_nodes->size();
+	u32 index = (u32)_bvh_nodes->size();
 	_bvh_nodes->emplace_back();
 	_bvh_nodes->emplace_back();
 	return index;

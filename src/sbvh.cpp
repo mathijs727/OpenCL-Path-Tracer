@@ -38,7 +38,7 @@ u32 raytracer::SbvhBuilder::build(
 	_totalSplits = 0;
 	_spatialSplits = 0;
 
-	u32 triangleCount = triangles.size();
+	u32 triangleCount = (u32)triangles.size();
 	_triangles = &triangles;
 	_vertices = &vertices;
 	_bvh_nodes = &outBvhNodes;
@@ -93,8 +93,8 @@ u32 raytracer::SbvhBuilder::build(
 		auto& node = (*_bvh_nodes)[nodeId];
 		auto& tris = _node_triangle_list[nodeId];
 		if (node.triangleCount > 0) {
-			node.firstTriangleIndex = newFaces.size();
-			node.triangleCount = tris.size();
+			node.firstTriangleIndex = (u32)newFaces.size();
+			node.triangleCount = (u32)tris.size();
 			for (auto& tri : tris) {
 				newFaces.push_back((*_triangles)[tri.first]);
 			}
@@ -105,7 +105,7 @@ u32 raytracer::SbvhBuilder::build(
 		}
 	}
 	*_triangles = std::move(newFaces);
-	_totalNodes = _bvh_nodes->size() - 1;
+	_totalNodes = (u32)_bvh_nodes->size() - 1;
 	return rootIndex;
 }
 
@@ -247,8 +247,8 @@ bool raytracer::SbvhBuilder::partition(u32 nodeId)
 	else { // in case of spatial split
 		_spatialSplits++;
 		u32 axis = bestAxis;
-		leftCount = bestLeft.trianglesAABB.size();
-		rightCount = bestRight.trianglesAABB.size();
+		leftCount = (u32)bestLeft.trianglesAABB.size();
+		rightCount = (u32)bestRight.trianglesAABB.size();
 		leftBounds = bestLeft.bounds;
 		rightBounds = bestRight.bounds;
 		_ASSERT(leftCount + rightCount >= node->triangleCount);
@@ -314,7 +314,7 @@ raytracer::AABB raytracer::SbvhBuilder::createBounds(u32 triangleIndex)
 
 u32 raytracer::SbvhBuilder::allocateNodePair()
 {
-	u32 index = _bvh_nodes->size();
+	u32 index = (u32)_bvh_nodes->size();
 	_bvh_nodes->emplace_back();
 	_bvh_nodes->emplace_back();
 	_node_triangle_list.emplace_back();
@@ -544,7 +544,7 @@ raytracer::AABB raytracer::SbvhBuilder::clipTriangleBounds(AABB bounds, u32 tria
 			}
 		}
 		for (u32 i = 0; i < v.size(); ++i) {
-			int prevI = (i == 0) ? (v.size() - 1) : (i - 1);
+			int prevI = (i == 0) ? ((u32)v.size() - 1) : (i - 1);
 			if ((insideV[i] && !insideV[prevI]) || (insideV[prevI] && !insideV[i])) {
 				auto e = v[i] - v[prevI];
 				// do line plane intersection
