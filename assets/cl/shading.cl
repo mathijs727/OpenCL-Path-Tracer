@@ -68,6 +68,14 @@ float3 slide17Shading(
 	if (material->type == Emmisive)
 		return material->emmisive.emmisiveColour;
 
+	// Triangle normal
+	VertexData vertices[3];
+	TriangleData triangle = scene->triangles[triangleIndex];
+	getVertices(vertices, triangle.indices, scene);
+	float3 e1 = vertices[1].vertex - vertices[0].vertex;
+	float3 e2 = vertices[2].vertex - vertices[0].vertex;
+	float3 normal = normalize(cross(e1, e2));
+
 	// Construct vector to random point on light
 	int lightIndex = clrngMrg31k3pRandomInteger(randomStream, 0, scene->numEmmisiveTriangles);
 	TriangleData lightTriangle = scene->triangles[scene->emmisiveTriangles[lightIndex]];
@@ -78,12 +86,11 @@ float3 slide17Shading(
 	float3 lightNormal = normalize(cross(edge1, edge2));
 	float3 lightColour = scene->meshMaterials[lightTriangle.mat_index].emmisive.emmisiveColour;
 
-	float3 L = normalize(uniformSampleTriangle(lightVertices, randomStream) - intersection);
-	//float3 L = lightVertices[0].vertex - intersection;
+	float3 L = uniformSampleTriangle(lightVertices, randomStream) - intersection;
 	float dist = sqrt(dot(L, L));
 	L /= dist;
 	float cos_o = dot(-L, lightNormal);
-	float cos_i = dot(L, -rayDirection);
+	float cos_i = dot(L, normal);
 	if ((cos_o <= 0)  || (cos_i <= 0)) return BLACK;
 
 	// Light is not behind surface point, trace shadow ray
@@ -93,8 +100,9 @@ float3 slide17Shading(
 
 	int bounceTriInd;
 	bool hit = traceRay(scene, &ray, true, dist - 2 * EPSILON, &bounceTriInd, NULL, NULL, NULL);
-	if (hit)
+	if (hit) {
 		return BLACK;
+	}
 
 	float3 BRDF = material->diffuse.diffuseColour * INVPI;
 	float solidAngle = (cos_o * triangleArea(lightVertices)) / (dist * dist);
@@ -119,16 +127,9 @@ float3 slide16Shading(
 	VertexData vertices[3];
 	TriangleData triangle = scene->triangles[triangleIndex];
 	getVertices(vertices, triangle.indices, scene);
-	float2 t0 = vertices[0].texCoord;
-	float2 t1 = vertices[1].texCoord;
-	float2 t2 = vertices[2].texCoord;
-	float2 tex_coords = t0 + (t1-t0) * uv.x + (t2-t0) * uv.y;
-	float3 n0 = vertices[0].normal;
-	float3 n1 = vertices[1].normal;
-	float3 n2 = vertices[2].normal;
-	float3 normal = normalize( n0 + (n1-n0) * uv.x + (n2-n0) * uv.y );
 	float3 e1 = vertices[1].vertex - vertices[0].vertex;
 	float3 e2 = vertices[2].vertex - vertices[0].vertex;
+	float3 normal = normalize(cross(e1, e2));
 
 	float normalTransform[16];
 	matrixTranspose(invTransform, normalTransform);

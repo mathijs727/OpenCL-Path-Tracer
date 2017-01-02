@@ -88,15 +88,29 @@ __kernel void traceRays(
 		if (hit)
 		{
 			float3 intersection = t * ray.direction + ray.origin;
-			float3 outColour = slide17Shading(
-				&scene,
-				triangleIndex,
-				intersection,
-				ray.direction,
-				invTransform,
-				uv,
-				textures,
-				&privateStream);
+			float3 outColour;
+			if (x < get_global_size(0) / 2)
+			{
+				outColour = slide16Shading(
+					&scene,
+					triangleIndex,
+					intersection,
+					ray.direction,
+					invTransform,
+					uv,
+					textures,
+					&privateStream);
+			} else {
+				outColour = slide17Shading(
+					&scene,
+					triangleIndex,
+					intersection,
+					ray.direction,
+					invTransform,
+					uv,
+					textures,
+					&privateStream);
+			}
 			accumulatedColour += outColour;
 		}
 	}
