@@ -258,10 +258,14 @@ bool traceRay(
 
 	if (closestT != maxT)// We did not hit anysubg
 	{
-		*outTriangleIndex = triangleIndex;
-		*outT = closestT;
-		*outUV = closestUV;
-		*outInvTransform = closestMatrix;
+		if (outTriangleIndex)
+			*outTriangleIndex = triangleIndex;
+		if (outT)
+			*outT = closestT;
+		if (outUV)
+			*outUV = closestUV;
+		if (outInvTransform)
+			*outInvTransform = closestMatrix;
 		return true;
 	} else {// We did not intersect with any triangle
 		return false;

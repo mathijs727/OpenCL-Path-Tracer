@@ -70,11 +70,11 @@ private:
 	std::vector<Material> _materials_host;
 	std::vector<SubBvhNode> _sub_bvh_nodes_host;
 
-	cl_int _num_static_vertices;
-	cl_int _num_static_triangles;
-	cl_int _num_static_emmisive_triangles;
-	cl_int _num_static_materials;
-	cl_int _num_static_bvh_nodes;
+	cl_uint _num_static_vertices;
+	cl_uint _num_static_triangles;
+	cl_uint _num_static_emmisive_triangles;
+	cl_uint _num_static_materials;
+	cl_uint _num_static_bvh_nodes;
 	uint _active_buffers = 0;
 	cl::Buffer _vertices[2];
 	cl::Buffer _triangles[2];
@@ -88,7 +88,7 @@ private:
 	cl::Image2DArray _material_textures;
 
 	std::vector<TopBvhNode> _top_bvh_nodes_host;
-	cl_int _top_bvh_root_node[2];
+	cl_uint _top_bvh_root_node[2];
 	cl::Buffer _top_bvh[2];
 };
 

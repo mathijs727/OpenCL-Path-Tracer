@@ -299,6 +299,7 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 	// Initialize buffers
 	_num_static_vertices = 0;
 	_num_static_triangles = 0;
+	_num_static_emmisive_triangles = 0;
 	_num_static_materials = 0;
 	_num_static_bvh_nodes = 0;
 	_num_lights = (u32)scene->get_lights().size();
@@ -328,6 +329,7 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 
 			_num_static_vertices += (u32)mesh->getVertices().size();
 			_num_static_triangles += (u32)mesh->getTriangles().size();
+			_num_static_emmisive_triangles += (u32)mesh->getEmmisiveTriangles().size();
 			_num_static_materials += (u32)mesh->getMaterials().size();
 			_num_static_bvh_nodes += (u32)mesh->getBvhNodes().size();
 		}

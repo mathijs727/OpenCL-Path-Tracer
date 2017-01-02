@@ -88,7 +88,7 @@ __kernel void traceRays(
 		if (hit)
 		{
 			float3 intersection = t * ray.direction + ray.origin;
-			float3 outColour = slide16Shading(
+			float3 outColour = slide17Shading(
 				&scene,
 				triangleIndex,
 				intersection,
