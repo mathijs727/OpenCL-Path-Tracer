@@ -25,11 +25,12 @@ public:
 
 	void SetScene(std::shared_ptr<Scene> scene);
 	void SetTarget(GLuint glTexture);
-	void RayTrace(const Camera& camera);
+	void RayTrace(Camera& camera);
 private:
 	void TraceRays(const Camera& camera);
 	void Accumulate();
 	void GammaCorrection();
+	void ClearAccumulationBuffer();
 
 	void CopyNextFramesData();
 

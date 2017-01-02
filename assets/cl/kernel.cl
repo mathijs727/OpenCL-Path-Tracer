@@ -85,12 +85,7 @@ __kernel void traceRays(
 		float t;
 		float2 uv;
 		const __global float* invTransform;
-#ifdef COUNT_TRAVERSAL
-		int bvhCount;
-		bool hit = traceRay(&scene, &item.ray, false, INFINITY, &triangleIndex, &t, &uv, &invTransform, &bvhCount);
-#else
 		bool hit = traceRay(&scene, &item.ray, false, INFINITY, &triangleIndex, &t, &uv, &invTransform);
-#endif
 		
 		if (hit)
 		{
@@ -108,11 +103,6 @@ __kernel void traceRays(
 				item.multiplier,
 				&stack);
 		}
-
-#ifdef COUNT_TRAVERSAL
-		outColor += bvhCount * (float3)(0.f, 0.001f, 0.f);
-#endif
-
 		if (++iterCount >= MAX_ITERATIONS)
 		{
 			break;
@@ -121,5 +111,5 @@ __kernel void traceRays(
 
 	//outColor = accurateLinearToSRGB(outColor);
 	//write_imagef(output, (int2)(x, y), (float4)(outColor, 1.0f));
-	output[y * inputData->width + x] = outColor;
+	output[y * inputData->width + x] += outColor;
 }

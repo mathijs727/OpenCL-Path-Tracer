@@ -19,6 +19,7 @@
 #include "template/includes.h"
 
 //#define PROFILE_OPENCL
+#define MAX_RAYS_PER_PIXEL 100
 
 struct KernelData
 {
@@ -410,13 +411,23 @@ void raytracer::RayTracer::SetTarget(GLuint glTexture)
 	checkClErr(err, "ImageGL");
 }
 
-void raytracer::RayTracer::RayTrace(const Camera& camera)
+void raytracer::RayTracer::RayTrace(Camera& camera)
 {
 	// We must make sure that OpenGL is done with the textures, so we ask to sync.
 	glFinish();
 	
 	std::vector<cl::Memory> images = { _output_image };
 	_queue.enqueueAcquireGLObjects(&images);
+
+	if (camera.dirty)
+	{
+		ClearAccumulationBuffer();
+		_rays_per_pixel = 0;
+		camera.dirty = false;
+	}
+
+	if (_rays_per_pixel >= MAX_RAYS_PER_PIXEL)
+		return;
 
 	// Non blocking CPU
 	TraceRays(camera);
@@ -493,7 +504,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		&kernelEvent);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
-	_rays_per_pixel = 1;
+	_rays_per_pixel++;
 }
 
 void raytracer::RayTracer::Accumulate()
@@ -513,6 +524,18 @@ void raytracer::RayTracer::Accumulate()
 
 void raytracer::RayTracer::GammaCorrection()
 {
+}
+
+void raytracer::RayTracer::ClearAccumulationBuffer()
+{
+	cl_float3 zero; zero.x = 0.0f, zero.y = 0.0f, zero.z = 0.0f, zero.w = 0.0f;
+	_queue.enqueueFillBuffer(
+		_accumulation_buffer,
+		zero,
+		0,
+		_scr_width * _scr_height * sizeof(cl_float3),
+		nullptr,
+		nullptr);
 }
 
 void raytracer::RayTracer::CopyNextFramesData()

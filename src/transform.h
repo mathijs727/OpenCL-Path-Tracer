@@ -27,7 +27,7 @@ struct Transform
 		return location_matrix * orientation_matrix * scale_matrix;
 	}
 
-	Transform() {}
+	Transform() { }
 
 	Transform(const glm::vec3& location, const glm::quat& orientation = glm::quat(), const glm::vec3& scale = glm::vec3(1.f)) : location(location), orientation(orientation) {}
 
