@@ -6,6 +6,7 @@
 #include "ray.h"
 #include "pixel.h"
 #include "Texture.h"
+#include "template/includes.h"
 #include <algorithm>
 #include <iostream>
 #include <emmintrin.h>
@@ -15,8 +16,7 @@
 #include <thread>
 #include <stdlib.h>
 #include <chrono>
-//#include <OpenGL/wglew.h>
-#include "template/includes.h"
+#include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
 #define MAX_RAYS_PER_PIXEL 100
@@ -255,6 +255,9 @@ void raytracer::RayTracer::InitBuffers(
 		&err);
 	checkClErr(err, "cl::Image2DArray");
 
+
+
+
 	_ray_kernel_data = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		sizeof(KernelData),
@@ -262,6 +265,19 @@ void raytracer::RayTracer::InitBuffers(
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
+	// Create random streams and copy them to the GPU
+	size_t numWorkItems = _scr_width * _scr_height;
+	size_t streamBufferSize;
+	clrngMrg31k3pStream* streams = clrngMrg31k3pCreateStreams(
+		NULL, numWorkItems, &streamBufferSize, (clrngStatus*)&err);
+	checkClErr(err, "clrngMrg31k3pCreateStreams");
+	_random_streams = cl::Buffer(_context,
+		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+		streamBufferSize,
+		streams,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+	clrngMrg31k3pDestroyStreams(streams);
 	
 
 
@@ -494,6 +510,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	_ray_trace_kernel.setArg(7, _lights);
 	_ray_trace_kernel.setArg(8, _sub_bvh[_active_buffers]);
 	_ray_trace_kernel.setArg(9, _top_bvh[_active_buffers]);
+	_ray_trace_kernel.setArg(10, _random_streams);
 
 	err = _queue.enqueueNDRangeKernel(
 		_ray_trace_kernel,
@@ -772,7 +789,7 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 		(std::istreambuf_iterator<char>()));
 	cl::Program::Sources source(1, std::make_pair(prog.c_str(), prog.length()+1));
 	cl::Program program(_context, source);
-	err = program.build(_devices, "-I assets/cl/");
+	err = program.build(_devices, "-I assets/cl/ -I assets/cl/clRNG/");
 	{
 		if (err != CL_SUCCESS)
 		{

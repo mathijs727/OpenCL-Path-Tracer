@@ -57,6 +57,7 @@ private:
 
 	cl::Kernel _ray_trace_kernel;
 	cl::Buffer _ray_kernel_data;
+	cl::Buffer _random_streams;
 
 	cl_uint _rays_per_pixel;
 	cl::Kernel _accumulate_kernel;

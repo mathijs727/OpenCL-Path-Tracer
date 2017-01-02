@@ -1,10 +1,12 @@
 //#define NO_SHADOWS
+#define USE_BVH
+//#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
 
 // When a ray is parallel to axis, the intersection tests are really slow
 #define NO_PARALLEL_RAYS
 
-#define USE_BVH
-//#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
+// Necessary for i.e. random
+#define MAX_GROUP_SIZE 32
 
 #include "shapes.cl"
 #include "material.cl"
@@ -14,8 +16,10 @@
 #include "gamma.cl"
 #include "bvh.cl"
 #include "shading.cl"
+#include <clRNG/mrg31k3p.clh>
 
 #define MAX_ITERATIONS 4
+
 
 typedef struct
 {
@@ -42,10 +46,14 @@ __kernel void traceRays(
 	__read_only image2d_array_t textures,
 	__global Light* lights,
 	__global SubBvhNode* subBvh,
-	__global TopBvhNode* topLevelBvh) {
+	__global TopBvhNode* topLevelBvh,
+	__global clrngMrg31k3pHostStream* randomStreams) {
 	//__read_only image2d_array_t textures) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
+	int gid = y * get_global_size(0) + x;
+	clrngMrg31k3pStream privateStream;
+	clrngMrg31k3pCopyOverStreamsFromGlobal(1, &privateStream, &randomStreams[gid]);
 
 	Scene scene;
 	loadScene(
@@ -65,6 +73,10 @@ __kernel void traceRays(
 	
 	float3 screenPoint = inputData->screen + \
 		inputData->u_step * (float)x + inputData->v_step * (float)y;	
+	screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->u_step;
+	screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->v_step;
+
+
 
 	StackItem item;
 	item.ray.origin = inputData->eye;
@@ -109,7 +121,8 @@ __kernel void traceRays(
 		}
 	}
 
+	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &privateStream);
+
 	//outColor = accurateLinearToSRGB(outColor);
-	//write_imagef(output, (int2)(x, y), (float4)(outColor, 1.0f));
 	output[y * inputData->width + x] += outColor;
 }
