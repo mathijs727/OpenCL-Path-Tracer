@@ -5,9 +5,7 @@
 // When a ray is parallel to axis, the intersection tests are really slow
 #define NO_PARALLEL_RAYS
 
-// Necessary for i.e. random
-#define MAX_GROUP_SIZE 32
-
+#include <clRNG/mrg31k3p.clh>
 #include "shapes.cl"
 #include "material.cl"
 #include "scene.cl"
@@ -16,10 +14,6 @@
 #include "gamma.cl"
 #include "bvh.cl"
 #include "shading.cl"
-#include <clRNG/mrg31k3p.clh>
-
-#define MAX_ITERATIONS 4
-
 
 typedef struct
 {
@@ -32,8 +26,9 @@ typedef struct
 
 	// Scene
 	uint numVertices, numTriangles, numEmmisiveTriangles, numLights;
-
 	uint topLevelBvhRoot;
+
+	uint raysPerPass;
 } KernelData;
 
 __kernel void traceRays(
@@ -52,6 +47,8 @@ __kernel void traceRays(
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 	int gid = y * get_global_size(0) + x;
+
+	// Read random stream
 	clrngMrg31k3pStream privateStream;
 	clrngMrg31k3pCopyOverStreamsFromGlobal(1, &privateStream, &randomStreams[gid]);
 
@@ -71,14 +68,43 @@ __kernel void traceRays(
 		topLevelBvh,
 		&scene);
 	
-	float3 screenPoint = inputData->screen + \
-		inputData->u_step * (float)x + inputData->v_step * (float)y;	
-	screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->u_step;
-	screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->v_step;
+	float3 accumulatedColour = (float3)(0, 0, 0);
+	for (int i = 0; i < inputData->raysPerPass; i++)
+	{
+		float3 screenPoint = inputData->screen + \
+			inputData->u_step * (float)x + inputData->v_step * (float)y;	
+		screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->u_step;
+		screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->v_step;
 
+		Ray ray;
+		ray.origin = inputData->eye;
+		ray.direction = normalize(screenPoint - inputData->eye);
 
+		int triangleIndex;
+		float t;
+		float2 uv;
+		const __global float* invTransform;
+		bool hit = traceRay(&scene, &ray, false, INFINITY, &triangleIndex, &t, &uv, &invTransform);
+		if (hit)
+		{
+			float3 intersection = t * ray.direction + ray.origin;
+			float3 outColour = slide16Shading(
+				&scene,
+				triangleIndex,
+				intersection,
+				ray.direction,
+				invTransform,
+				uv,
+				textures,
+				&privateStream);
+			accumulatedColour += outColour;
+		}
+	}
+	output[y * inputData->width + x] += accumulatedColour;
 
-	StackItem item;
+	// Store random streams
+	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &privateStream);
+	/*StackItem item;
 	item.ray.origin = inputData->eye;
 	item.ray.direction = normalize(screenPoint - inputData->eye);
 	item.multiplier = (float3)(1.0f, 1.0f, 1.0f);
@@ -119,10 +145,6 @@ __kernel void traceRays(
 		{
 			break;
 		}
-	}
+	}*/
 
-	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &privateStream);
-
-	//outColor = accurateLinearToSRGB(outColor);
-	output[y * inputData->width + x] += outColor;
 }

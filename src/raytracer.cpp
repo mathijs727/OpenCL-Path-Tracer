@@ -19,7 +19,8 @@
 #include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
-#define MAX_RAYS_PER_PIXEL 100
+#define MAX_RAYS_PER_PIXEL 10000
+#define RAYS_PER_PASS 10
 
 struct KernelData
 {
@@ -32,8 +33,9 @@ struct KernelData
 
 	// Scene
 	uint numVertices, numTriangles, numEmmisiveTriangles, numLights;
-
 	uint topLevelBvhRoot;
+
+	uint raysPerPass;
 };
 
 
@@ -487,8 +489,9 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	data.numTriangles = _num_static_triangles;
 	data.numEmmisiveTriangles = _num_static_emmisive_triangles;
 	data.numLights = _num_lights;
-
 	data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];
+
+	data.raysPerPass = RAYS_PER_PASS;
 
 	cl_int err = _queue.enqueueWriteBuffer(
 		_ray_kernel_data,
@@ -521,7 +524,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		&kernelEvent);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
-	_rays_per_pixel++;
+	_rays_per_pixel += RAYS_PER_PASS;
 }
 
 void raytracer::RayTracer::Accumulate()

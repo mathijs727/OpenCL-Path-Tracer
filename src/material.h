@@ -18,6 +18,12 @@ namespace Tmpl8
 	class Surface;
 }
 
+#define CL_VEC3(NAME) \
+	union { \
+		glm::vec3 NAME; \
+		cl_float3 __cl_padding; \
+	}
+
 namespace raytracer {
 class Scene;
 
@@ -25,40 +31,25 @@ struct Material
 {
 	enum class Type : cl_int
 	{
-		Reflective,
 		Diffuse,
-		Glossy,
-		Fresnel
+		Emmisive
 	};
 
 	Material() { }
 	Material(const Material& m) { memcpy(this, &m, sizeof(Material)); }
 	Material& operator=(const Material& m) { memcpy(this, &m, sizeof(Material)); return *this; }
-
-	union { //16 bytes
-		glm::vec3 colour;
-		cl_float3 __cl_colour;
-	};
 	
 	union
 	{
 		struct
 		{
-			cl_int tex_id;
+			CL_VEC3(diffuseColour);
+			cl_int tex_id; byte __padding[12];
 		} diffuse;
 		struct
 		{
-			cl_float specularity;
-		} glossy;
-		struct
-		{
-			union { //16 bytes
-				glm::vec3 absorption;
-				cl_float3 __cl_absorption;
-			};
-			cl_float refractive_index;// 4 bytes
-			byte __padding1[12];
-		} fresnel;
+			CL_VEC3(emmisiveColour);
+		} emmisive;
 	};
 	Type type; // 4 bytes
 	byte __padding2[12];
@@ -66,7 +57,7 @@ struct Material
 	static Material Diffuse(const glm::vec3& colour) {
 		Material result;
 		result.type = Type::Diffuse;
-		result.colour = colour;
+		result.diffuse.diffuseColour = colour;
 		result.diffuse.tex_id = -1;
 		return result;
 	}
@@ -74,12 +65,19 @@ struct Material
 	static Material Diffuse(const raytracer::Texture& diffuse, const glm::vec3& colour = glm::vec3(0)) {
 		Material result;
 		result.type = Type::Diffuse;
-		result.colour = colour;
+		result.diffuse.diffuseColour = colour;
 		result.diffuse.tex_id = diffuse.getId();
 		return result;
 	}
 
-	static Material Reflective(const glm::vec3& colour) {
+	static Material Emmisive(const glm::vec3& colour) {
+		Material result;
+		result.type = Type::Emmisive;
+		result.emmisive.emmisiveColour = colour;
+		return result;
+	}
+
+	/*static Material Reflective(const glm::vec3& colour) {
 		Material result;
 		result.type = Type::Reflective;
 		result.colour = colour;
@@ -101,6 +99,6 @@ struct Material
 		result.fresnel.refractive_index = std::max(refractive_index, 1.f);
 		result.fresnel.absorption = absorption;
 		return result;
-	}
+	}*/
 };
 }

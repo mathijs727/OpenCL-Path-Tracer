@@ -2,7 +2,6 @@
 #define __SHAPES_CL
 #include "ray.cl"
 
-#define EPSILON FLT_MIN
 #define PI 3.14159265359f
 
 typedef struct
@@ -41,7 +40,7 @@ bool intersectRayTriangle(
 	//if determinant is near zero, ray lies in plane of triangle or ray is parallel to plane of triangle
 	det = dot(e1, P);
 	//NOT CULLING
-	if(det > -EPSILON && det < EPSILON) return false;
+	if(det > -FLT_MIN && det < FLT_MIN) return false;
 	inv_det = 1.f / det;
 
 	//calculate distance from V1 to ray origin

@@ -1,30 +1,23 @@
 #ifndef __MATERIAL_CL
 #define __MATERIAL_CL
 typedef enum {
-		Reflective,
 		Diffuse,
-		Glossy,
-		Fresnel
+		Emmisive
 } MaterialType;
 
 typedef struct
 {
-	float3 colour;
 	union
 	{
 		struct
 		{
+			float3 diffuseColour;
 			int tex_id;
 		} diffuse;
 		struct
 		{
-			float specularity;
-		} glossy;
-		struct
-		{
-			float3 absorption;
-			float refractiveIndex;
-		} fresnel;
+			float3 emmisiveColour;
+		} emmisive;
 	};
 	MaterialType type;
 } Material;

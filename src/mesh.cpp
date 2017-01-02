@@ -61,18 +61,24 @@ void raytracer::Mesh::addSubMesh(
 	aiColor3D emmisiveColour;
 	material->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
 	material->Get(AI_MATKEY_COLOR_EMISSIVE, emmisiveColour);
-	if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
-		aiString path;
-		material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
-		std::string textureFile = texturePath;
-		textureFile += path.C_Str();
-		//_materials.push_back(Material::Diffuse(ai2glm(colour)));
-		_materials.push_back(Material::Diffuse(Texture(textureFile.c_str()), ai2glm(colour)));
+	bool emmisive = emmisiveColour.r != 0.0f || emmisiveColour.g != 0.0f || emmisiveColour.b != 0.0f;
+	if (emmisive)
+	{
+		_materials.push_back(Material::Emmisive(ai2glm(emmisiveColour)));
 	}
 	else {
-		_materials.push_back(Material::Diffuse(ai2glm(colour)));
+		if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+			aiString path;
+			material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
+			std::string textureFile = texturePath;
+			textureFile += path.C_Str();
+			//_materials.push_back(Material::Diffuse(ai2glm(colour)));
+			_materials.push_back(Material::Diffuse(Texture(textureFile.c_str()), ai2glm(colour)));
+		}
+		else {
+			_materials.push_back(Material::Diffuse(ai2glm(colour)));
+		}
 	}
-	bool emmisive = emmisiveColour.r != 0.0f || emmisiveColour.g != 0.0f || emmisiveColour.b != 0.0f;
 
 	// add all of the vertex data
 	glm::mat4 normalMatrix = normal_matrix(transform_matrix);
