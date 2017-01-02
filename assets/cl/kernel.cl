@@ -32,7 +32,7 @@ typedef struct
 	int topLevelBvhRoot;
 } KernelData;
 
-__kernel void hello(
+__kernel void traceRays(
 	__write_only image2d_t output,
 	__global KernelData* inputData,
 	__global VertexData* vertices,
@@ -116,6 +116,6 @@ __kernel void hello(
 		}
 	}
 
-	outColor = accurateLinearToSRGB(outColor);
+	//outColor = accurateLinearToSRGB(outColor);
 	write_imagef(output, (int2)(x, y), (float4)(outColor, 1.0f));
 }

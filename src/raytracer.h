@@ -27,10 +27,17 @@ public:
 	void SetTarget(GLuint glTexture);
 	void RayTrace(const Camera& camera);
 private:
+	void TraceRays(const Camera& camera);
+	void Accumulate();
+	void GammaCorrection();
+
+	void CopyNextFramesData();
+
 	void InitOpenCL();
 	void InitBuffers(
 		u32 numVertices,
 		u32 numTriangles,
+		u32 numEmmisiveTriangles,
 		u32 numMaterials,
 		u32 numSubBvhNodes,
 		u32 numTopBvhNodes,
@@ -47,21 +54,29 @@ private:
 	cl::CommandQueue _queue;
 	cl::CommandQueue _copyQueue;
 
-	cl::Kernel _helloWorldKernel;
-	cl::Buffer _kernel_data;
+	cl::Kernel _ray_trace_kernel;
+	cl::Buffer _ray_kernel_data;
+
+	cl_int _rays_per_pixel;
+	cl::Kernel _accumulate_kernel;
+	cl::Image2D _accumulation_buffer;
+	cl::ImageGL _output_image;
 
 	std::vector<VertexSceneData> _vertices_host;
 	std::vector<TriangleSceneData> _triangles_host;
+	std::vector<u32> _emmisive_triangles_host;
 	std::vector<Material> _materials_host;
 	std::vector<SubBvhNode> _sub_bvh_nodes_host;
 
 	cl_int _num_static_vertices;
 	cl_int _num_static_triangles;
+	cl_int _num_static_emmisive_triangles;
 	cl_int _num_static_materials;
 	cl_int _num_static_bvh_nodes;
 	uint _active_buffers = 0;
 	cl::Buffer _vertices[2];
 	cl::Buffer _triangles[2];
+	cl::Buffer _emmisive_trangles[2];
 	cl::Buffer _materials[2];
 	cl::Buffer _sub_bvh[2];
 
@@ -73,8 +88,6 @@ private:
 	std::vector<TopBvhNode> _top_bvh_nodes_host;
 	cl_int _top_bvh_root_node[2];
 	cl::Buffer _top_bvh[2];
-
-	cl::ImageGL _output_image;
 };
 
 

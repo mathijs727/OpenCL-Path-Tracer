@@ -26,7 +26,8 @@ public:
 	const std::vector<TriangleSceneData>& getTriangles() const override { return _triangles; }
 	const std::vector<Material>& getMaterials() const override { return _materials; }
 	const std::vector<SubBvhNode>& getBvhNodes() const override { return _bvh_nodes; }
-	
+	const std::vector<u32>& getEmmisiveTriangles() const override { return _emmisive_triangles; }
+
 	u32 getBvhRootNode() const override { return _bvh_root_node; };
 
 	bool isDynamic() const override { return false; };
@@ -43,6 +44,7 @@ private:
 private:
 	std::vector<VertexSceneData> _vertices;
 	std::vector<TriangleSceneData> _triangles;
+	std::vector<u32> _emmisive_triangles;
 	std::vector<Material> _materials;
 	std::vector<SubBvhNode> _bvh_nodes;
 

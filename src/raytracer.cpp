@@ -135,13 +135,14 @@ inline void timeOpenCL(cl::Event& ev, const char* operationName)
 
 
 
-raytracer::RayTracer::RayTracer(int width, int height)
+raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 {
 	_scr_width = width;
 	_scr_height = height;
 
 	InitOpenCL();
-	_helloWorldKernel = LoadKernel("assets/cl/kernel.cl", "hello");
+	_ray_trace_kernel = LoadKernel("assets/cl/kernel.cl", "traceRays");
+	_accumulate_kernel = LoadKernel("assets/cl/accumulate.cl", "accumulate");
 
 	_top_bvh_root_node[0] = 0;
 	_top_bvh_root_node[1] = 0;
@@ -154,6 +155,7 @@ raytracer::RayTracer::~RayTracer()
 void raytracer::RayTracer::InitBuffers(
 	u32 numVertices,
 	u32 numTriangles,
+	u32 numEmmisiveTriangles,
 	u32 numMaterials,
 	u32 numSubBvhNodes,
 	u32 numTopBvhNodes,
@@ -181,6 +183,18 @@ void raytracer::RayTracer::InitBuffers(
 	_triangles[1] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		std::max(1u, numTriangles) * sizeof(TriangleSceneData),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
+	_emmisive_trangles[0] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numEmmisiveTriangles) * sizeof(u32),
+		NULL,
+		&err);
+	_emmisive_trangles[1] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numEmmisiveTriangles) * sizeof(u32),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
@@ -229,15 +243,6 @@ void raytracer::RayTracer::InitBuffers(
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
-
-
-	_kernel_data = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		sizeof(KernelData),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-
 	// https://www.khronos.org/registry/cl/specs/opencl-cplusplus-1.2.pdf
 	_material_textures = cl::Image2DArray(_context,
 		CL_MEM_READ_ONLY,
@@ -248,6 +253,27 @@ void raytracer::RayTracer::InitBuffers(
 		0, 0, NULL,// Unused host_ptr
 		&err);
 	checkClErr(err, "cl::Image2DArray");
+
+	_ray_kernel_data = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		sizeof(KernelData),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
+	
+
+
+
+	_accumulation_buffer = cl::Image2D(_context,
+		CL_MEM_READ_WRITE,
+		cl::ImageFormat(CL_RGBA, CL_FLOAT),
+		_scr_width,
+		_scr_height,
+		0,
+		0,
+		&err);
+	checkClErr(err, "cl::Image2D");
 }
 
 void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
@@ -263,6 +289,7 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 
 	u32 numVertices = 0;
 	u32 numTriangles= 0;
+	u32 numEmmisiveTriangles = 0;
 	u32 numMaterials = 0;
 	u32 numBvhNodes = 0;
 	for (auto& meshBvhPair : scene->get_meshes())
@@ -279,6 +306,7 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 		else {
 			numVertices += (u32)mesh->getVertices().size();
 			numTriangles += (u32)mesh->getTriangles().size();
+			numEmmisiveTriangles += (u32)mesh->getEmmisiveTriangles().size();
 			numMaterials += (u32)mesh->getMaterials().size();
 			numBvhNodes += (u32)mesh->getBvhNodes().size();
 
@@ -289,7 +317,7 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 		}
 	}
 
-	InitBuffers(numVertices, numTriangles, numMaterials,
+	InitBuffers(numVertices, numTriangles, numEmmisiveTriangles, numMaterials,
 		numBvhNodes, (u32)scene->get_meshes().size() * 2, (u32)scene->get_lights().size());
 	
 
@@ -380,6 +408,31 @@ void raytracer::RayTracer::SetTarget(GLuint glTexture)
 
 void raytracer::RayTracer::RayTrace(const Camera& camera)
 {
+	// We must make sure that OpenGL is done with the textures, so we ask to sync.
+	glFinish();
+	
+	std::vector<cl::Memory> images = { _output_image };
+	_queue.enqueueAcquireGLObjects(&images);
+
+	// Non blocking CPU
+	TraceRays(camera);
+	Accumulate();
+	GammaCorrection();
+
+	// Lot of CPU work
+	CopyNextFramesData();
+
+	// Before returning the objects to OpenGL, we sync to make sure OpenCL is done.
+	cl_int err = _queue.finish();
+	checkClErr(err, "CommandQueue::finish");
+
+	_queue.enqueueReleaseGLObjects(&images);
+
+	_active_buffers = (_active_buffers + 1) % 2;
+}
+
+void raytracer::RayTracer::TraceRays(const Camera& camera)
+{
 	glm::vec3 eye;
 	glm::vec3 scr_base_origin;
 	glm::vec3 scr_base_u;
@@ -389,160 +442,163 @@ void raytracer::RayTracer::RayTrace(const Camera& camera)
 	glm::vec3 u_step = scr_base_u / (float)_scr_width;
 	glm::vec3 v_step = scr_base_v / (float)_scr_height;
 
-	// We must make sure that OpenGL is done with the textures, so we ask to sync.
-	glFinish();
+	
 
-	{
-		// Copy camera (and scene) data to the device using a struct so we dont use 20 kernel arguments
-		KernelData data = {};
-		data.eye = glmToCl(eye);
-		data.screen = glmToCl(scr_base_origin);
-		data.u_step = glmToCl(u_step);
-		data.v_step = glmToCl(v_step);
-		data.width = _scr_width;
+	// Copy camera (and scene) data to the device using a struct so we dont use 20 kernel arguments
+	KernelData data = {};
+	data.eye = glmToCl(eye);
+	data.screen = glmToCl(scr_base_origin);
+	data.u_step = glmToCl(u_step);
+	data.v_step = glmToCl(v_step);
+	data.width = _scr_width;
 
-		data.numVertices = _num_static_vertices;
-		data.numTriangles = _num_static_triangles;
-		data.numLights = _num_lights;
+	data.numVertices = _num_static_vertices;
+	data.numTriangles = _num_static_triangles;
+	data.numLights = _num_lights;
 
-		data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];
+	data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];
 
-		cl_int err = _queue.enqueueWriteBuffer(
-			_kernel_data,
-			CL_TRUE,
-			0,
-			sizeof(KernelData),
-			&data);
-		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-	}
+	cl_int err = _queue.enqueueWriteBuffer(
+		_ray_kernel_data,
+		CL_TRUE,
+		0,
+		sizeof(KernelData),
+		&data);
+	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 
-	std::vector<cl::Memory> images = { _output_image };
-	_queue.enqueueAcquireGLObjects(&images);
-
-	cl_int err;
+	
 	cl::Event kernelEvent;
-	_helloWorldKernel.setArg(0, _output_image);
-	_helloWorldKernel.setArg(1, _kernel_data);
-	_helloWorldKernel.setArg(2, _vertices[_active_buffers]);
-	_helloWorldKernel.setArg(3, _triangles[_active_buffers]);
-	_helloWorldKernel.setArg(4, _materials[_active_buffers]);
-	_helloWorldKernel.setArg(5, _material_textures);
-	_helloWorldKernel.setArg(6, _lights);
-	_helloWorldKernel.setArg(7, _sub_bvh[_active_buffers]);
-	_helloWorldKernel.setArg(8, _top_bvh[_active_buffers]);
+	_ray_trace_kernel.setArg(0, _accumulation_buffer);
+	_ray_trace_kernel.setArg(1, _ray_kernel_data);
+	_ray_trace_kernel.setArg(2, _vertices[_active_buffers]);
+	_ray_trace_kernel.setArg(3, _triangles[_active_buffers]);
+	_ray_trace_kernel.setArg(4, _materials[_active_buffers]);
+	_ray_trace_kernel.setArg(5, _material_textures);
+	_ray_trace_kernel.setArg(6, _lights);
+	_ray_trace_kernel.setArg(7, _sub_bvh[_active_buffers]);
+	_ray_trace_kernel.setArg(8, _top_bvh[_active_buffers]);
 
 	err = _queue.enqueueNDRangeKernel(
-		_helloWorldKernel,
+		_ray_trace_kernel,
 		cl::NullRange,
 		cl::NDRange(_scr_width, _scr_height),
 		cl::NullRange,
 		NULL,
 		&kernelEvent);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
-	
+
+	_rays_per_pixel = 1;
+}
+
+void raytracer::RayTracer::Accumulate()
+{
+	_accumulate_kernel.setArg(0, _accumulation_buffer);
+	_accumulate_kernel.setArg(1, _output_image);
+	_accumulate_kernel.setArg(2, _rays_per_pixel);
+	_queue.enqueueNDRangeKernel(
+		_accumulate_kernel,
+		cl::NullRange,
+		cl::NDRange(_scr_width, _scr_height),
+		cl::NullRange,
+		nullptr,
+		nullptr);
+}
+
+void raytracer::RayTracer::GammaCorrection()
+{
+}
+
+void raytracer::RayTracer::CopyNextFramesData()
+{
+	// Manually flush the queue
+	// At least on AMD, the queue is flushed after the enqueueWriteBuffer (probably because it thinks
+	//  one kernel launch is not enough reason to flush). So it would be executed at _queue.finish(), which
+	//  is called after the top lvl bvh construction (which is expensive) has completed. Instead we manually
+	//  flush and than calculate the top lvl bvh.
+	_queue.flush();
+
+	int copyBuffers = (_active_buffers + 1) % 2;
+	std::vector<cl::Event> waitEvents;
+
+	_vertices_host.resize(_num_static_vertices);
+	_triangles_host.resize(_num_static_triangles);
+	_materials_host.resize(_num_static_materials);
+	_sub_bvh_nodes_host.resize(_num_static_bvh_nodes);
+
+	// Collect all static geometry and upload it to the GPU
+	for (auto& meshBvhPair : _scene->get_meshes())
 	{
-		// Manually flush the queue
-		// At least on AMD, the queue is flushed after the enqueueWriteBuffer (probably because it thinks
-		//  one kernel launch is not enough reason to flush). So it would be executed at _queue.finish(), which
-		//  is called after the top lvl bvh construction (which is expensive) has completed. Instead we manually
-		//  flush and than calculate the top lvl bvh.
-		_queue.flush();
+		auto mesh = meshBvhPair.mesh;
+		if (!mesh->isDynamic())
+			continue;
 
-		int copyBuffers = (_active_buffers + 1) % 2;
-		std::vector<cl::Event> waitEvents;
+		mesh->buildBvh();
 
+		// TODO: use memcpy instead of looping over vertices (faster?)
+		u32 startVertex = (u32)_vertices_host.size();
+		for (auto& vertex : mesh->getVertices())
 		{
-			_vertices_host.resize(_num_static_vertices);
-			_triangles_host.resize(_num_static_triangles);
-			_materials_host.resize(_num_static_materials);
-			_sub_bvh_nodes_host.resize(_num_static_bvh_nodes);
-
-
-			// Collect all static geometry and upload it to the GPU
-			for (auto& meshBvhPair : _scene->get_meshes())
-			{
-				auto mesh = meshBvhPair.mesh;
-				if (!mesh->isDynamic())
-					continue;
-
-				mesh->buildBvh();
-
-				// TODO: use memcpy instead of looping over vertices (faster?)
-				u32 startVertex = (u32)_vertices_host.size();
-				for (auto& vertex : mesh->getVertices())
-				{
-					_vertices_host.push_back(vertex);
-				}
-
-				u32 startMaterial = (u32)_materials_host.size();
-				for (auto& material : mesh->getMaterials())
-				{
-					_materials_host.push_back(material);
-				}
-
-				u32 startTriangle = (u32)_triangles_host.size();
-				for (auto& triangle : mesh->getTriangles())
-				{
-					_triangles_host.push_back(triangle);
-					_triangles_host.back().indices += startVertex;
-					_triangles_host.back().material_index += startMaterial;
-				}
-
-				u32 startBvhNode = (u32)_sub_bvh_nodes_host.size();
-				for (auto& bvhNode : mesh->getBvhNodes())
-				{
-					_sub_bvh_nodes_host.push_back(bvhNode);
-					auto& newNode = _sub_bvh_nodes_host.back();
-					if (newNode.triangleCount > 0)
-						newNode.firstTriangleIndex += startTriangle;
-					else
-						newNode.leftChildIndex += startBvhNode;
-				}
-				meshBvhPair.bvh_offset = startBvhNode;
-			}
-
-			if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices))// Dont copy if we dont have any dynamic geometry
-			{
-				writeToBuffer(_copyQueue, _vertices[copyBuffers], _vertices_host, _num_static_vertices, waitEvents);
-				writeToBuffer(_copyQueue, _triangles[copyBuffers], _triangles_host, _num_static_triangles, waitEvents);
-				writeToBuffer(_copyQueue, _materials[copyBuffers], _materials_host, _num_static_materials, waitEvents);
-				writeToBuffer(_copyQueue, _sub_bvh[copyBuffers], _sub_bvh_nodes_host, _num_static_bvh_nodes, waitEvents);
-			}
+			_vertices_host.push_back(vertex);
 		}
 
-		// Update the top level BVH and copy it to the GPU on a seperate copy queue
-		_top_bvh_nodes_host.clear();
-		auto bvhBuilder = TopLevelBvhBuilder(*_scene.get());
-		_top_bvh_root_node[copyBuffers] = bvhBuilder.build(_sub_bvh_nodes_host, _top_bvh_nodes_host);
-
-		writeToBuffer(_copyQueue, _top_bvh[copyBuffers], _top_bvh_nodes_host, 0, waitEvents);
-
-		if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices))
+		u32 startMaterial = (u32)_materials_host.size();
+		for (auto& material : mesh->getMaterials())
 		{
-			timeOpenCL(waitEvents[0], "vertex upload");
-			timeOpenCL(waitEvents[1], "triangle upload");
-			timeOpenCL(waitEvents[2], "material upload");
-			timeOpenCL(waitEvents[3], "sub bvh upload");
-			timeOpenCL(waitEvents[4], "top bvh upload");
-		}
-		else {
-			timeOpenCL(waitEvents[0], "top bvh upload");
+			_materials_host.push_back(material);
 		}
 
-		// Make sure the main queue waits for the copy to finish
-		err = _queue.enqueueBarrierWithWaitList(&waitEvents);
-		checkClErr(err, "CommandQueue::enqueueBarrierWithWaitList");
+		u32 startTriangle = (u32)_triangles_host.size();
+		for (auto& triangle : mesh->getTriangles())
+		{
+			_triangles_host.push_back(triangle);
+			_triangles_host.back().indices += startVertex;
+			_triangles_host.back().material_index += startMaterial;
+		}
+
+		u32 startBvhNode = (u32)_sub_bvh_nodes_host.size();
+		for (auto& bvhNode : mesh->getBvhNodes())
+		{
+			_sub_bvh_nodes_host.push_back(bvhNode);
+			auto& newNode = _sub_bvh_nodes_host.back();
+			if (newNode.triangleCount > 0)
+				newNode.firstTriangleIndex += startTriangle;
+			else
+				newNode.leftChildIndex += startBvhNode;
+		}
+		meshBvhPair.bvh_offset = startBvhNode;
+	}
+
+	if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices))// Dont copy if we dont have any dynamic geometry
+	{
+		writeToBuffer(_copyQueue, _vertices[copyBuffers], _vertices_host, _num_static_vertices, waitEvents);
+		writeToBuffer(_copyQueue, _triangles[copyBuffers], _triangles_host, _num_static_triangles, waitEvents);
+		writeToBuffer(_copyQueue, _materials[copyBuffers], _materials_host, _num_static_materials, waitEvents);
+		writeToBuffer(_copyQueue, _sub_bvh[copyBuffers], _sub_bvh_nodes_host, _num_static_bvh_nodes, waitEvents);
 	}
 
 
+	// Update the top level BVH and copy it to the GPU on a seperate copy queue
+	_top_bvh_nodes_host.clear();
+	auto bvhBuilder = TopLevelBvhBuilder(*_scene.get());
+	_top_bvh_root_node[copyBuffers] = bvhBuilder.build(_sub_bvh_nodes_host, _top_bvh_nodes_host);
 
-	// Before returning the objects to OpenGL, we sync to make sure OpenCL is done.
-	err = _queue.finish();
-	checkClErr(err, "CommandQueue::finish");
+	writeToBuffer(_copyQueue, _top_bvh[copyBuffers], _top_bvh_nodes_host, 0, waitEvents);
 
-	_queue.enqueueReleaseGLObjects(&images);
+	if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices))
+	{
+		timeOpenCL(waitEvents[0], "vertex upload");
+		timeOpenCL(waitEvents[1], "triangle upload");
+		timeOpenCL(waitEvents[2], "material upload");
+		timeOpenCL(waitEvents[3], "sub bvh upload");
+		timeOpenCL(waitEvents[4], "top bvh upload");
+	}
+	else {
+		timeOpenCL(waitEvents[0], "top bvh upload");
+	}
 
-	_active_buffers = (_active_buffers + 1) % 2;
+	// Make sure the main queue waits for the copy to finish
+	cl_int err = _queue.enqueueBarrierWithWaitList(&waitEvents);
+	checkClErr(err, "CommandQueue::enqueueBarrierWithWaitList");
 }
 
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/

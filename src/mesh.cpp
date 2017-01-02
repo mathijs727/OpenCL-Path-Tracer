@@ -57,8 +57,10 @@ void raytracer::Mesh::addSubMesh(
 	// process the materials
 	u32 materialId = (u32)_materials.size();
 	aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
-	aiColor3D colour; 
+	aiColor3D colour;
+	aiColor3D emmisiveColour;
 	material->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
+	material->Get(AI_MATKEY_COLOR_EMISSIVE, emmisiveColour);
 	if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 		aiString path;
 		material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
@@ -70,6 +72,7 @@ void raytracer::Mesh::addSubMesh(
 	else {
 		_materials.push_back(Material::Diffuse(ai2glm(colour)));
 	}
+	bool emmisive = emmisiveColour.r != 0.0f || emmisiveColour.g != 0.0f || emmisiveColour.b != 0.0f;
 
 	// add all of the vertex data
 	glm::mat4 normalMatrix = normal_matrix(transform_matrix);
@@ -108,7 +111,8 @@ void raytracer::Mesh::addSubMesh(
 		triangle.material_index = materialId;
 		_triangles.push_back(triangle);
 
-		//std::cout << "importing face: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", starting index: " << vertex_starting_index << std::endl;
+		if (emmisive)
+			_emmisive_triangles.push_back((u32)_triangles.size() - 1);
 	}
 }
 
@@ -217,13 +221,13 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 	if (fileExists(bvhFileName))
 	{
 		std::cout << "Loading bvh from file: " << bvhFileName << std::endl;
-		if (loadBvh(bvhFileName.c_str()))
+		/*if (loadBvh(bvhFileName.c_str()))
 		{
 			buildBvh = false;
 		}
 		else {
 			std::cout << "Unsuppored file format, need to regenerate BVH." << std::endl;
-		}
+		}*/
 	}
 	
 	if (buildBvh) {
