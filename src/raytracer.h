@@ -57,9 +57,9 @@ private:
 	cl::Kernel _ray_trace_kernel;
 	cl::Buffer _ray_kernel_data;
 
-	cl_int _rays_per_pixel;
+	cl_uint _rays_per_pixel;
 	cl::Kernel _accumulate_kernel;
-	cl::Image2D _accumulation_buffer;
+	cl::Buffer _accumulation_buffer;
 	cl::ImageGL _output_image;
 
 	std::vector<VertexSceneData> _vertices_host;

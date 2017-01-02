@@ -30,9 +30,9 @@ struct KernelData
 	uint width;// Render target width
 
 	// Scene
-	int numVertices, numTriangles, numLights;
+	uint numVertices, numTriangles, numEmmisiveTriangles, numLights;
 
-	int topLevelBvhRoot;
+	uint topLevelBvhRoot;
 };
 
 
@@ -265,15 +265,12 @@ void raytracer::RayTracer::InitBuffers(
 
 
 
-	_accumulation_buffer = cl::Image2D(_context,
+	_accumulation_buffer = cl::Buffer(_context,
 		CL_MEM_READ_WRITE,
-		cl::ImageFormat(CL_RGBA, CL_FLOAT),
-		_scr_width,
-		_scr_height,
-		0,
-		0,
+		_scr_width * _scr_height * sizeof(cl_float3),
+		nullptr,
 		&err);
-	checkClErr(err, "cl::Image2D");
+	checkClErr(err, "cl::Buffer");
 }
 
 void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
@@ -350,6 +347,11 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 			_triangles_host.back().material_index += startMaterial;
 		}
 
+		for (u32 triangle : mesh->getEmmisiveTriangles())
+		{
+			_emmisive_triangles_host.push_back(triangle + startTriangle);
+		}
+
 		u32 startBvhNode = (u32)_sub_bvh_nodes_host.size();
 		for (auto& bvhNode : mesh->getBvhNodes())
 		{
@@ -365,11 +367,13 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 
 	writeToBuffer(_queue, _vertices[0], _vertices_host);
 	writeToBuffer(_queue, _triangles[0], _triangles_host);
+	writeToBuffer(_queue, _emmisive_trangles[0], _emmisive_triangles_host);
 	writeToBuffer(_queue, _materials[0], _materials_host);
 	writeToBuffer(_queue, _sub_bvh[0], _sub_bvh_nodes_host);
 
 	writeToBuffer(_queue, _vertices[1], _vertices_host);
 	writeToBuffer(_queue, _triangles[1], _triangles_host);
+	writeToBuffer(_queue, _emmisive_trangles[1], _emmisive_triangles_host);
 	writeToBuffer(_queue, _materials[1], _materials_host);
 	writeToBuffer(_queue, _sub_bvh[1], _sub_bvh_nodes_host);
 
@@ -454,6 +458,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 
 	data.numVertices = _num_static_vertices;
 	data.numTriangles = _num_static_triangles;
+	data.numEmmisiveTriangles = _num_static_emmisive_triangles;
 	data.numLights = _num_lights;
 
 	data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];
@@ -472,11 +477,12 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	_ray_trace_kernel.setArg(1, _ray_kernel_data);
 	_ray_trace_kernel.setArg(2, _vertices[_active_buffers]);
 	_ray_trace_kernel.setArg(3, _triangles[_active_buffers]);
-	_ray_trace_kernel.setArg(4, _materials[_active_buffers]);
-	_ray_trace_kernel.setArg(5, _material_textures);
-	_ray_trace_kernel.setArg(6, _lights);
-	_ray_trace_kernel.setArg(7, _sub_bvh[_active_buffers]);
-	_ray_trace_kernel.setArg(8, _top_bvh[_active_buffers]);
+	_ray_trace_kernel.setArg(4, _emmisive_trangles[_active_buffers]);
+	_ray_trace_kernel.setArg(5, _materials[_active_buffers]);
+	_ray_trace_kernel.setArg(6, _material_textures);
+	_ray_trace_kernel.setArg(7, _lights);
+	_ray_trace_kernel.setArg(8, _sub_bvh[_active_buffers]);
+	_ray_trace_kernel.setArg(9, _top_bvh[_active_buffers]);
 
 	err = _queue.enqueueNDRangeKernel(
 		_ray_trace_kernel,
@@ -495,6 +501,7 @@ void raytracer::RayTracer::Accumulate()
 	_accumulate_kernel.setArg(0, _accumulation_buffer);
 	_accumulate_kernel.setArg(1, _output_image);
 	_accumulate_kernel.setArg(2, _rays_per_pixel);
+	_accumulate_kernel.setArg(3, _scr_width);
 	_queue.enqueueNDRangeKernel(
 		_accumulate_kernel,
 		cl::NullRange,

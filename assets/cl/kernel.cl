@@ -27,16 +27,17 @@ typedef struct
 	uint width;// Render target width
 
 	// Scene
-	int numVertices, numTriangles, numLights;
+	uint numVertices, numTriangles, numEmmisiveTriangles, numLights;
 
-	int topLevelBvhRoot;
+	uint topLevelBvhRoot;
 } KernelData;
 
 __kernel void traceRays(
-	__write_only image2d_t output,
+	__global float3* output,
 	__global KernelData* inputData,
 	__global VertexData* vertices,
 	__global TriangleData* triangles,
+	__global uint* emmisiveTriangles,
 	__global Material* materials,
 	__read_only image2d_array_t textures,
 	__global Light* lights,
@@ -52,6 +53,8 @@ __kernel void traceRays(
 		vertices,
 		inputData->numTriangles,
 		triangles,
+		inputData->numEmmisiveTriangles,
+		emmisiveTriangles,
 		materials,
 		inputData->numLights,
 		lights,
@@ -117,5 +120,6 @@ __kernel void traceRays(
 	}
 
 	//outColor = accurateLinearToSRGB(outColor);
-	write_imagef(output, (int2)(x, y), (float4)(outColor, 1.0f));
+	//write_imagef(output, (int2)(x, y), (float4)(outColor, 1.0f));
+	output[y * inputData->width + x] = outColor;
 }

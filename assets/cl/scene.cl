@@ -12,15 +12,16 @@
 
 typedef struct
 {
-	int numLights, numVertices, numTriangles;
+	uint numVertices, numTriangles, numEmmisiveTriangles, numLights;
 	const __global VertexData* vertices;
 	const __global TriangleData* triangles;
+	const __global uint* emmisiveTriangles;
 	const __global Material* meshMaterials;
 	const __global Light* lights;
 
 	const __global SubBvhNode* subBvh;
 	const __global TopBvhNode* topLevelBvh;
-	int topLevelBvhRoot;
+	uint topLevelBvhRoot;
 
 	float refractiveIndex;
 } Scene;
@@ -32,15 +33,17 @@ void getVertices(VertexData* out_vertices, uint* indices, const Scene* scene) {
 }
 
 void loadScene(
-	int numVertices,
+	uint numVertices,
 	const __global VertexData* vertices,
-	int numTriangles,
+	uint numTriangles,
 	const __global TriangleData* triangles,
+	uint numEmmisiveTriangles,
+	const __global uint* emmisiveTriangles,
 	const __global Material* materials,
-	int numLights,
+	uint numLights,
 	const __global Light* lights,
 	const __global SubBvhNode* subBvh,
-	int topLevelBvhRoot,
+	uint topLevelBvhRoot,
 	const __global TopBvhNode* topLevelBvh,
 	Scene* scene) {
 	scene->refractiveIndex =  1.000277f;
@@ -48,9 +51,11 @@ void loadScene(
 	scene->numLights = numLights;
 	scene->numVertices = numVertices;
 	scene->numTriangles = numTriangles;
+	scene->numEmmisiveTriangles = numEmmisiveTriangles;
 
 	scene->meshMaterials = materials;
 	scene->triangles = triangles;
+	scene->emmisiveTriangles = emmisiveTriangles;
 	scene->vertices = vertices;
 	scene->lights = lights;
 
