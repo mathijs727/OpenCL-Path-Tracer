@@ -68,11 +68,14 @@ __kernel void traceRays(
 		topLevelBvh,
 		&scene);
 	
+	bool leftSide = (x < get_global_size(0) / 2);
+
 	float3 accumulatedColour = (float3)(0, 0, 0);
 	for (int i = 0; i < inputData->raysPerPass; i++)
 	{
+		float corX = (float)(leftSide ? x : x - get_global_size(0) / 2);
 		float3 screenPoint = inputData->screen + \
-			inputData->u_step * (float)x + inputData->v_step * (float)y;	
+			inputData->u_step * corX + inputData->v_step * (float)y;	
 		screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->u_step;
 		screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->v_step;
 
@@ -89,7 +92,7 @@ __kernel void traceRays(
 		{
 			float3 intersection = t * ray.direction + ray.origin;
 			float3 outColour;
-			if (x < get_global_size(0) / 2)
+			if (leftSide)
 			{
 				outColour = slide16Shading(
 					&scene,
