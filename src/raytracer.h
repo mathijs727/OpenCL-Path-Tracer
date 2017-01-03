@@ -31,6 +31,7 @@ private:
 	void Accumulate();
 	void GammaCorrection();
 	void ClearAccumulationBuffer();
+	void CalculateAverageGrayscale();
 
 	void CopyNextFramesData();
 

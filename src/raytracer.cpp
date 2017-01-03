@@ -19,6 +19,7 @@
 #include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
+#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 10000
 #define RAYS_PER_PASS 20
 
@@ -315,6 +316,9 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 	// Non blocking CPU
 	TraceRays(camera);
 	Accumulate();
+#ifdef OUTPUT_AVERAGE_GRAYSCALE
+	CalculateAverageGrayscale();
+#endif
 	GammaCorrection();
 
 	// Lot of CPU work
@@ -421,6 +425,39 @@ void raytracer::RayTracer::ClearAccumulationBuffer()
 		_scr_width * _scr_height * sizeof(cl_float3),
 		nullptr,
 		nullptr);
+}
+
+void raytracer::RayTracer::CalculateAverageGrayscale()
+{
+	size_t sizeInVecs = _scr_width * _scr_height;
+	auto buffer =  std::make_unique<glm::vec4[]>(sizeInVecs);
+	_queue.enqueueReadBuffer(
+		_accumulation_buffer,
+		CL_TRUE,
+		0,
+		sizeInVecs * sizeof(cl_float3),
+		buffer.get(),
+		nullptr,
+		nullptr);
+
+	float sumLeft = 0.0f;
+	float sumRight = 0.0f;
+	for (int i = 0; i < sizeInVecs; i++)
+	{
+		// https://en.wikipedia.org/wiki/Grayscale
+		glm::vec3 colour = glm::vec3(buffer[i]) / (float)_rays_per_pixel;
+		float grayscale = 0.2126f * colour.r + 0.7152f * colour.g + 0.0722f * colour.b;
+
+		auto col = i % _scr_width;
+		if (col < _scr_width / 2)
+			sumLeft += grayscale;
+		else
+			sumRight += grayscale;
+	}
+	sumLeft /= (float)sizeInVecs * 2;
+	sumRight /= (float)sizeInVecs * 2;
+	std::cout << "Average grayscale value left:  " << sumLeft << std::endl;
+	std::cout << "Average grayscale value right: " << sumRight << "\n" << std::endl;
 }
 
 void raytracer::RayTracer::CopyNextFramesData()
