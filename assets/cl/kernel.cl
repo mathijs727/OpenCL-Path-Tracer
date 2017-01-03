@@ -95,12 +95,14 @@ __kernel void traceRays(
 			if (hit)
 			{
 				float3 intersection = t * item.ray.direction + item.ray.origin;
+				float normalTransform[16];
+				matrixTranspose(invTransform, normalTransform);
 				accumulatedColour += shading(
 					&scene,
 					triangleIndex,
 					intersection,
 					item.ray.direction,
-					invTransform,
+					normalTransform,
 					uv,
 					textures,
 					&privateStream,

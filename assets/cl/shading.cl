@@ -9,7 +9,7 @@ float3 shading(
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
-	const __global float* invTransform,
+	const float* normalTransform,
 	float2 uv,
 	image2d_array_t textures,
 	clrngMrg31k3pStream* randomStream,
@@ -23,6 +23,7 @@ float3 shading(
 	float3 edge1 = vertices[1].vertex - vertices[0].vertex;
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = normalize(cross(edge1, edge2));
+	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
@@ -34,7 +35,8 @@ float3 shading(
 
 	// Continue in random direction
 	float3 reflection = diffuseReflection(edge1, edge2, randomStream);
-	
+	reflection = normalize(matrixMultiplyLocal(normalTransform, (float4)(reflection, 0.0f)).xyz);
+
 	// Update throughput
 	float3 BRDF = material->diffuse.diffuseColour / PI;
 	float3 Ei = dot(realNormal , reflection);// Irradiance
