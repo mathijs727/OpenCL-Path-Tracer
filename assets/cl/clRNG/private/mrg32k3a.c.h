@@ -75,9 +75,9 @@ clrngStatus clrngMrg32k3aCopyOverStreams(size_t count, clrngMrg32k3aStream* dest
 {
 	//Check params
 	if (!destStreams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): destStreams cannot be NULL", __func__);
+		return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): destStreams cannot be NULL", __func__);
 	if (!srcStreams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): srcStreams cannot be NULL", __func__);
+		return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): srcStreams cannot be NULL", __func__);
 
 	for (size_t i = 0; i < count; i++)
 		destStreams[i] = srcStreams[i];
@@ -136,9 +136,9 @@ static cl_ulong clrngMrg32k3aNextState(clrngMrg32k3aStreamState* currentState)
 	\
 	clrngStatus clrngMrg32k3aRandomU01Array_##fptype(clrngMrg32k3aStream* stream, size_t count, fptype* buffer) { \
 		if (!stream) \
-			return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): stream cannot be NULL", __func__); \
+			return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): stream cannot be NULL", __func__); \
 		if (!buffer) \
-			return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): buffer cannot be NULL", __func__); \
+			return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): buffer cannot be NULL", __func__); \
 		for (size_t i = 0; i < count; i++)  \
 			buffer[i] = clrngMrg32k3aRandomU01_##fptype(stream); \
 		return CLRNG_SUCCESS; \
@@ -146,9 +146,9 @@ static cl_ulong clrngMrg32k3aNextState(clrngMrg32k3aStreamState* currentState)
 	\
 	clrngStatus clrngMrg32k3aRandomIntegerArray_##fptype(clrngMrg32k3aStream* stream, cl_int i, cl_int j, size_t count, cl_int* buffer) { \
 		if (!stream) \
-			return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): stream cannot be NULL", __func__); \
+			return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): stream cannot be NULL", __func__); \
 		if (!buffer) \
-			return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): buffer cannot be NULL", __func__); \
+			return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): buffer cannot be NULL", __func__); \
 		for (size_t k = 0; k < count; k++) \
 			buffer[k] = clrngMrg32k3aRandomInteger_##fptype(stream, i, j); \
 		return CLRNG_SUCCESS; \
@@ -172,7 +172,7 @@ clrngStatus clrngMrg32k3aRewindStreams(size_t count, clrngMrg32k3aStream* stream
 {
 	//Check params
 	if (!streams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): streams cannot be NULL", __func__);
+		return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): streams cannot be NULL", __func__);
 	//Reset current state to the stream initial state
 	for (size_t j = 0; j < count; j++) {
 #ifdef __CLRNG_DEVICE_API
@@ -194,7 +194,7 @@ clrngStatus clrngMrg32k3aRewindSubstreams(size_t count, clrngMrg32k3aStream* str
 {
 	//Check params
 	if (!streams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): streams cannot be NULL", __func__);
+		return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): streams cannot be NULL", __func__);
 	//Reset current state to the subStream initial state
 	for (size_t j = 0; j < count; j++) {
 		streams[j].current = streams[j].substream;
@@ -207,7 +207,7 @@ clrngStatus clrngMrg32k3aForwardToNextSubstreams(size_t count, clrngMrg32k3aStre
 {
 	//Check params
 	if (!streams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): streams cannot be NULL", __func__);
+		return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): streams cannot be NULL", __func__);
 
 	for (size_t k = 0; k < count; k++) {
 		modMatVec(clrngMrg32k3a_A1p76, streams[k].substream.g1, streams[k].substream.g1, Mrg32k3a_M1);

@@ -113,9 +113,9 @@ clrngStatus clrngPhilox432CopyOverStreamsFromGlobal(size_t count, clrngPhilox432
 {
 	//Check params
 	if (!destStreams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "clrngPhilox432CopyOverStreamsFromGlobal(): destStreams cannot be NULL");
+		return clrngSetErrorString1P(CLRNG_INVALID_VALUE, "clrngPhilox432CopyOverStreamsFromGlobal(): destStreams cannot be NULL");
 	if (!srcStreams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "clrngPhilox432CopyOverStreamsFromGlobal(): srcStreams cannot be NULL");
+		return clrngSetErrorString1P(CLRNG_INVALID_VALUE, "clrngPhilox432CopyOverStreamsFromGlobal(): srcStreams cannot be NULL");
 
 	for (size_t i = 0; i < count; i++) {
 		destStreams[i].current = srcStreams[i].current;
@@ -132,9 +132,9 @@ clrngStatus clrngPhilox432CopyOverStreamsToGlobal(size_t count, __global clrngPh
 {
 	//Check params
 	if (!destStreams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "clrngPhilox432CopyOverStreamsToGlobal(): destStreams cannot be NULL");
+		return clrngSetErrorString1P(CLRNG_INVALID_VALUE, "clrngPhilox432CopyOverStreamsToGlobal(): destStreams cannot be NULL");
 	if (!srcStreams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "clrngPhilox432CopyOverStreamsToGlobal(): srcStreams cannot be NULL");
+		return clrngSetErrorString1P(CLRNG_INVALID_VALUE, "clrngPhilox432CopyOverStreamsToGlobal(): srcStreams cannot be NULL");
 
 	for (size_t i = 0; i < count; i++) {
 		destStreams[i].current = srcStreams[i].current;

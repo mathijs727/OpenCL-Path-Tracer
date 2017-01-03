@@ -112,9 +112,9 @@ clrngStatus clrngMrg32k3aCopyOverStreamsFromGlobal(size_t count, clrngMrg32k3aSt
 {
 	//Check params
 	if (!destStreams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "clrngMrg32k3aCopyOverStreamsFromGlobal(): destStreams cannot be NULL");
+		return clrngSetErrorString1P(CLRNG_INVALID_VALUE, "clrngMrg32k3aCopyOverStreamsFromGlobal(): destStreams cannot be NULL");
 	if (!srcStreams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "clrngMrg32k3aCopyOverStreamsFromGlobal(): srcStreams cannot be NULL");
+		return clrngSetErrorString1P(CLRNG_INVALID_VALUE, "clrngMrg32k3aCopyOverStreamsFromGlobal(): srcStreams cannot be NULL");
 
 	for (size_t i = 0; i < count; i++) {
 		destStreams[i].current = srcStreams[i].current;
@@ -131,9 +131,9 @@ clrngStatus clrngMrg32k3aCopyOverStreamsToGlobal(size_t count, __global clrngMrg
 {
     //Check params
     if (!destStreams)
-	return clrngSetErrorString(CLRNG_INVALID_VALUE, "clrngMrg32k3aCopyOverStreamsToGlobal(): destStreams cannot be NULL");
+	return clrngSetErrorString1P(CLRNG_INVALID_VALUE, "clrngMrg32k3aCopyOverStreamsToGlobal(): destStreams cannot be NULL");
     if (!srcStreams)
-	return clrngSetErrorString(CLRNG_INVALID_VALUE, "clrngMrg32k3aCopyOverStreamsToGlobal(): srcStreams cannot be NULL");
+	return clrngSetErrorString1P(CLRNG_INVALID_VALUE, "clrngMrg32k3aCopyOverStreamsToGlobal(): srcStreams cannot be NULL");
 
     for (size_t i = 0; i < count; i++) {
 	destStreams[i].current   = srcStreams[i].current;

@@ -160,7 +160,7 @@
     <Link>
       <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;clRNG.lib;OpenCL.lib;opengl32.lib;glew32s.lib;assimp-vc140-mt.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\assimp\$(PLATFORM);lib\SDL2\$(Platform);lib\clRNG\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(CUDA_PATH)\lib\$(PLATFORM);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\assimp\$(PLATFORM);lib\SDL2\$(Platform);lib\clRNG\$(Platform);lib\glew\$(Platform);lib\FreeImage\$(Platform);$(CUDA_PATH)\lib\$(PLATFORM);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -198,7 +198,7 @@
     <Link>
       <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;clRNG.lib;OpenCL.lib;opengl32.lib;glew32s.lib;assimp-vc140-mt.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\assimp\$(PLATFORM);lib\SDL2\$(Platform);lib\clRNG\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(CUDA_PATH)\lib\$(PLATFORM);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\assimp\$(PLATFORM);lib\SDL2\$(Platform);lib\clRNG\$(Platform);lib\glew\$(Platform);lib\FreeImage\$(Platform);$(CUDA_PATH)\lib\$(PLATFORM);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -240,7 +240,7 @@
     <Link>
       <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;clRNG.lib;OpenCL.lib;opengl32.lib;glew32s.lib;assimp-vc140-mt.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\assimp\$(PLATFORM);lib\SDL2\$(Platform);lib\clRNG\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(CUDA_PATH)\lib\$(PLATFORM);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\assimp\$(PLATFORM);lib\SDL2\$(Platform);lib\clRNG\$(Platform);lib\glew\$(Platform);lib\FreeImage\$(Platform);$(CUDA_PATH)\lib\$(PLATFORM);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -285,7 +285,7 @@
     <Link>
       <AdditionalDependencies>user32.lib;winmm.lib;sdl2.lib;sdl2main.lib;freeimage.lib;clRNG.lib;OpenCL.lib;opengl32.lib;glew32s.lib;assimp-vc140-mt.lib</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>lib\assimp\$(PLATFORM);lib\SDL2\$(Platform);lib\clRNG\$(Platform);lib\glew\$(Platform);lib\freeimage\$(Platform);$(CUDA_PATH)\lib\$(PLATFORM);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\assimp\$(PLATFORM);lib\SDL2\$(Platform);lib\clRNG\$(Platform);lib\glew\$(Platform);lib\FreeImage\$(Platform);$(CUDA_PATH)\lib\$(PLATFORM);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>

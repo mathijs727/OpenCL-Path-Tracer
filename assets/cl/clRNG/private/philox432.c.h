@@ -73,9 +73,9 @@ clrngStatus clrngPhilox432CopyOverStreams(size_t count, clrngPhilox432Stream* de
 {
 	//Check params
 	if (!destStreams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): destStreams cannot be NULL", __func__);
+		return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): destStreams cannot be NULL", __func__);
 	if (!srcStreams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): srcStreams cannot be NULL", __func__);
+		return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): srcStreams cannot be NULL", __func__);
 
 	for (size_t i = 0; i < count; i++)
 		destStreams[i] = srcStreams[i];
@@ -146,9 +146,9 @@ static cl_uint clrngPhilox432NextState(clrngPhilox432StreamState *currentState) 
 	\
 	clrngStatus clrngPhilox432RandomU01Array_##fptype(clrngPhilox432Stream* stream, size_t count, fptype* buffer) { \
 		if (!stream) \
-			return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): stream cannot be NULL", __func__); \
+			return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): stream cannot be NULL", __func__); \
 		if (!buffer) \
-			return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): buffer cannot be NULL", __func__); \
+			return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): buffer cannot be NULL", __func__); \
 		for (size_t i = 0; i < count; i++)  \
 			buffer[i] = clrngPhilox432RandomU01_##fptype(stream); \
 		return CLRNG_SUCCESS; \
@@ -156,9 +156,9 @@ static cl_uint clrngPhilox432NextState(clrngPhilox432StreamState *currentState) 
 	\
 	clrngStatus clrngPhilox432RandomIntegerArray_##fptype(clrngPhilox432Stream* stream, cl_int i, cl_int j, size_t count, cl_int* buffer) { \
 		if (!stream) \
-			return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): stream cannot be NULL", __func__); \
+			return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): stream cannot be NULL", __func__); \
 		if (!buffer) \
-			return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): buffer cannot be NULL", __func__); \
+			return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): buffer cannot be NULL", __func__); \
 		for (size_t k = 0; k < count; k++) \
 			buffer[k] = clrngPhilox432RandomInteger_##fptype(stream, i, j); \
 		return CLRNG_SUCCESS; \
@@ -182,7 +182,7 @@ clrngStatus clrngPhilox432RewindStreams(size_t count, clrngPhilox432Stream* stre
 {
 	//Check params
 	if (!streams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): streams cannot be NULL", __func__);
+		return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): streams cannot be NULL", __func__);
 	//Reset current state to the stream initial state
 	for (size_t j = 0; j < count; j++) {
 #ifdef __CLRNG_DEVICE_API
@@ -205,7 +205,7 @@ clrngStatus clrngPhilox432RewindSubstreams(size_t count, clrngPhilox432Stream* s
 {
 	//Check params
 	if (!streams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): streams cannot be NULL", __func__);
+		return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): streams cannot be NULL", __func__);
 	//Reset current state to the subStream initial state
 	for (size_t j = 0; j < count; j++) {
 		streams[j].current = streams[j].substream;
@@ -229,7 +229,7 @@ clrngStatus clrngPhilox432ForwardToNextSubstreams(size_t count, clrngPhilox432St
 {
 	//Check params
 	if (!streams)
-		return clrngSetErrorString(CLRNG_INVALID_VALUE, "%s(): streams cannot be NULL", __func__);
+		return clrngSetErrorString2P(CLRNG_INVALID_VALUE, "%s(): streams cannot be NULL", __func__);
 
 	for (size_t k = 0; k < count; k++) {
 
