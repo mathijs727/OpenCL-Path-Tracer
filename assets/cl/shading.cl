@@ -105,8 +105,10 @@ float3 slide17Shading(
 	if (hit)
 		return BLACK;
 
+
 	float3 BRDF = material->diffuse.diffuseColour * INVPI;
 	float solidAngle = (cos_o * triangleArea(lightVertices)) / (dist * dist);
+	solidAngle = min(2 * PI, solidAngle);
 	return scene->numEmmisiveTriangles * BRDF* lightColour * solidAngle * cos_i;
 }
 
