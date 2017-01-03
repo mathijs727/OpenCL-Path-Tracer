@@ -59,9 +59,10 @@ void Game::Init()
 		Transform transform;
 		transform.scale = glm::vec3(0.5f);
 		transform.location = glm::vec3(0, 0.5f, 0);
+		transform.orientation = glm::quat(glm::vec3(0, 1, 0));
 		auto cube = std::make_shared<Mesh>();
 		cube->loadFromFile("assets/3dmodels/cube/cube.obj");
-		//_scene->add_node(cube, transform);
+		_cube_scene_node = &_scene->add_node(cube, transform);
 	}
 	
 	/*_animatedHeli = std::make_shared<MeshSequence>();

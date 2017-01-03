@@ -1,9 +1,8 @@
-//#define NO_SHADOWS
+#define NO_PARALLEL_RAYS// When a ray is parallel to axis, the intersection tests are really slow
 #define USE_BVH
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
 
-// When a ray is parallel to axis, the intersection tests are really slow
-#define NO_PARALLEL_RAYS
+#define MAX_ITERATIONS 5
 
 #include <clRNG/mrg31k3p.clh>
 #include "shapes.cl"
@@ -67,54 +66,50 @@ __kernel void traceRays(
 		inputData->topLevelBvhRoot,
 		topLevelBvh,
 		&scene);
-	
-	bool leftSide = (x < get_global_size(0) / 2);
 
 	float3 accumulatedColour = (float3)(0, 0, 0);
+	Stack stack;
+	StackInit(&stack);
 	for (int i = 0; i < inputData->raysPerPass; i++)
 	{
-		float corX = (float)(leftSide ? x : x - get_global_size(0) / 2);
+		float corX = x;//(float)(leftSide ? x : x - get_global_size(0) / 2);
 		float3 screenPoint = inputData->screen + \
 			inputData->u_step * corX + inputData->v_step * (float)y;	
 		screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->u_step;
 		screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->v_step;
+		StackPush(&stack,
+			inputData->eye,
+			normalize(screenPoint - inputData->eye),
+			(float3)(1,1,1));
 
-		Ray ray;
-		ray.origin = inputData->eye;
-		ray.direction = normalize(screenPoint - inputData->eye);
-
-		int triangleIndex;
-		float t;
-		float2 uv;
-		const __global float* invTransform;
-		bool hit = traceRay(&scene, &ray, false, INFINITY, &triangleIndex, &t, &uv, &invTransform);
-		if (hit)
+		int iteration = 0;
+		while (!StackEmpty(&stack))
 		{
-			float3 intersection = t * ray.direction + ray.origin;
-			float3 outColour;
-			if (leftSide)
+			StackItem item = StackPop(&stack);
+
+			int triangleIndex;
+			float t;
+			float2 uv;
+			const __global float* invTransform;
+			bool hit = traceRay(&scene, &item.ray, false, INFINITY, &triangleIndex, &t, &uv, &invTransform);
+			if (hit)
 			{
-				outColour = slide16Shading(
+				float3 intersection = t * item.ray.direction + item.ray.origin;
+				accumulatedColour += shading(
 					&scene,
 					triangleIndex,
 					intersection,
-					ray.direction,
+					item.ray.direction,
 					invTransform,
 					uv,
 					textures,
-					&privateStream);
-			} else {
-				outColour = slide17Shading(
-					&scene,
-					triangleIndex,
-					intersection,
-					ray.direction,
-					invTransform,
-					uv,
-					textures,
-					&privateStream);
+					&privateStream,
+					item.multiplier,
+					&stack);
 			}
-			accumulatedColour += outColour;
+
+			if (++iteration == MAX_ITERATIONS)
+				break;
 		}
 	}
 	output[y * inputData->width + x] += accumulatedColour;

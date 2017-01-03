@@ -19,9 +19,9 @@
 #include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
-#define OUTPUT_AVERAGE_GRAYSCALE
+//#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 10000
-#define RAYS_PER_PASS 20
+#define RAYS_PER_PASS 10
 
 struct KernelData
 {

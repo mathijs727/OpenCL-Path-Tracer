@@ -41,7 +41,7 @@ private:
 	glm::vec3 _camera_euler;
 
 	float t = 0.0f;
-	//raytracer::SceneNode* _cube_scene_node;
+	raytracer::SceneNode* _cube_scene_node;
 
 	std::unique_ptr<raytracer::RayTracer> _ray_tracer;
 	GLOutput _out;

@@ -2,7 +2,7 @@
 #define __STACK_CL
 #include "ray.cl"
 
-#define MAX_STACK_SIZE 16
+#define MAX_STACK_SIZE 8
 
 typedef struct
 {
@@ -21,18 +21,21 @@ void StackInit(Stack* stack)
 	stack->numItems = 0;
 }
 
-void StackPush(Stack* stack, const StackItem* item)
+void StackPush(Stack* stack, float3 origin, float3 direction, float3 multiplier)
 {
 	// If we push to a full stack, ignore the operation
 	if (stack->numItems == MAX_STACK_SIZE)
 		return;
 
-	stack->items[stack->numItems++] = *item;
+	StackItem* item = &stack->items[stack->numItems++];
+	item->ray.origin = origin;
+	item->ray.direction = direction;
+	item->multiplier = multiplier;
 }
 
-void StackPop(Stack* stack, StackItem* out)
+StackItem StackPop(Stack* stack)
 {
-	*out = stack->items[--stack->numItems];
+	return stack->items[--stack->numItems];
 }
 
 bool StackEmpty(const Stack* stack)
