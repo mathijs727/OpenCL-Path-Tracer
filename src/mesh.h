@@ -38,6 +38,7 @@ public:
 	void buildBvh() override { };// Only necessary for dynamic objects
 private:
 	void addSubMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix, const char* texturePath);
+	void collectEmmisiveTriangles();
 
 	void storeBvh(const char* fileName);
 	bool loadBvh(const char* fileName);

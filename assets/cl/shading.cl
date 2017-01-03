@@ -1,11 +1,13 @@
 #ifndef __SHADING_CL
 #define __SHADING_CL
 
-#define EPSILON 0.0001f
+#define EPSILON 0.00001f
 #define PI 3.14159265359f
 #define INVPI 0.31830988618f;
+
 #define BLACK (float3)(0, 0, 0);
 #define WHITE (float3)(1, 1, 1);
+#define GRAY(x) (float3)(x, x, x);
 
 // http://www.rorydriscoll.com/2009/01/07/better-sampling/
 float3 diffuseReflection(
@@ -43,9 +45,9 @@ float3 uniformSampleTriangle(VertexData* vertices, clrngMrg31k3pStream* randomSt
 // https://www.mathsisfun.com/geometry/herons-formula.html
 float triangleArea(VertexData* vertices)
 {
-	float3 A = vertices[0].vertex;
-	float3 B = vertices[1].vertex;
-	float3 C = vertices[2].vertex;
+	float3 A = vertices[1].vertex - vertices[0].vertex;
+	float3 B = vertices[2].vertex - vertices[1].vertex;
+	float3 C = vertices[0].vertex - vertices[2].vertex;
 	float lenA = sqrt(dot(A, A));
 	float lenB = sqrt(dot(B, B));
 	float lenC = sqrt(dot(C, C));
@@ -72,18 +74,18 @@ float3 slide17Shading(
 	VertexData vertices[3];
 	TriangleData triangle = scene->triangles[triangleIndex];
 	getVertices(vertices, triangle.indices, scene);
-	float3 e1 = vertices[1].vertex - vertices[0].vertex;
-	float3 e2 = vertices[2].vertex - vertices[0].vertex;
-	float3 normal = normalize(cross(e1, e2));
+	float3 normal = normalize(cross(
+		vertices[1].vertex - vertices[0].vertex,
+		vertices[2].vertex - vertices[0].vertex));
 
 	// Construct vector to random point on light
 	int lightIndex = clrngMrg31k3pRandomInteger(randomStream, 0, scene->numEmmisiveTriangles);
 	TriangleData lightTriangle = scene->triangles[scene->emmisiveTriangles[lightIndex]];
 	VertexData lightVertices[3];
 	getVertices(lightVertices, lightTriangle.indices, scene);
-	float3 edge1 = lightVertices[1].vertex - lightVertices[0].vertex;
-	float3 edge2 = lightVertices[2].vertex - lightVertices[0].vertex;
-	float3 lightNormal = normalize(cross(edge1, edge2));
+	float3 lightNormal = normalize(cross(
+		lightVertices[1].vertex - lightVertices[0].vertex,
+		lightVertices[2].vertex - lightVertices[0].vertex));
 	float3 lightColour = scene->meshMaterials[lightTriangle.mat_index].emmisive.emmisiveColour;
 
 	float3 L = uniformSampleTriangle(lightVertices, randomStream) - intersection;
@@ -100,13 +102,12 @@ float3 slide17Shading(
 
 	int bounceTriInd;
 	bool hit = traceRay(scene, &ray, true, dist - 2 * EPSILON, &bounceTriInd, NULL, NULL, NULL);
-	if (hit) {
+	if (hit)
 		return BLACK;
-	}
 
 	float3 BRDF = material->diffuse.diffuseColour * INVPI;
 	float solidAngle = (cos_o * triangleArea(lightVertices)) / (dist * dist);
-	return BRDF * scene->numEmmisiveTriangles * lightColour * solidAngle * cos_i;
+	return scene->numEmmisiveTriangles * BRDF* lightColour * solidAngle * cos_i;
 }
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2007%20-%20path%20tracing.pdf

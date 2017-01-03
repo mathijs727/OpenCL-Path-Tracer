@@ -20,7 +20,7 @@
 
 //#define PROFILE_OPENCL
 #define MAX_RAYS_PER_PIXEL 10000
-#define RAYS_PER_PASS 10
+#define RAYS_PER_PASS 20
 
 struct KernelData
 {
@@ -153,143 +153,6 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 
 raytracer::RayTracer::~RayTracer()
 {
-}
-
-void raytracer::RayTracer::InitBuffers(
-	u32 numVertices,
-	u32 numTriangles,
-	u32 numEmmisiveTriangles,
-	u32 numMaterials,
-	u32 numSubBvhNodes,
-	u32 numTopBvhNodes,
-	u32 numLights)
-{
-	cl_int err;
-
-	_vertices[0] = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1u, numVertices) * sizeof(VertexSceneData),
-		NULL,
-		&err);
-	_vertices[1] = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1u, numVertices) * sizeof(VertexSceneData),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-
-	_triangles[0] = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1u, numTriangles) * sizeof(TriangleSceneData),
-		NULL,
-		&err);
-	_triangles[1] = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1u, numTriangles) * sizeof(TriangleSceneData),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-
-	_emmisive_trangles[0] = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1u, numEmmisiveTriangles) * sizeof(u32),
-		NULL,
-		&err);
-	_emmisive_trangles[1] = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1u, numEmmisiveTriangles) * sizeof(u32),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-
-	_materials[0] = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1u, numMaterials) * sizeof(Material),
-		NULL,
-		&err);
-	_materials[1] = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1u, numMaterials) * sizeof(Material),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-
-	_sub_bvh[0] = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1u, numSubBvhNodes) * sizeof(SubBvhNode),
-		NULL,
-		&err);
-	_sub_bvh[1] = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1u, numSubBvhNodes) * sizeof(SubBvhNode),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-
-	_top_bvh[0] = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		numTopBvhNodes * sizeof(TopBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-	_top_bvh[1] = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		numTopBvhNodes * sizeof(TopBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-
-	_lights = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1u, numLights) * sizeof(Light),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-
-	// https://www.khronos.org/registry/cl/specs/opencl-cplusplus-1.2.pdf
-	_material_textures = cl::Image2DArray(_context,
-		CL_MEM_READ_ONLY,
-		cl::ImageFormat(CL_BGRA, CL_UNORM_INT8),
-		std::max((u32)1u, (u32)Texture::getNumUniqueSurfaces()),
-		Texture::TEXTURE_WIDTH,
-		Texture::TEXTURE_HEIGHT,
-		0, 0, NULL,// Unused host_ptr
-		&err);
-	checkClErr(err, "cl::Image2DArray");
-
-
-
-
-	_ray_kernel_data = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		sizeof(KernelData),
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-
-	// Create random streams and copy them to the GPU
-	size_t numWorkItems = _scr_width * _scr_height;
-	size_t streamBufferSize;
-	clrngMrg31k3pStream* streams = clrngMrg31k3pCreateStreams(
-		NULL, numWorkItems, &streamBufferSize, (clrngStatus*)&err);
-	checkClErr(err, "clrngMrg31k3pCreateStreams");
-	_random_streams = cl::Buffer(_context,
-		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-		streamBufferSize,
-		streams,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-	clrngMrg31k3pDestroyStreams(streams);
-	
-
-
-
-	_accumulation_buffer = cl::Buffer(_context,
-		CL_MEM_READ_WRITE,
-		_scr_width * _scr_height * sizeof(cl_float3),
-		nullptr,
-		&err);
-	checkClErr(err, "cl::Buffer");
 }
 
 void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
@@ -777,6 +640,143 @@ void raytracer::RayTracer::InitOpenCL()
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
 	_copyQueue = clCreateCommandQueue(lContext, lDeviceId, props, &lError);
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
+}
+
+void raytracer::RayTracer::InitBuffers(
+	u32 numVertices,
+	u32 numTriangles,
+	u32 numEmmisiveTriangles,
+	u32 numMaterials,
+	u32 numSubBvhNodes,
+	u32 numTopBvhNodes,
+	u32 numLights)
+{
+	cl_int err;
+
+	_vertices[0] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numVertices) * sizeof(VertexSceneData),
+		NULL,
+		&err);
+	_vertices[1] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numVertices) * sizeof(VertexSceneData),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
+	_triangles[0] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numTriangles) * sizeof(TriangleSceneData),
+		NULL,
+		&err);
+	_triangles[1] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numTriangles) * sizeof(TriangleSceneData),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
+	_emmisive_trangles[0] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numEmmisiveTriangles) * sizeof(u32),
+		NULL,
+		&err);
+	_emmisive_trangles[1] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numEmmisiveTriangles) * sizeof(u32),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
+	_materials[0] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numMaterials) * sizeof(Material),
+		NULL,
+		&err);
+	_materials[1] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numMaterials) * sizeof(Material),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
+	_sub_bvh[0] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numSubBvhNodes) * sizeof(SubBvhNode),
+		NULL,
+		&err);
+	_sub_bvh[1] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numSubBvhNodes) * sizeof(SubBvhNode),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
+	_top_bvh[0] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		numTopBvhNodes * sizeof(TopBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+	_top_bvh[1] = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		numTopBvhNodes * sizeof(TopBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
+	_lights = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		std::max(1u, numLights) * sizeof(Light),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
+	// https://www.khronos.org/registry/cl/specs/opencl-cplusplus-1.2.pdf
+	_material_textures = cl::Image2DArray(_context,
+		CL_MEM_READ_ONLY,
+		cl::ImageFormat(CL_BGRA, CL_UNORM_INT8),
+		std::max((u32)1u, (u32)Texture::getNumUniqueSurfaces()),
+		Texture::TEXTURE_WIDTH,
+		Texture::TEXTURE_HEIGHT,
+		0, 0, NULL,// Unused host_ptr
+		&err);
+	checkClErr(err, "cl::Image2DArray");
+
+
+
+
+	_ray_kernel_data = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		sizeof(KernelData),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+
+	// Create random streams and copy them to the GPU
+	size_t numWorkItems = _scr_width * _scr_height;
+	size_t streamBufferSize;
+	clrngMrg31k3pStream* streams = clrngMrg31k3pCreateStreams(
+		NULL, numWorkItems, &streamBufferSize, (clrngStatus*)&err);
+	checkClErr(err, "clrngMrg31k3pCreateStreams");
+	_random_streams = cl::Buffer(_context,
+		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+		streamBufferSize,
+		streams,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+	clrngMrg31k3pDestroyStreams(streams);
+
+
+
+
+	_accumulation_buffer = cl::Buffer(_context,
+		CL_MEM_READ_WRITE,
+		_scr_width * _scr_height * sizeof(cl_float3),
+		nullptr,
+		&err);
+	checkClErr(err, "cl::Buffer");
 }
 
 cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* funcName)

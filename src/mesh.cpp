@@ -117,10 +117,86 @@ void raytracer::Mesh::addSubMesh(
 		triangle.material_index = materialId;
 		_triangles.push_back(triangle);
 
-		if (emmisive)
-			_emmisive_triangles.push_back((u32)_triangles.size() - 1);
+		// Doesnt work if SBVH is gonna mess up triangle order anyways
+		//if (emmisive)
+		//	_emmisive_triangles.push_back((u32)_triangles.size() - 1);
 	}
 }
+
+void raytracer::Mesh::collectEmmisiveTriangles()
+{
+	_emmisive_triangles.clear();
+	for (u32 i = 0; i < _triangles.size(); i++)
+	{
+		auto triangle = _triangles[i];
+		auto material = _materials[triangle.material_index];
+		glm::vec4 vertices[3];
+		vertices[0] = _vertices[triangle.indices.x].vertex;
+		vertices[1] = _vertices[triangle.indices.y].vertex;
+		vertices[2] = _vertices[triangle.indices.z].vertex;
+		if (material.type == Material::Type::Emmisive)
+			_emmisive_triangles.push_back(i);
+	}
+}
+
+void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
+	struct StackElement
+	{
+		aiNode* node;
+		glm::mat4x4 transform;
+		StackElement(aiNode* node, const glm::mat4& transform = glm::mat4()) : node(node), transform(transform) {}
+	};
+
+	std::string path = getPath(file);
+
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
+
+	if (scene == nullptr || scene->mRootNode == nullptr)
+		std::cout << "Mesh not found: " << file << std::endl;
+
+	if (scene != nullptr && scene->mFlags != AI_SCENE_FLAGS_INCOMPLETE && scene->mRootNode != nullptr) {
+		std::stack<StackElement> stack;
+		stack.push(StackElement(scene->mRootNode, offset.matrix()));
+		while (!stack.empty()) {
+			auto current = stack.top();
+			stack.pop();
+			glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
+			for (uint i = 0; i < current.node->mNumMeshes; ++i) {
+				addSubMesh(scene, current.node->mMeshes[i], cur_transform, path.c_str());
+				//if (!success) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
+				//else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
+				//out_vec.push_back(mesh);
+			}
+			for (uint i = 0; i < current.node->mNumChildren; ++i) {
+				stack.push(StackElement(current.node->mChildren[i], cur_transform));
+			}
+		}
+	}
+
+	std::string bvhFileName = file;
+	bvhFileName += ".bvh";
+	bool buildBvh = true;
+	if (fileExists(bvhFileName))
+	{
+		std::cout << "Loading bvh from file: " << bvhFileName << std::endl;
+		//buildBvh = !loadBvh(bvhFileName.c_str());
+	}
+
+	if (buildBvh) {
+		std::cout << "Starting bvh build..." << std::endl;
+		// Create a BVH for the mesh
+		SbvhBuilder bvhBuilder;
+		_bvh_root_node = bvhBuilder.build(_vertices, _triangles, _bvh_nodes);
+
+		std::cout << "Storing bvh in file: " << bvhFileName << std::endl;
+		storeBvh(bvhFileName.c_str());
+	}
+
+	collectEmmisiveTriangles();
+}
+
+
 
 const u32 BVH_FILE_FORMAT_VERSION = 1;
 
@@ -184,68 +260,4 @@ bool raytracer::Mesh::loadBvh(const char* fileName)
 
 	inFile.close();
 	return true;
-}
-
-void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
-	struct StackElement
-	{
-		aiNode* node;
-		glm::mat4x4 transform;
-		StackElement(aiNode* node, const glm::mat4& transform = glm::mat4()) : node(node), transform(transform) {}
-	};
-
-	std::string path = getPath(file);
-
-	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
-
-	if (scene == nullptr || scene->mRootNode == nullptr)
-		std::cout << "Mesh not found: " << file << std::endl;
-
-	if (scene != nullptr && scene->mFlags != AI_SCENE_FLAGS_INCOMPLETE && scene->mRootNode != nullptr) {
-		std::stack<StackElement> stack;
-		stack.push(StackElement(scene->mRootNode, offset.matrix()));
-		while (!stack.empty()) {
-			auto current = stack.top();
-			stack.pop();
-			glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
-			for (uint i = 0; i < current.node->mNumMeshes; ++i) {
-				addSubMesh(scene, current.node->mMeshes[i], cur_transform, path.c_str());
-				//if (!success) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
-				//else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
-				//out_vec.push_back(mesh);
-			}
-			for (uint i = 0; i < current.node->mNumChildren; ++i) {
-				stack.push(StackElement(current.node->mChildren[i], cur_transform));
-			}
-		}
-	}
-
-	std::string bvhFileName = file;
-	bvhFileName += ".bvh";
-	bool buildBvh = true;
-	if (fileExists(bvhFileName))
-	{
-		std::cout << "Loading bvh from file: " << bvhFileName << std::endl;
-		/*if (loadBvh(bvhFileName.c_str()))
-		{
-			buildBvh = false;
-		}
-		else {
-			std::cout << "Unsuppored file format, need to regenerate BVH." << std::endl;
-		}*/
-	}
-	
-	if (buildBvh) {
-		std::cout << "Starting bvh build..." << std::endl;
-		// Create a BVH for the mesh
-		SbvhBuilder bvhBuilder;
-		_bvh_root_node = bvhBuilder.build(_vertices, _triangles, _bvh_nodes);
-		/*std::cout << "bvh build finished!\ntotal nodes: " << bvhBuilder._totalNodes
-			<< "\ntotal splits: " << bvhBuilder._totalSplits
-			<< "\nspatial splits: " << bvhBuilder._spatialSplits << std::endl;*/
-
-		std::cout << "Storing bvh in file: " << bvhFileName << std::endl;
-		storeBvh(bvhFileName.c_str());
-	}
 }
