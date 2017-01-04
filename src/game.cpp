@@ -52,10 +52,10 @@ void Game::Init()
 	{
 		auto cornell = std::make_shared<Mesh>();
 		cornell->loadFromFile("assets/3dmodels/cornel/CornellBox-Empty-RG.obj");
-		//_scene->add_node(cornell);
+		_scene->add_node(cornell);
 	}
 
-	{
+	/*{
 		Transform transform;
 		auto groundPlane = std::make_shared<Mesh>();
 		groundPlane->loadFromFile("assets/3dmodels/plane/plane.obj", Material::Diffuse(glm::vec3(0.8f, 0.8f, 0.8f)), transform);
@@ -70,12 +70,12 @@ void Game::Init()
 		auto lightPlane = std::make_shared<Mesh>();
 		lightPlane->loadFromFile("assets/3dmodels/plane/plane.obj", Material::Emmisive(glm::vec3(0.8f, 0.8f, 0.8f) * 15.0f), transform);
 		_scene->add_node(lightPlane);
-	}
+	}*/
 
 	{
 		Transform transform;
 		transform.scale = glm::vec3(0.5f);
-		transform.location = glm::vec3(0, 0.5f, -1);
+		transform.location = glm::vec3(0, 0.5f, 0);
 		transform.orientation = glm::quat(glm::vec3(0, 1, 0));
 		auto cube = std::make_shared<Mesh>();
 		cube->loadFromFile("assets/3dmodels/cube/cube.obj");

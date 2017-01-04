@@ -8,7 +8,15 @@
 #define WHITE (float3)(1, 1, 1);
 #define GRAY(x) (float3)(x, x, x);
 
-#define EPSILON 0.00001f
+#define EPSILON 0.0001f
+
+// Random int between start (inclusive) and stop (exclusive)
+int randInt(clrngMrg31k3pStream* randomStream, int start, int stop)
+{
+	float u = min((float)clrngMrg31k3pRandomU01(randomStream), 1.0f - FLT_MAX);
+	float range = stop - start;
+	return start + (int)(u * range);
+}
 
 // http://www.rorydriscoll.com/2009/01/07/better-sampling/
 float3 diffuseReflection(
@@ -69,7 +77,7 @@ void randomPointOnLight(
 	float* outLightArea)
 {
 	// Construct vector to random point on light
-	int lightIndex = clrngMrg31k3pRandomInteger(randomStream, 0, scene->numEmmisiveTriangles);
+	int lightIndex = clrngMrg31k3pRandomInteger(randomStream, 0, scene->numEmmisiveTriangles-1);
 	TriangleData lightTriangle = scene->triangles[scene->emmisiveTriangles[lightIndex]];
 	VertexData lightVertices[3];
 	getVertices(lightVertices, lightTriangle.indices, scene);

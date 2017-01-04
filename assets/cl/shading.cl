@@ -26,8 +26,6 @@ float3 neeShading(
 	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
-
-
 	if (dot(realNormal, -rayDirection) < 0.0f)
 		return BLACK;
 

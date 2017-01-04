@@ -24,19 +24,20 @@ float3 slide17Shading(
 	float3 normal = normalize(cross(
 		vertices[1].vertex - vertices[0].vertex,
 		vertices[2].vertex - vertices[0].vertex));
+	normal = normalize(matrixMultiplyLocal(normalTransform, (float4)(normal, 0.0f)).xyz);
 
-	// Construct vector to random point on light
-	int lightIndex = clrngMrg31k3pRandomInteger(randomStream, 0, scene->numEmmisiveTriangles);
-	TriangleData lightTriangle = scene->triangles[scene->emmisiveTriangles[lightIndex]];
-	VertexData lightVertices[3];
-	getVertices(lightVertices, lightTriangle.indices, scene);
-	float3 lightNormal = normalize(cross(
-		lightVertices[1].vertex - lightVertices[0].vertex,
-		lightVertices[2].vertex - lightVertices[0].vertex));
-	float3 lightColour = scene->meshMaterials[lightTriangle.mat_index].emmisive.emmisiveColour;
-
-	float3 L = uniformSampleTriangle(lightVertices, randomStream) - intersection;
-	float dist = sqrt(dot(L, L));
+	// Sample a random light source
+	float3 lightPos, lightNormal, lightColour; float lightArea;
+	randomPointOnLight(
+		scene,
+		randomStream,
+		&lightPos,
+		&lightNormal,
+		&lightColour,
+		&lightArea);
+	float3 L = lightPos - intersection;
+	float dist2 = dot(L, L);
+	float dist = sqrt(dist2);
 	L /= dist;
 	float cos_o = dot(-L, lightNormal);
 	float cos_i = dot(L, normal);
@@ -49,13 +50,13 @@ float3 slide17Shading(
 
 	int bounceTriInd;
 	bool hit = traceRay(scene, &ray, true, dist - 2 * EPSILON, &bounceTriInd, NULL, NULL, NULL);
-	if (hit)
+	if (hit) {
 		return BLACK;
-
+	}
 
 	float3 BRDF = material->diffuse.diffuseColour * INVPI;
-	float solidAngle = (cos_o * triangleArea(lightVertices)) / (dist * dist);
-	solidAngle = min(2 * PI, solidAngle);
+	float solidAngle = (cos_o * lightArea) / dist2;
+	solidAngle = min(solidAngle, 2 * PI);
 	return scene->numEmmisiveTriangles * BRDF * lightColour * solidAngle * cos_i;
 }
 
@@ -80,7 +81,6 @@ float3 slide16Shading(
 	float3 e1 = vertices[1].vertex - vertices[0].vertex;
 	float3 e2 = vertices[2].vertex - vertices[0].vertex;
 	float3 normal = normalize(cross(e1, e2));
-
 	normal = normalize(matrixMultiplyLocal(normalTransform, (float4)(normal, 0.0f)).xyz);
 
 	if (dot(normal, -rayDirection) < 0.0f)
