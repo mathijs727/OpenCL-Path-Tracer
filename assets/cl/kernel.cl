@@ -13,6 +13,7 @@
 #include "gamma.cl"
 #include "bvh.cl"
 #include "shading.cl"
+#include "direct_shading.cl"
 
 typedef struct
 {
@@ -46,6 +47,7 @@ __kernel void traceRays(
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 	int gid = y * get_global_size(0) + x;
+	bool leftSide = (x < get_global_size(0) / 2);
 
 	// Read random stream
 	clrngMrg31k3pStream privateStream;
@@ -68,7 +70,7 @@ __kernel void traceRays(
 	StackInit(&stack);
 	for (int i = 0; i < inputData->raysPerPass; i++)
 	{
-		float corX = x;//(float)(leftSide ? x : x - get_global_size(0) / 2);
+		float corX = (float)(leftSide ? x : x - get_global_size(0) / 2);
 		float3 screenPoint = inputData->screen + \
 			inputData->u_step * corX + inputData->v_step * (float)y;	
 		screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->u_step;
@@ -93,17 +95,28 @@ __kernel void traceRays(
 				float3 intersection = t * item.ray.direction + item.ray.origin;
 				float normalTransform[16];
 				matrixTranspose(invTransform, normalTransform);
-				accumulatedColour += neeShading(
-					&scene,
-					triangleIndex,
-					intersection,
-					item.ray.direction,
-					normalTransform,
-					uv,
-					textures,
-					&privateStream,
-					&item,
-					&stack);
+				if (leftSide)
+				{
+					accumulatedColour += slide16Shading(
+						&scene,
+						triangleIndex,
+						intersection,
+						item.ray.direction,
+						normalTransform,
+						uv,
+						textures,
+						&privateStream);
+				} else {
+					accumulatedColour += slide17Shading(
+						&scene,
+						triangleIndex,
+						intersection,
+						item.ray.direction,
+						normalTransform,
+						uv,
+						textures,
+						&privateStream);
+				}
 			}
 
 			if (++iteration == MAX_ITERATIONS)

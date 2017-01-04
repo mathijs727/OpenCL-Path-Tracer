@@ -8,10 +8,13 @@
 #define WHITE (float3)(1, 1, 1);
 #define GRAY(x) (float3)(x, x, x);
 
+#define EPSILON 0.00001f
+
 // http://www.rorydriscoll.com/2009/01/07/better-sampling/
 float3 diffuseReflection(
 	float3 edge1,
 	float3 edge2,
+	const float* normalTransform,
 	clrngMrg31k3pStream* randomStream)
 {
 	float u1 = clrngMrg31k3pRandomU01(randomStream);
@@ -24,9 +27,12 @@ float3 diffuseReflection(
 	float3 tangent = normalize(cross(normal, edge1));
 	float3 bitangent = cross(normal, tangent);
 
-	// Normal transform matrix
+	// Transform hemisphere to normal of the surface (of the static model)
 	// [tangent, bitangent, normal]
 	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
+	
+	// Apply the normal transform (top level BVH)
+	orientedSample = normalize(matrixMultiplyLocal(normalTransform, (float4)(orientedSample, 0.0f)).xyz);
 	return normalize(orientedSample);
 }
 

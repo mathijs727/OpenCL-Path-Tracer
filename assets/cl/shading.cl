@@ -2,8 +2,6 @@
 #define __SHADING_CL
 #include "shading_helper.cl"
 
-#define EPSILON 0.00001f
-
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
 // Slide 26
 float3 neeShading(
@@ -27,6 +25,11 @@ float3 neeShading(
 	float3 realNormal = normalize(cross(edge1, edge2));
 	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
+
+
+
+	if (dot(realNormal, -rayDirection) < 0.0f)
+		return BLACK;
 
 	float3 BRDF = material->diffuse.diffuseColour / PI;
 
@@ -62,12 +65,13 @@ float3 neeShading(
 		{
 			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
 			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
-			Ld = lightColour * solidAngle * BRDF * dot(realNormal, L);
+			Ld = scene->numEmmisiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
 		}
 	}
 
 	// Continue random walk
-	float3 reflection = diffuseReflection(edge1, edge2, randomStream);
+	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
+
 	float3 Ei = dot(realNormal, reflection);
 	float3 integral = PI * 2.0f * BRDF * Ei;
 	StackPushNEE(
@@ -76,7 +80,7 @@ float3 neeShading(
 		reflection,
 		stackItem->multiplier * integral,
 		false);
-	return Ld;
+	return stackItem->multiplier * Ld;
 }
 
 
@@ -111,8 +115,7 @@ float3 naiveShading(
 		return stackItem->multiplier * material->emmisive.emmisiveColour;
 
 	// Continue in random direction
-	float3 reflection = diffuseReflection(edge1, edge2, randomStream);
-	reflection = normalize(matrixMultiplyLocal(normalTransform, (float4)(reflection, 0.0f)).xyz);
+	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
 
 	// Update throughput
 	float3 BRDF = material->diffuse.diffuseColour / PI;

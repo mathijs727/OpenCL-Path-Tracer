@@ -30,4 +30,16 @@ void matrixTranspose(const __global float* matrix, float* matrixOut)
 	}
 }
 
+void matrixTransposeLocal(const float* matrix, float* matrixOut)
+{
+	for (int col = 0; col < 4; col++)
+	{
+		for (int row = 0; row < 4; row++)
+		{
+			matrixOut[row + col * 4] = matrix[col + row * 4];
+		}
+	}
+}
+
+
 #endif// __math_cl
