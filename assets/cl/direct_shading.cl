@@ -109,7 +109,7 @@ float3 slide17Shading(
 	float3 BRDF = material->diffuse.diffuseColour * INVPI;
 	float solidAngle = (cos_o * triangleArea(lightVertices)) / (dist * dist);
 	solidAngle = min(2 * PI, solidAngle);
-	return scene->numEmmisiveTriangles * BRDF* lightColour * solidAngle * cos_i;
+	return scene->numEmmisiveTriangles * BRDF * lightColour * solidAngle * cos_i;
 }
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2007%20-%20path%20tracing.pdf

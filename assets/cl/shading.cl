@@ -4,7 +4,7 @@
 
 #define EPSILON 0.00001f
 
-float3 shading(
+float3 neeShading(
 	const Scene* scene,
 	int triangleIndex,
 	float3 intersection,
@@ -13,7 +13,81 @@ float3 shading(
 	float2 uv,
 	image2d_array_t textures,
 	clrngMrg31k3pStream* randomStream,
-	float3 multiplier,
+	StackItem* stackItem,
+	Stack* stack)
+{
+	// Gather intersection data
+	VertexData vertices[3];
+	TriangleData triangle = scene->triangles[triangleIndex];
+	getVertices(vertices, triangle.indices, scene);
+	float3 edge1 = vertices[1].vertex - vertices[0].vertex;
+	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
+	float3 realNormal = normalize(cross(edge1, edge2));
+	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
+	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
+
+	float3 BRDF = material->diffuse.diffuseColour / PI;
+
+	// Terminate if we hit a light source
+	if (material->type == Emmisive)
+	{
+		if (stackItem->lastSpecular) {
+			return stackItem->multiplier * material->emmisive.emmisiveColour;
+		} else {
+			return BLACK;
+		}
+	}
+
+	// Sample a random light source
+	float3 lightPos, lightNormal, lightColour; float lightArea;
+	randomPointOnLight(
+		scene,
+		randomStream,
+		&lightPos,
+		&lightNormal,
+		&lightColour,
+		&lightArea);
+	float3 L = lightPos - intersection;
+	float dist2 = dot(L, L);
+	float dist = sqrt(dist2);
+	L /= dist;
+
+	float3 Ld = BLACK;
+	Ray lightRay = createRay(intersection + L * EPSILON, L);
+	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
+	{
+		if (!traceRay(scene, &lightRay, true, dist - 2 * EPSILON, NULL, NULL, NULL, NULL))
+		{
+			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
+			Ld = lightColour * solidAngle * BRDF * dot(realNormal, L);
+		}
+	}
+
+	// Continue random walk
+	float3 reflection = diffuseReflection(edge1, edge2, randomStream);
+	float3 Ei = dot(realNormal, reflection);
+	float3 integral = PI * 2.0f * BRDF * Ei;
+	StackPushNEE(
+		stack,
+		intersection + reflection * EPSILON,
+		reflection,
+		stackItem->multiplier * integral,
+		false);
+	return Ld;
+}
+
+
+
+float3 naiveShading(
+	const Scene* scene,
+	int triangleIndex,
+	float3 intersection,
+	float3 rayDirection,
+	const float* normalTransform,
+	float2 uv,
+	image2d_array_t textures,
+	clrngMrg31k3pStream* randomStream,
+	StackItem* stackItem,
 	Stack* stack)
 {
 	// Gather intersection data
@@ -31,7 +105,7 @@ float3 shading(
 
 	// Terminate if we hit a light source
 	if (material->type == Emmisive)
-		return multiplier * material->emmisive.emmisiveColour;
+		return stackItem->multiplier * material->emmisive.emmisiveColour;
 
 	// Continue in random direction
 	float3 reflection = diffuseReflection(edge1, edge2, randomStream);
@@ -41,7 +115,7 @@ float3 shading(
 	float3 BRDF = material->diffuse.diffuseColour / PI;
 	float3 Ei = dot(realNormal , reflection);// Irradiance
 	float3 integral = PI * 2.0f * BRDF * Ei;
-	StackPush(stack, intersection + reflection * EPSILON, reflection, multiplier * integral);
+	StackPush(stack, intersection + reflection * EPSILON, reflection, stackItem->multiplier * integral);
 	return BLACK;
 }
 

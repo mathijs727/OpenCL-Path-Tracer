@@ -7,6 +7,7 @@
 typedef struct
 {
 	float3 multiplier;
+	bool lastSpecular;
 	Ray ray;
 } StackItem;
 
@@ -21,7 +22,11 @@ void StackInit(Stack* stack)
 	stack->numItems = 0;
 }
 
-void StackPush(Stack* stack, float3 origin, float3 direction, float3 multiplier)
+void StackPush(
+	Stack* stack,
+	float3 origin,
+	float3 direction,
+	float3 multiplier)
 {
 	// If we push to a full stack, ignore the operation
 	if (stack->numItems == MAX_STACK_SIZE)
@@ -31,6 +36,26 @@ void StackPush(Stack* stack, float3 origin, float3 direction, float3 multiplier)
 	item->ray.origin = origin;
 	item->ray.direction = direction;
 	item->multiplier = multiplier;
+	item->lastSpecular = true;
+}
+
+
+void StackPushNEE(
+	Stack* stack,
+	float3 origin,
+	float3 direction,
+	float3 multiplier,
+	bool lastSpecular)
+{
+	// If we push to a full stack, ignore the operation
+	if (stack->numItems == MAX_STACK_SIZE)
+		return;
+
+	StackItem* item = &stack->items[stack->numItems++];
+	item->ray.origin = origin;
+	item->ray.direction = direction;
+	item->multiplier = multiplier;
+	item->lastSpecular = lastSpecular;
 }
 
 StackItem StackPop(Stack* stack)

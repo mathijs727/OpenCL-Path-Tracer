@@ -6,9 +6,11 @@ typedef struct
 	float3 direction;
 } Ray;
 
-typedef struct
+Ray createRay(float3 origin, float3 direction)
 {
-	float3 origin;
-	float3 dest;
-} Line;
+	Ray ray;
+	ray.origin = origin;
+	ray.direction = direction;
+	return ray;
+}
 #endif// __RAY_CL

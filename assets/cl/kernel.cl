@@ -93,7 +93,7 @@ __kernel void traceRays(
 				float3 intersection = t * item.ray.direction + item.ray.origin;
 				float normalTransform[16];
 				matrixTranspose(invTransform, normalTransform);
-				accumulatedColour += shading(
+				accumulatedColour += neeShading(
 					&scene,
 					triangleIndex,
 					intersection,
@@ -102,7 +102,7 @@ __kernel void traceRays(
 					uv,
 					textures,
 					&privateStream,
-					item.multiplier,
+					&item,
 					&stack);
 			}
 
@@ -114,47 +114,4 @@ __kernel void traceRays(
 
 	// Store random streams
 	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &privateStream);
-	/*StackItem item;
-	item.ray.origin = inputData->eye;
-	item.ray.direction = normalize(screenPoint - inputData->eye);
-	item.multiplier = (float3)(1.0f, 1.0f, 1.0f);
-
-	uint iterCount = 0;
-	float3 outColor = (float3)(0.0f, 0.0f, 0.0f);
-	Stack stack;
-	StackInit(&stack);
-	StackPush(&stack, &item);
-	while (!StackEmpty(&stack))
-	{
-		StackItem item;
-		StackPop(&stack, &item);
-
-		int triangleIndex;
-		float t;
-		float2 uv;
-		const __global float* invTransform;
-		bool hit = traceRay(&scene, &item.ray, false, INFINITY, &triangleIndex, &t, &uv, &invTransform);
-		
-		if (hit)
-		{
-			float3 direction = item.ray.direction;
-			float3 intersection = t * item.ray.direction + item.ray.origin;
-
-			outColor += whittedShading(
-				&scene,
-				triangleIndex,
-				intersection,
-				invTransform,
-				direction,
-				uv,
-				textures,
-				item.multiplier,
-				&stack);
-		}
-		if (++iterCount >= MAX_ITERATIONS)
-		{
-			break;
-		}
-	}*/
-
 }

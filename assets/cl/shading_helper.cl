@@ -54,4 +54,25 @@ float triangleArea(VertexData* vertices)
 	return sqrt(s * (s - lenA) * (s - lenB) * (s - lenC));
 }
 
+void randomPointOnLight(
+	const Scene* scene,
+	clrngMrg31k3pStream* randomStream,
+	float3* outPoint,
+	float3* outLightNormal,
+	float3* outLightColour,
+	float* outLightArea)
+{
+	// Construct vector to random point on light
+	int lightIndex = clrngMrg31k3pRandomInteger(randomStream, 0, scene->numEmmisiveTriangles);
+	TriangleData lightTriangle = scene->triangles[scene->emmisiveTriangles[lightIndex]];
+	VertexData lightVertices[3];
+	getVertices(lightVertices, lightTriangle.indices, scene);
+	*outLightNormal = normalize(cross(
+		lightVertices[1].vertex - lightVertices[0].vertex,
+		lightVertices[2].vertex - lightVertices[0].vertex));
+	*outLightColour = scene->meshMaterials[lightTriangle.mat_index].emmisive.emmisiveColour;
+	*outPoint = uniformSampleTriangle(lightVertices, randomStream);
+	*outLightArea = triangleArea(lightVertices);
+}
+
 #endif// __SHADER_HELPER_CL
