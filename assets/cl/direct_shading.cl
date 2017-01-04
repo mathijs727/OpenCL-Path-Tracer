@@ -21,9 +21,9 @@ float3 slide17Shading(
 	VertexData vertices[3];
 	TriangleData triangle = scene->triangles[triangleIndex];
 	getVertices(vertices, triangle.indices, scene);
-	float3 normal = normalize(cross(
+	float3 normal = cross(
 		vertices[1].vertex - vertices[0].vertex,
-		vertices[2].vertex - vertices[0].vertex));
+		vertices[2].vertex - vertices[0].vertex);
 	normal = normalize(matrixMultiplyLocal(normalTransform, (float4)(normal, 0.0f)).xyz);
 
 	// Sample a random light source

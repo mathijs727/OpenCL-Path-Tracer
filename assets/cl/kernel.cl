@@ -70,7 +70,7 @@ __kernel void traceRays(
 	StackInit(&stack);
 	for (int i = 0; i < inputData->raysPerPass; i++)
 	{
-		float corX = (float)(leftSide ? x : x - get_global_size(0) / 2);
+		float corX = x;//(float)(leftSide ? x : x - get_global_size(0) / 2);
 		float3 screenPoint = inputData->screen + \
 			inputData->u_step * corX + inputData->v_step * (float)y;	
 		screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->u_step;
@@ -95,9 +95,9 @@ __kernel void traceRays(
 				float3 intersection = t * item.ray.direction + item.ray.origin;
 				float normalTransform[16];
 				matrixTranspose(invTransform, normalTransform);
-				if (leftSide)
+				/*if (leftSide)
 				{
-					accumulatedColour += slide16Shading(
+					accumulatedColour += naiveShading(
 						&scene,
 						triangleIndex,
 						intersection,
@@ -105,9 +105,11 @@ __kernel void traceRays(
 						normalTransform,
 						uv,
 						textures,
-						&privateStream);
+						&privateStream,
+						&item,
+						&stack);
 				} else {
-					accumulatedColour += slide17Shading(
+					accumulatedColour += neeShading(
 						&scene,
 						triangleIndex,
 						intersection,
@@ -115,8 +117,21 @@ __kernel void traceRays(
 						normalTransform,
 						uv,
 						textures,
-						&privateStream);
-				}
+						&privateStream,
+						&item,
+						&stack);
+				}*/
+				accumulatedColour += neeShading(
+						&scene,
+						triangleIndex,
+						intersection,
+						item.ray.direction,
+						normalTransform,
+						uv,
+						textures,
+						&privateStream,
+						&item,
+						&stack);
 			}
 
 			if (++iteration == MAX_ITERATIONS)

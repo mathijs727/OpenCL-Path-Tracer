@@ -22,14 +22,14 @@ float3 neeShading(
 	getVertices(vertices, triangle.indices, scene);
 	float3 edge1 = vertices[1].vertex - vertices[0].vertex;
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
-	float3 realNormal = normalize(cross(edge1, edge2));
+	float3 realNormal = cross(edge1, edge2);
 	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
 		return BLACK;
 
-	float3 BRDF = material->diffuse.diffuseColour / PI;
+	float3 BRDF = material->diffuse.diffuseColour * INVPI;
 
 	// Terminate if we hit a light source
 	if (material->type == Emmisive)
