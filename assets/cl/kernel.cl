@@ -24,7 +24,7 @@ typedef struct
 	uint width;// Render target width
 
 	// Scene
-	uint numVertices, numTriangles, numEmmisiveTriangles, numLights;
+	uint numEmmisiveTriangles;
 	uint topLevelBvhRoot;
 
 	uint raysPerPass;
@@ -53,15 +53,11 @@ __kernel void traceRays(
 
 	Scene scene;
 	loadScene(
-		inputData->numVertices,
 		vertices,
-		inputData->numTriangles,
 		triangles,
+		materials,
 		inputData->numEmmisiveTriangles,
 		emmisiveTriangles,
-		materials,
-		inputData->numLights,
-		lights,
 		subBvh,
 		inputData->topLevelBvhRoot,
 		topLevelBvh,

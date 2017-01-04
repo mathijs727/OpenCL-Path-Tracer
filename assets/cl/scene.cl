@@ -15,9 +15,9 @@ typedef struct
 	uint numVertices, numTriangles, numEmmisiveTriangles, numLights;
 	const __global VertexData* vertices;
 	const __global TriangleData* triangles;
-	const __global uint* emmisiveTriangles;
 	const __global Material* meshMaterials;
-	const __global Light* lights;
+
+	const __global uint* emmisiveTriangles;
 
 	const __global SubBvhNode* subBvh;
 	const __global TopBvhNode* topLevelBvh;
@@ -33,31 +33,24 @@ void getVertices(VertexData* out_vertices, uint* indices, const Scene* scene) {
 }
 
 void loadScene(
-	uint numVertices,
 	const __global VertexData* vertices,
-	uint numTriangles,
 	const __global TriangleData* triangles,
+	const __global Material* materials,
 	uint numEmmisiveTriangles,
 	const __global uint* emmisiveTriangles,
-	const __global Material* materials,
-	uint numLights,
-	const __global Light* lights,
 	const __global SubBvhNode* subBvh,
 	uint topLevelBvhRoot,
 	const __global TopBvhNode* topLevelBvh,
 	Scene* scene) {
 	scene->refractiveIndex =  1.000277f;
 	
-	scene->numLights = numLights;
-	scene->numVertices = numVertices;
-	scene->numTriangles = numTriangles;
 	scene->numEmmisiveTriangles = numEmmisiveTriangles;
 
-	scene->meshMaterials = materials;
-	scene->triangles = triangles;
-	scene->emmisiveTriangles = emmisiveTriangles;
 	scene->vertices = vertices;
-	scene->lights = lights;
+	scene->triangles = triangles;
+	scene->meshMaterials = materials;
+	
+	scene->emmisiveTriangles = emmisiveTriangles;
 
 	scene->subBvh = subBvh;
 	scene->topLevelBvh = topLevelBvh;

@@ -33,7 +33,7 @@ struct KernelData
 	uint width;// Render target width
 
 	// Scene
-	uint numVertices, numTriangles, numEmmisiveTriangles, numLights;
+	uint numEmmisiveTriangles;
 	uint topLevelBvhRoot;
 
 	uint raysPerPass;
@@ -354,10 +354,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	data.v_step = glmToCl(v_step);
 	data.width = _scr_width;
 
-	data.numVertices = _num_static_vertices;
-	data.numTriangles = _num_static_triangles;
 	data.numEmmisiveTriangles = _num_static_emmisive_triangles;
-	data.numLights = _num_lights;
 	data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];
 
 	data.raysPerPass = RAYS_PER_PASS;
