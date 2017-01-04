@@ -48,7 +48,8 @@ void raytracer::Mesh::addSubMesh(
 	const aiScene* scene,
 	uint mesh_index,
 	const glm::mat4& transform_matrix,
-	const char* texturePath) {
+	const char* texturePath,
+	const Material* overrideMaterial) {
 	aiMesh* in_mesh = scene->mMeshes[mesh_index];
 
 	if (in_mesh->mNumVertices == 0 || in_mesh->mNumFaces == 0)
@@ -56,28 +57,34 @@ void raytracer::Mesh::addSubMesh(
 
 	// process the materials
 	u32 materialId = (u32)_materials.size();
-	aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
-	aiColor3D colour;
-	aiColor3D emmisiveColour;
-	material->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
-	material->Get(AI_MATKEY_COLOR_EMISSIVE, emmisiveColour);
-	bool emmisive = emmisiveColour.r != 0.0f || emmisiveColour.g != 0.0f || emmisiveColour.b != 0.0f;
-	if (emmisive)
+	if (overrideMaterial == nullptr)
 	{
-		_materials.push_back(Material::Emmisive(ai2glm(emmisiveColour)));
-	}
-	else {
-		if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
-			aiString path;
-			material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
-			std::string textureFile = texturePath;
-			textureFile += path.C_Str();
-			//_materials.push_back(Material::Diffuse(ai2glm(colour)));
-			_materials.push_back(Material::Diffuse(Texture(textureFile.c_str()), ai2glm(colour)));
+		aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
+		aiColor3D colour;
+		aiColor3D emmisiveColour;
+		material->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
+		material->Get(AI_MATKEY_COLOR_EMISSIVE, emmisiveColour);
+		bool emmisive = emmisiveColour.r != 0.0f || emmisiveColour.g != 0.0f || emmisiveColour.b != 0.0f;
+		if (emmisive)
+		{
+			_materials.push_back(Material::Emmisive(ai2glm(emmisiveColour)));
 		}
 		else {
-			_materials.push_back(Material::Diffuse(ai2glm(colour)));
+			if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+				aiString path;
+				material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
+				std::string textureFile = texturePath;
+				textureFile += path.C_Str();
+				//_materials.push_back(Material::Diffuse(ai2glm(colour)));
+				_materials.push_back(Material::Diffuse(Texture(textureFile.c_str()), ai2glm(colour)));
+			}
+			else {
+				_materials.push_back(Material::Diffuse(ai2glm(colour)));
+			}
 		}
+	}
+	else {
+		_materials.push_back(*overrideMaterial);
 	}
 
 	// add all of the vertex data
@@ -85,7 +92,7 @@ void raytracer::Mesh::addSubMesh(
 	u32 vertexOffset = (u32)_vertices.size();
 	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
 		glm::vec4 position = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
-		glm::vec4 normal = normalMatrix * glm::vec4(ai2glm(in_mesh->mNormals[v]), 1);
+		glm::vec4 normal = normalMatrix * glm::vec4(ai2glm(in_mesh->mNormals[v]), 0);
 		glm::vec2 texCoords;
 		if (in_mesh->HasTextureCoords(0)) {
 			texCoords.x = in_mesh->mTextureCoords[0][v].x;
@@ -139,7 +146,20 @@ void raytracer::Mesh::collectEmmisiveTriangles()
 	}
 }
 
-void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
+void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset)
+{
+	loadFromFile(file, nullptr, offset);
+}
+
+void raytracer::Mesh::loadFromFile(const char* file, const Material& overrideMaterial, const Transform& offset)
+{
+	loadFromFile(file, &overrideMaterial, offset);
+}
+
+void raytracer::Mesh::loadFromFile(
+	const char* file,
+	const Material* defaultMaterial,
+	const Transform& offset) {
 	struct StackElement
 	{
 		aiNode* node;
@@ -163,7 +183,7 @@ void raytracer::Mesh::loadFromFile(const char* file, const Transform& offset) {
 			stack.pop();
 			glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
 			for (uint i = 0; i < current.node->mNumMeshes; ++i) {
-				addSubMesh(scene, current.node->mMeshes[i], cur_transform, path.c_str());
+				addSubMesh(scene, current.node->mMeshes[i], cur_transform, path.c_str(), defaultMaterial);
 				//if (!success) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
 				//else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
 				//out_vec.push_back(mesh);

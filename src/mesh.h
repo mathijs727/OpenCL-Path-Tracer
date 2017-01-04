@@ -20,7 +20,13 @@ public:
 	Mesh() {}
 	~Mesh() { }
 	
-	void loadFromFile(const char* file,	const Transform& offset = Transform());
+	void loadFromFile(
+		const char* file,
+		const Transform& offset = Transform());
+	void loadFromFile(
+		const char* file,
+		const Material& overrideMaterial,
+		const Transform& offset = Transform());
 
 	const std::vector<VertexSceneData>& getVertices() const override { return _vertices; }
 	const std::vector<TriangleSceneData>& getTriangles() const override { return _triangles; }
@@ -37,7 +43,16 @@ public:
 	u32 maxNumBvhNodes() const override { return (u32)_bvh_nodes.size(); };
 	void buildBvh() override { };// Only necessary for dynamic objects
 private:
-	void addSubMesh(const aiScene* scene, uint mesh_index, const glm::mat4& transform_matrix, const char* texturePath);
+	void loadFromFile(
+		const char* file,
+		const Material* overrideMaterial,
+		const Transform& offset);
+	void addSubMesh(
+		const aiScene* scene,
+		uint mesh_index,
+		const glm::mat4& transform_matrix,
+		const char* texturePath,
+		const Material* overrideMaterial);
 	void collectEmmisiveTriangles();
 
 	void storeBvh(const char* fileName);
