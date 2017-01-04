@@ -4,6 +4,8 @@
 
 #define EPSILON 0.00001f
 
+// http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
+// Slide 26
 float3 neeShading(
 	const Scene* scene,
 	int triangleIndex,
@@ -59,6 +61,7 @@ float3 neeShading(
 		if (!traceRay(scene, &lightRay, true, dist - 2 * EPSILON, NULL, NULL, NULL, NULL))
 		{
 			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
+			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
 			Ld = lightColour * solidAngle * BRDF * dot(realNormal, L);
 		}
 	}
