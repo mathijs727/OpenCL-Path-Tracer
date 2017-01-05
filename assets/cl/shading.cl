@@ -2,6 +2,90 @@
 #define __SHADING_CL
 #include "shading_helper.cl"
 
+
+// http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
+// Slide 42
+float3 neeIsShading(// Next Event Estimation + Importance Sampling
+	const Scene* scene,
+	int triangleIndex,
+	float3 intersection,
+	float3 rayDirection,
+	const float* normalTransform,
+	float2 uv,
+	image2d_array_t textures,
+	clrngMrg31k3pStream* randomStream,
+	StackItem* stackItem,
+	Stack* stack)
+{
+	// Gather intersection data
+	VertexData vertices[3];
+	TriangleData triangle = scene->triangles[triangleIndex];
+	getVertices(vertices, triangle.indices, scene);
+	float3 edge1 = vertices[1].vertex - vertices[0].vertex;
+	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
+	float3 realNormal = cross(edge1, edge2);
+	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
+	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
+
+	if (dot(realNormal, -rayDirection) < 0.0f)
+		return BLACK;
+
+	float3 BRDF = material->diffuse.diffuseColour * INVPI;
+
+	// Terminate if we hit a light source
+	if (material->type == Emissive)
+	{
+		if (stackItem->lastSpecular) {
+			return stackItem->multiplier * material->emissive.emissiveColour;
+		} else {
+			return BLACK;
+		}
+	}
+
+	// Sample a random light source
+	float3 lightPos, lightNormal, lightColour; float lightArea;
+	randomPointOnLight(
+		scene,
+		randomStream,
+		&lightPos,
+		&lightNormal,
+		&lightColour,
+		&lightArea);
+	float3 L = lightPos - intersection;
+	float dist2 = dot(L, L);
+	float dist = sqrt(dist2);
+	L /= dist;
+
+	float3 Ld = BLACK;
+	Ray lightRay = createRay(intersection + L * EPSILON, L);
+	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
+	{
+		if (!traceRay(scene, &lightRay, true, dist - 2 * EPSILON, NULL, NULL, NULL, NULL))
+		{
+			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
+			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
+			Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
+		}
+	}
+
+	// Continue random walk
+	float3 reflection = cosineWeightedDiffuseReflection(edge1, edge2, normalTransform, randomStream);
+	//float PDF = dot(realNormal, reflection) / PI;
+	//float3 Ei = dot(realNormal, reflection) / PDF;
+	float3 Ei = PI;
+	float3 integral = BRDF * Ei;
+	StackPushNEE(
+		stack,
+		intersection + reflection * EPSILON,
+		reflection,
+		stackItem->multiplier * integral,
+		false);
+	return stackItem->multiplier * Ld;
+}
+
+
+
+
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
 // Slide 26
 float3 neeShading(

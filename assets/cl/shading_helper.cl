@@ -44,6 +44,37 @@ float3 diffuseReflection(
 	return normalize(orientedSample);
 }
 
+// http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
+// Slide 41
+float3 cosineWeightedDiffuseReflection(
+	float3 edge1,
+	float3 edge2,
+	const float* normalTransform,
+	clrngMrg31k3pStream* randomStream)
+{
+	// A cosine-weither random distribution is obtained by generating points on the unit
+	// disc, and projecting the disc on the unit hemisphere.
+	float r0 = clrngMrg31k3pRandomU01(randomStream);
+	float r1 = clrngMrg31k3pRandomU01(randomStream);
+	float r = sqrt(r0);
+	float theta = 2 * PI * r1;
+	float x = r * cos(theta);
+	float y = r * sin(theta);
+	float3 sample = (float3)(x, y, sqrt(1 - r0));
+
+	float3 normal = normalize(cross(edge1, edge2));
+	float3 tangent = normalize(cross(normal, edge1));
+	float3 bitangent = cross(normal, tangent);
+
+	// Transform hemisphere to normal of the surface (of the static model)
+	// [tangent, bitangent, normal]
+	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
+	
+	// Apply the normal transform (top level BVH)
+	orientedSample = normalize(matrixMultiplyLocal(normalTransform, (float4)(orientedSample, 0.0f)).xyz);
+	return normalize(orientedSample);
+}
+
 // http://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
 float3 uniformSampleTriangle(const float3* vertices, clrngMrg31k3pStream* randomStream)
 {
