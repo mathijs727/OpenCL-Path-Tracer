@@ -34,7 +34,7 @@ struct KernelData
 	uint width;// Render target width
 
 	// Scene
-	uint numEmisiveTriangles;
+	uint numEmissiveTriangles;
 	uint topLevelBvhRoot;
 
 	uint raysPerPass;
@@ -152,8 +152,8 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 	_top_bvh_root_node[0] = 0;
 	_top_bvh_root_node[1] = 0;
 
-	_num_emisive_triangles[0] = 0;
-	_num_emisive_triangles[1] = 0;
+	_num_emissive_triangles[0] = 0;
+	_num_emissive_triangles[1] = 0;
 }
 
 raytracer::RayTracer::~RayTracer()
@@ -342,7 +342,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	data.v_step = glmToCl(v_step);
 	data.width = _scr_width;
 
-	data.numEmisiveTriangles = _num_emisive_triangles[_active_buffers];
+	data.numEmissiveTriangles = _num_emissive_triangles[_active_buffers];
 	data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];
 
 	data.raysPerPass = RAYS_PER_PASS;
@@ -361,7 +361,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	_ray_trace_kernel.setArg(1, _ray_kernel_data);
 	_ray_trace_kernel.setArg(2, _vertices[_active_buffers]);
 	_ray_trace_kernel.setArg(3, _triangles[_active_buffers]);
-	_ray_trace_kernel.setArg(4, _emisive_trangles[_active_buffers]);
+	_ray_trace_kernel.setArg(4, _emissive_trangles[_active_buffers]);
 	_ray_trace_kernel.setArg(5, _materials[_active_buffers]);
 	_ray_trace_kernel.setArg(6, _material_textures);
 	_ray_trace_kernel.setArg(7, _sub_bvh[_active_buffers]);
@@ -505,10 +505,10 @@ void raytracer::RayTracer::CopyNextAnimationFrameData()
 	}
 
 	// Get the light emmiting triangles transformed by the scene graph
-	_emisive_triangles_host.clear();
+	_emissive_triangles_host.clear();
 	CollectTransformedLights(&_scene->get_root_node(), glm::mat4());
-	_num_emisive_triangles[copyBuffers] = _emisive_triangles_host.size();
-	writeToBuffer(_copyQueue, _emisive_trangles[copyBuffers], _emisive_triangles_host, 0, waitEvents);
+	_num_emissive_triangles[copyBuffers] = _emissive_triangles_host.size();
+	writeToBuffer(_copyQueue, _emissive_trangles[copyBuffers], _emissive_triangles_host, 0, waitEvents);
 
 	if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices))// Dont copy if we dont have any dynamic geometry
 	{
@@ -530,11 +530,11 @@ void raytracer::RayTracer::CopyNextAnimationFrameData()
 		timeOpenCL(waitEvents[1], "triangle upload");
 		timeOpenCL(waitEvents[2], "material upload");
 		timeOpenCL(waitEvents[3], "sub bvh upload");
-		timeOpenCL(waitEvents[4], "emisive triangles upload");
+		timeOpenCL(waitEvents[4], "emissive triangles upload");
 		timeOpenCL(waitEvents[5], "top bvh upload");
 	}
 	else {
-		timeOpenCL(waitEvents[0], "emisive triangles upload");
+		timeOpenCL(waitEvents[0], "emissive triangles upload");
 		timeOpenCL(waitEvents[1], "top bvh upload");
 	}
 
@@ -551,18 +551,18 @@ void raytracer::RayTracer::CollectTransformedLights(const SceneNode* node, const
 		auto& mesh = _scene->get_meshes()[node->mesh];
 		auto& vertices = mesh.mesh->getVertices();
 		auto& triangles = mesh.mesh->getTriangles();
-		auto& emisiveTriangles = mesh.mesh->getEmisiveTriangles();
+		auto& emissiveTriangles = mesh.mesh->getEmissiveTriangles();
 		auto& materials = mesh.mesh->getMaterials();
 
-		for (auto& triangleIndex : emisiveTriangles)
+		for (auto& triangleIndex : emissiveTriangles)
 		{
 			auto& triangle = triangles[triangleIndex];
-			EmisiveTriangle result;
+			EmissiveTriangle result;
 			result.vertices[0] = newTransform * vertices[triangle.indices[0]].vertex;
 			result.vertices[1] = newTransform * vertices[triangle.indices[1]].vertex;
 			result.vertices[2] = newTransform * vertices[triangle.indices[2]].vertex;
 			result.material = materials[triangle.material_index];
-			_emisive_triangles_host.push_back(result);
+			_emissive_triangles_host.push_back(result);
 		}
 	}
 
@@ -705,7 +705,7 @@ void raytracer::RayTracer::InitOpenCL()
 void raytracer::RayTracer::InitBuffers(
 	u32 numVertices,
 	u32 numTriangles,
-	u32 numEmisiveTriangles,
+	u32 numEmissiveTriangles,
 	u32 numMaterials,
 	u32 numSubBvhNodes,
 	u32 numTopBvhNodes,
@@ -737,14 +737,14 @@ void raytracer::RayTracer::InitBuffers(
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
-	_emisive_trangles[0] = cl::Buffer(_context,
+	_emissive_trangles[0] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		std::max(1u, numEmisiveTriangles) * sizeof(EmisiveTriangle),
+		std::max(1u, numEmissiveTriangles) * sizeof(EmissiveTriangle),
 		NULL,
 		&err);
-	_emisive_trangles[1] = cl::Buffer(_context,
+	_emissive_trangles[1] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		std::max(1u, numEmisiveTriangles) * sizeof(EmisiveTriangle),
+		std::max(1u, numEmissiveTriangles) * sizeof(EmissiveTriangle),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");

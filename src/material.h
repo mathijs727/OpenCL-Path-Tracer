@@ -32,7 +32,7 @@ struct Material
 	enum class Type : cl_int
 	{
 		Diffuse,
-		Emisive
+		Emissive
 	};
 
 	Material() { }
@@ -48,8 +48,8 @@ struct Material
 		} diffuse;
 		struct
 		{
-			CL_VEC3(emisiveColour);
-		} emisive;
+			CL_VEC3(emissiveColour);
+		} emissive;
 	};
 	Type type; // 4 bytes
 	byte __padding2[12];
@@ -70,10 +70,10 @@ struct Material
 		return result;
 	}
 
-	static Material Emisive(const glm::vec3& colour) {
+	static Material Emissive(const glm::vec3& colour) {
 		Material result;
-		result.type = Type::Emisive;
-		result.emisive.emisiveColour = colour;
+		result.type = Type::Emissive;
+		result.emissive.emissiveColour = colour;
 		return result;
 	}
 

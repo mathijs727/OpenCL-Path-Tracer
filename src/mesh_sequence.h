@@ -24,7 +24,7 @@ namespace raytracer
 		const std::vector<TriangleSceneData>& getTriangles() const override { return _frames[_current_frame].triangles; }
 		const std::vector<Material>& getMaterials() const override { return _frames[_current_frame].materials; }
 		const std::vector<SubBvhNode>& getBvhNodes() const override { return _bvh_nodes; }
-		const std::vector<u32>& getEmisiveTriangles() const override { return std::vector<u32>(); }// Not implemented yet
+		const std::vector<u32>& getEmissiveTriangles() const override { return std::vector<u32>(); }// Not implemented yet
 
 		u32 getBvhRootNode() const override { return _bvh_root_node; };
 

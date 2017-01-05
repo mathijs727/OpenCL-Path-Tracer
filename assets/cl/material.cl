@@ -2,7 +2,7 @@
 #define __MATERIAL_CL
 typedef enum {
 		Diffuse,
-		Emisive
+		Emissive
 } MaterialType;
 
 typedef struct
@@ -16,8 +16,8 @@ typedef struct
 		} diffuse;
 		struct
 		{
-			float3 emisiveColour;
-		} emisive;
+			float3 emissiveColour;
+		} emissive;
 	};
 	MaterialType type;
 } Material;

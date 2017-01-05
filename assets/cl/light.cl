@@ -6,6 +6,6 @@ typedef struct
 {
 	float3 vertices[3];
 	Material material;
-} EmisiveTriangle;
+} EmissiveTriangle;
 
 #endif// __LIGHT_CL

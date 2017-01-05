@@ -19,7 +19,7 @@ struct VertexSceneData
 	byte __padding[8];
 };
 
-struct EmisiveTriangle
+struct EmissiveTriangle
 {
 	glm::vec4 vertices[3];
 	Material material;

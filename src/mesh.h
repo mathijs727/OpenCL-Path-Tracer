@@ -32,7 +32,7 @@ public:
 	const std::vector<TriangleSceneData>& getTriangles() const override { return _triangles; }
 	const std::vector<Material>& getMaterials() const override { return _materials; }
 	const std::vector<SubBvhNode>& getBvhNodes() const override { return _bvh_nodes; }
-	const std::vector<u32>& getEmisiveTriangles() const override { return _emisive_triangles; }
+	const std::vector<u32>& getEmissiveTriangles() const override { return _emissive_triangles; }
 
 	u32 getBvhRootNode() const override { return _bvh_root_node; };
 
@@ -53,14 +53,14 @@ private:
 		const glm::mat4& transform_matrix,
 		const char* texturePath,
 		const Material* overrideMaterial);
-	void collectEmisiveTriangles();
+	void collectEmissiveTriangles();
 
 	void storeBvh(const char* fileName);
 	bool loadBvh(const char* fileName);
 private:
 	std::vector<VertexSceneData> _vertices;
 	std::vector<TriangleSceneData> _triangles;
-	std::vector<u32> _emisive_triangles;
+	std::vector<u32> _emissive_triangles;
 	std::vector<Material> _materials;
 	std::vector<SubBvhNode> _bvh_nodes;
 

@@ -32,10 +32,10 @@ float3 neeShading(
 	float3 BRDF = material->diffuse.diffuseColour * INVPI;
 
 	// Terminate if we hit a light source
-	if (material->type == Emisive)
+	if (material->type == Emissive)
 	{
 		if (stackItem->lastSpecular) {
-			return stackItem->multiplier * material->emisive.emisiveColour;
+			return stackItem->multiplier * material->emissive.emissiveColour;
 		} else {
 			return BLACK;
 		}
@@ -63,7 +63,7 @@ float3 neeShading(
 		{
 			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
 			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
-			Ld = scene->numEmisiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
+			Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
 		}
 	}
 
@@ -109,8 +109,8 @@ float3 naiveShading(
 		return BLACK;
 
 	// Terminate if we hit a light source
-	if (material->type == Emisive)
-		return stackItem->multiplier * material->emisive.emisiveColour;
+	if (material->type == Emissive)
+		return stackItem->multiplier * material->emissive.emissiveColour;
 
 	// Continue in random direction
 	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);

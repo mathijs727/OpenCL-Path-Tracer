@@ -14,8 +14,8 @@ float3 slide17Shading(
 	clrngMrg31k3pStream* randomStream)
 {
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
-	if (material->type == Emisive)
-		return material->emisive.emisiveColour;
+	if (material->type == Emissive)
+		return material->emissive.emissiveColour;
 
 	// Triangle normal
 	VertexData vertices[3];
@@ -57,7 +57,7 @@ float3 slide17Shading(
 	float3 BRDF = material->diffuse.diffuseColour * INVPI;
 	float solidAngle = (cos_o * lightArea) / dist2;
 	solidAngle = min(solidAngle, 2 * PI);
-	return scene->numEmisiveTriangles * BRDF * lightColour * solidAngle * cos_i;
+	return scene->numEmissiveTriangles * BRDF * lightColour * solidAngle * cos_i;
 }
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2007%20-%20path%20tracing.pdf
@@ -72,8 +72,8 @@ float3 slide16Shading(
 	clrngMrg31k3pStream* randomStream)
 {
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
-	if (material->type == Emisive)
-		return material->emisive.emisiveColour;
+	if (material->type == Emissive)
+		return material->emissive.emissiveColour;
 
 	VertexData vertices[3];
 	TriangleData triangle = scene->triangles[triangleIndex];
@@ -96,12 +96,12 @@ float3 slide16Shading(
 	if (hit)
 	{
 		const __global Material* hitMat = &scene->meshMaterials[scene->triangles[bounceTriInd].mat_index];
-		if (hitMat->type != Emisive)
+		if (hitMat->type != Emissive)
 			return BLACK;
 
 		float3 BRDF = material->diffuse.diffuseColour * INVPI;
 		float cos_i = dot(reflection, normal);
-		return 2.0f * PI * BRDF * hitMat->emisive.emisiveColour * cos_i;
+		return 2.0f * PI * BRDF * hitMat->emissive.emissiveColour * cos_i;
 	} else {
 		return BLACK;
 	}
