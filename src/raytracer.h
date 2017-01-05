@@ -40,7 +40,7 @@ private:
 	void InitBuffers(
 		u32 numVertices,
 		u32 numTriangles,
-		u32 numEmmisiveTriangles,
+		u32 numEmisiveTriangles,
 		u32 numMaterials,
 		u32 numSubBvhNodes,
 		u32 numTopBvhNodes,
@@ -68,19 +68,19 @@ private:
 
 	std::vector<VertexSceneData> _vertices_host;
 	std::vector<TriangleSceneData> _triangles_host;
-	std::vector<EmmisiveTriangle> _emmisive_triangles_host;
+	std::vector<EmisiveTriangle> _emisive_triangles_host;
 	std::vector<Material> _materials_host;
 	std::vector<SubBvhNode> _sub_bvh_nodes_host;
 
 	cl_uint _num_static_vertices;
 	cl_uint _num_static_triangles;
-	cl_uint _num_emmisive_triangles[2];
+	cl_uint _num_emisive_triangles[2];
 	cl_uint _num_static_materials;
 	cl_uint _num_static_bvh_nodes;
 	uint _active_buffers = 0;
 	cl::Buffer _vertices[2];
 	cl::Buffer _triangles[2];
-	cl::Buffer _emmisive_trangles[2];
+	cl::Buffer _emisive_trangles[2];
 	cl::Buffer _materials[2];
 	cl::Buffer _sub_bvh[2];
 	

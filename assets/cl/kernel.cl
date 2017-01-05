@@ -25,7 +25,7 @@ typedef struct
 	uint width;// Render target width
 
 	// Scene
-	uint numEmmisiveTriangles;
+	uint numEmisiveTriangles;
 	uint topLevelBvhRoot;
 
 	uint raysPerPass;
@@ -36,7 +36,7 @@ __kernel void traceRays(
 	__global KernelData* inputData,
 	__global VertexData* vertices,
 	__global TriangleData* triangles,
-	__global EmmisiveTriangle* emmisiveTriangles,
+	__global EmisiveTriangle* emisiveTriangles,
 	__global Material* materials,
 	__read_only image2d_array_t textures,
 	__global SubBvhNode* subBvh,
@@ -57,8 +57,8 @@ __kernel void traceRays(
 		vertices,
 		triangles,
 		materials,
-		inputData->numEmmisiveTriangles,
-		emmisiveTriangles,
+		inputData->numEmisiveTriangles,
+		emisiveTriangles,
 		subBvh,
 		inputData->topLevelBvhRoot,
 		topLevelBvh,

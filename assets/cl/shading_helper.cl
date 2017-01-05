@@ -77,12 +77,12 @@ void randomPointOnLight(
 	float* outLightArea)
 {
 	// Construct vector to random point on light
-	int lightIndex = clrngMrg31k3pRandomInteger(randomStream, 0, scene->numEmmisiveTriangles-1);
-	EmmisiveTriangle lightTriangle = scene->emmisiveTriangles[lightIndex];
+	int lightIndex = clrngMrg31k3pRandomInteger(randomStream, 0, scene->numEmisiveTriangles-1);
+	EmisiveTriangle lightTriangle = scene->emisiveTriangles[lightIndex];
 	*outLightNormal = normalize(cross(
 		lightTriangle.vertices[1] - lightTriangle.vertices[0],
 		lightTriangle.vertices[2] - lightTriangle.vertices[0]));
-	*outLightColour = lightTriangle.material.emmisive.emmisiveColour;
+	*outLightColour = lightTriangle.material.emisive.emisiveColour;
 	*outPoint = uniformSampleTriangle(lightTriangle.vertices, randomStream);
 	*outLightArea = triangleArea(lightTriangle.vertices);
 }

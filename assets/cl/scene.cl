@@ -12,12 +12,12 @@
 
 typedef struct
 {
-	uint numVertices, numTriangles, numEmmisiveTriangles, numLights;
+	uint numVertices, numTriangles, numEmisiveTriangles, numLights;
 	const __global VertexData* vertices;
 	const __global TriangleData* triangles;
 	const __global Material* meshMaterials;
 
-	const __global EmmisiveTriangle* emmisiveTriangles;
+	const __global EmisiveTriangle* emisiveTriangles;
 
 	const __global SubBvhNode* subBvh;
 	const __global TopBvhNode* topLevelBvh;
@@ -36,21 +36,21 @@ void loadScene(
 	const __global VertexData* vertices,
 	const __global TriangleData* triangles,
 	const __global Material* materials,
-	uint numEmmisiveTriangles,
-	const __global EmmisiveTriangle* emmisiveTriangles,
+	uint numEmisiveTriangles,
+	const __global EmisiveTriangle* emisiveTriangles,
 	const __global SubBvhNode* subBvh,
 	uint topLevelBvhRoot,
 	const __global TopBvhNode* topLevelBvh,
 	Scene* scene) {
 	scene->refractiveIndex =  1.000277f;
 	
-	scene->numEmmisiveTriangles = numEmmisiveTriangles;
+	scene->numEmisiveTriangles = numEmisiveTriangles;
 
 	scene->vertices = vertices;
 	scene->triangles = triangles;
 	scene->meshMaterials = materials;
 	
-	scene->emmisiveTriangles = emmisiveTriangles;
+	scene->emisiveTriangles = emisiveTriangles;
 
 	scene->subBvh = subBvh;
 	scene->topLevelBvh = topLevelBvh;

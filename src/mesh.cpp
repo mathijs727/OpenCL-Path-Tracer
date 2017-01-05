@@ -61,13 +61,13 @@ void raytracer::Mesh::addSubMesh(
 	{
 		aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
 		aiColor3D colour;
-		aiColor3D emmisiveColour;
+		aiColor3D emisiveColour;
 		material->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
-		material->Get(AI_MATKEY_COLOR_EMISSIVE, emmisiveColour);
-		bool emmisive = emmisiveColour.r != 0.0f || emmisiveColour.g != 0.0f || emmisiveColour.b != 0.0f;
-		if (emmisive)
+		material->Get(AI_MATKEY_COLOR_EMISSIVE, emisiveColour);
+		bool emisive = emisiveColour.r != 0.0f || emisiveColour.g != 0.0f || emisiveColour.b != 0.0f;
+		if (emisive)
 		{
-			_materials.push_back(Material::Emmisive(ai2glm(emmisiveColour)));
+			_materials.push_back(Material::Emisive(ai2glm(emisiveColour)));
 		}
 		else {
 			if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
@@ -125,14 +125,14 @@ void raytracer::Mesh::addSubMesh(
 		_triangles.push_back(triangle);
 
 		// Doesnt work if SBVH is gonna mess up triangle order anyways
-		//if (emmisive)
-		//	_emmisive_triangles.push_back((u32)_triangles.size() - 1);
+		//if (emisive)
+		//	_emisive_triangles.push_back((u32)_triangles.size() - 1);
 	}
 }
 
-void raytracer::Mesh::collectEmmisiveTriangles()
+void raytracer::Mesh::collectEmisiveTriangles()
 {
-	_emmisive_triangles.clear();
+	_emisive_triangles.clear();
 	for (u32 i = 0; i < _triangles.size(); i++)
 	{
 		auto triangle = _triangles[i];
@@ -141,8 +141,8 @@ void raytracer::Mesh::collectEmmisiveTriangles()
 		vertices[0] = _vertices[triangle.indices.x].vertex;
 		vertices[1] = _vertices[triangle.indices.y].vertex;
 		vertices[2] = _vertices[triangle.indices.z].vertex;
-		if (material.type == Material::Type::Emmisive)
-			_emmisive_triangles.push_back(i);
+		if (material.type == Material::Type::Emisive)
+			_emisive_triangles.push_back(i);
 	}
 }
 
@@ -213,7 +213,7 @@ void raytracer::Mesh::loadFromFile(
 		storeBvh(bvhFileName.c_str());
 	}
 
-	collectEmmisiveTriangles();
+	collectEmisiveTriangles();
 }
 
 

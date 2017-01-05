@@ -68,7 +68,7 @@ void Game::Init()
 		transform.scale = glm::vec3(0.1f, 1, 0.1f);
 		transform.orientation = glm::quat(glm::vec3(PI, 0, 0));// Flip upside down
 		auto lightPlane = std::make_shared<Mesh>();
-		lightPlane->loadFromFile("assets/3dmodels/plane/plane.obj", Material::Emmisive(glm::vec3(0.8f, 0.8f, 0.8f) * 15.0f), transform);
+		lightPlane->loadFromFile("assets/3dmodels/plane/plane.obj", Material::Emisive(glm::vec3(0.8f, 0.8f, 0.8f) * 15.0f), transform);
 		_scene->add_node(lightPlane);
 	}*/
 
