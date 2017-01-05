@@ -96,7 +96,7 @@ __kernel void traceRays(
 				matrixTranspose(invTransform, normalTransform);
 				if (leftSide)
 				{
-					accumulatedColour += neeShading(
+					accumulatedColour += naiveShading(
 						&scene,
 						triangleIndex,
 						intersection,
@@ -108,7 +108,7 @@ __kernel void traceRays(
 						&item,
 						&stack);
 				} else {
-					accumulatedColour += neeIsShading(
+					accumulatedColour += neeMisShading(
 						&scene,
 						triangleIndex,
 						intersection,
