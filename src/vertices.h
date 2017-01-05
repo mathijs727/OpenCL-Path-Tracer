@@ -1,5 +1,6 @@
 #pragma once
 #include "types.h"
+#include "material.h"
 #include <glm.hpp>
 
 namespace raytracer
@@ -16,5 +17,11 @@ struct VertexSceneData
 	glm::vec4 normal;
 	glm::vec2 texCoord;
 	byte __padding[8];
+};
+
+struct EmmisiveTriangle
+{
+	glm::vec4 vertices[3];
+	Material material;
 };
 }

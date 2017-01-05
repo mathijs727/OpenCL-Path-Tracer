@@ -45,22 +45,22 @@ float3 diffuseReflection(
 }
 
 // http://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
-float3 uniformSampleTriangle(VertexData* vertices, clrngMrg31k3pStream* randomStream)
+float3 uniformSampleTriangle(const float3* vertices, clrngMrg31k3pStream* randomStream)
 {
-	float3 A = vertices[0].vertex;
-	float3 B = vertices[1].vertex;
-	float3 C = vertices[2].vertex;
+	float3 A = vertices[0];
+	float3 B = vertices[1];
+	float3 C = vertices[2];
 	float u1 = clrngMrg31k3pRandomU01(randomStream);
 	float u2 = clrngMrg31k3pRandomU01(randomStream);
 	return (1 - sqrt(u1)) * A + (sqrt(u1) * (1 - u2)) * B + (sqrt(u1) * u2) * C;
 }
 
 // https://www.mathsisfun.com/geometry/herons-formula.html
-float triangleArea(VertexData* vertices)
+float triangleArea(float3* vertices)
 {
-	float3 A = vertices[1].vertex - vertices[0].vertex;
-	float3 B = vertices[2].vertex - vertices[1].vertex;
-	float3 C = vertices[0].vertex - vertices[2].vertex;
+	float3 A = vertices[1] - vertices[0];
+	float3 B = vertices[2] - vertices[1];
+	float3 C = vertices[0] - vertices[2];
 	float lenA = sqrt(dot(A, A));
 	float lenB = sqrt(dot(B, B));
 	float lenC = sqrt(dot(C, C));
@@ -78,15 +78,13 @@ void randomPointOnLight(
 {
 	// Construct vector to random point on light
 	int lightIndex = clrngMrg31k3pRandomInteger(randomStream, 0, scene->numEmmisiveTriangles-1);
-	TriangleData lightTriangle = scene->triangles[scene->emmisiveTriangles[lightIndex]];
-	VertexData lightVertices[3];
-	getVertices(lightVertices, lightTriangle.indices, scene);
+	EmmisiveTriangle lightTriangle = scene->emmisiveTriangles[lightIndex];
 	*outLightNormal = normalize(cross(
-		lightVertices[1].vertex - lightVertices[0].vertex,
-		lightVertices[2].vertex - lightVertices[0].vertex));
-	*outLightColour = scene->meshMaterials[lightTriangle.mat_index].emmisive.emmisiveColour;
-	*outPoint = uniformSampleTriangle(lightVertices, randomStream);
-	*outLightArea = triangleArea(lightVertices);
+		lightTriangle.vertices[1] - lightTriangle.vertices[0],
+		lightTriangle.vertices[2] - lightTriangle.vertices[0]));
+	*outLightColour = lightTriangle.material.emmisive.emmisiveColour;
+	*outPoint = uniformSampleTriangle(lightTriangle.vertices, randomStream);
+	*outLightArea = triangleArea(lightTriangle.vertices);
 }
 
 #endif// __SHADER_HELPER_CL

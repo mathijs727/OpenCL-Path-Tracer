@@ -19,9 +19,10 @@
 #include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
-//#define OUTPUT_AVERAGE_GRAYSCALE
+#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
-#define RAYS_PER_PASS 4
+#define RAYS_PER_PASS 1
+#define MAX_NUM_LIGHTS 256
 
 struct KernelData
 {
@@ -150,6 +151,9 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 
 	_top_bvh_root_node[0] = 0;
 	_top_bvh_root_node[1] = 0;
+
+	_num_emmisive_triangles[0] = 0;
+	_num_emmisive_triangles[1] = 0;
 }
 
 raytracer::RayTracer::~RayTracer()
@@ -163,14 +167,11 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 	// Initialize buffers
 	_num_static_vertices = 0;
 	_num_static_triangles = 0;
-	_num_static_emmisive_triangles = 0;
 	_num_static_materials = 0;
 	_num_static_bvh_nodes = 0;
-	_num_lights = (u32)scene->get_lights().size();
 
 	u32 numVertices = 0;
 	u32 numTriangles= 0;
-	u32 numEmmisiveTriangles = 0;
 	u32 numMaterials = 0;
 	u32 numBvhNodes = 0;
 	for (auto& meshBvhPair : scene->get_meshes())
@@ -187,22 +188,18 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 		else {
 			numVertices += (u32)mesh->getVertices().size();
 			numTriangles += (u32)mesh->getTriangles().size();
-			numEmmisiveTriangles += (u32)mesh->getEmmisiveTriangles().size();
 			numMaterials += (u32)mesh->getMaterials().size();
 			numBvhNodes += (u32)mesh->getBvhNodes().size();
 
 			_num_static_vertices += (u32)mesh->getVertices().size();
 			_num_static_triangles += (u32)mesh->getTriangles().size();
-			_num_static_emmisive_triangles += (u32)mesh->getEmmisiveTriangles().size();
 			_num_static_materials += (u32)mesh->getMaterials().size();
 			_num_static_bvh_nodes += (u32)mesh->getBvhNodes().size();
 		}
 	}
 
-	InitBuffers(numVertices, numTriangles, numEmmisiveTriangles, numMaterials,
+	InitBuffers(numVertices, numTriangles, MAX_NUM_LIGHTS, numMaterials,
 		numBvhNodes, (u32)scene->get_meshes().size() * 2, (u32)scene->get_lights().size());
-	
-
 
 	// Collect all static geometry and upload it to the GPU
 	for (auto& meshBvhPair : scene->get_meshes())
@@ -232,11 +229,6 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 			_triangles_host.back().material_index += startMaterial;
 		}
 
-		for (u32 triangle : mesh->getEmmisiveTriangles())
-		{
-			_emmisive_triangles_host.push_back(triangle + startTriangle);
-		}
-
 		u32 startBvhNode = (u32)_sub_bvh_nodes_host.size();
 		for (auto& bvhNode : mesh->getBvhNodes())
 		{
@@ -252,17 +244,13 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 
 	writeToBuffer(_queue, _vertices[0], _vertices_host);
 	writeToBuffer(_queue, _triangles[0], _triangles_host);
-	writeToBuffer(_queue, _emmisive_trangles[0], _emmisive_triangles_host);
 	writeToBuffer(_queue, _materials[0], _materials_host);
 	writeToBuffer(_queue, _sub_bvh[0], _sub_bvh_nodes_host);
 
 	writeToBuffer(_queue, _vertices[1], _vertices_host);
 	writeToBuffer(_queue, _triangles[1], _triangles_host);
-	writeToBuffer(_queue, _emmisive_trangles[1], _emmisive_triangles_host);
 	writeToBuffer(_queue, _materials[1], _materials_host);
 	writeToBuffer(_queue, _sub_bvh[1], _sub_bvh_nodes_host);
-
-	writeToBuffer(_queue, _lights, scene->get_lights());
 
 	// Copy textures to the GPU
 	for (uint texId = 0; texId < Texture::getNumUniqueSurfaces(); texId++)
@@ -322,7 +310,7 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 	GammaCorrection();
 
 	// Lot of CPU work
-	CopyNextFramesData();
+	CopyNextAnimationFrameData();
 
 	// Before returning the objects to OpenGL, we sync to make sure OpenCL is done.
 	cl_int err = _queue.finish();
@@ -354,7 +342,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	data.v_step = glmToCl(v_step);
 	data.width = _scr_width;
 
-	data.numEmmisiveTriangles = _num_static_emmisive_triangles;
+	data.numEmmisiveTriangles = _num_emmisive_triangles[_active_buffers];
 	data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];
 
 	data.raysPerPass = RAYS_PER_PASS;
@@ -376,10 +364,9 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	_ray_trace_kernel.setArg(4, _emmisive_trangles[_active_buffers]);
 	_ray_trace_kernel.setArg(5, _materials[_active_buffers]);
 	_ray_trace_kernel.setArg(6, _material_textures);
-	_ray_trace_kernel.setArg(7, _lights);
-	_ray_trace_kernel.setArg(8, _sub_bvh[_active_buffers]);
-	_ray_trace_kernel.setArg(9, _top_bvh[_active_buffers]);
-	_ray_trace_kernel.setArg(10, _random_streams);
+	_ray_trace_kernel.setArg(7, _sub_bvh[_active_buffers]);
+	_ray_trace_kernel.setArg(8, _top_bvh[_active_buffers]);
+	_ray_trace_kernel.setArg(9, _random_streams);
 
 	err = _queue.enqueueNDRangeKernel(
 		_ray_trace_kernel,
@@ -457,7 +444,7 @@ void raytracer::RayTracer::CalculateAverageGrayscale()
 	std::cout << "Average grayscale value right: " << sumRight << "\n" << std::endl;
 }
 
-void raytracer::RayTracer::CopyNextFramesData()
+void raytracer::RayTracer::CopyNextAnimationFrameData()
 {
 	// Manually flush the queue
 	// At least on AMD, the queue is flushed after the enqueueWriteBuffer (probably because it thinks
@@ -517,6 +504,12 @@ void raytracer::RayTracer::CopyNextFramesData()
 		meshBvhPair.bvh_offset = startBvhNode;
 	}
 
+	// Get the light emmiting triangles transformed by the scene graph
+	_emmisive_triangles_host.clear();
+	CollectTransformedLights(&_scene->get_root_node(), glm::mat4());
+	_num_emmisive_triangles[copyBuffers] = _emmisive_triangles_host.size();
+	writeToBuffer(_copyQueue, _emmisive_trangles[copyBuffers], _emmisive_triangles_host, 0, waitEvents);
+
 	if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices))// Dont copy if we dont have any dynamic geometry
 	{
 		writeToBuffer(_copyQueue, _vertices[copyBuffers], _vertices_host, _num_static_vertices, waitEvents);
@@ -525,12 +518,10 @@ void raytracer::RayTracer::CopyNextFramesData()
 		writeToBuffer(_copyQueue, _sub_bvh[copyBuffers], _sub_bvh_nodes_host, _num_static_bvh_nodes, waitEvents);
 	}
 
-
 	// Update the top level BVH and copy it to the GPU on a seperate copy queue
 	_top_bvh_nodes_host.clear();
 	auto bvhBuilder = TopLevelBvhBuilder(*_scene.get());
 	_top_bvh_root_node[copyBuffers] = bvhBuilder.build(_sub_bvh_nodes_host, _top_bvh_nodes_host);
-
 	writeToBuffer(_copyQueue, _top_bvh[copyBuffers], _top_bvh_nodes_host, 0, waitEvents);
 
 	if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices))
@@ -539,16 +530,51 @@ void raytracer::RayTracer::CopyNextFramesData()
 		timeOpenCL(waitEvents[1], "triangle upload");
 		timeOpenCL(waitEvents[2], "material upload");
 		timeOpenCL(waitEvents[3], "sub bvh upload");
-		timeOpenCL(waitEvents[4], "top bvh upload");
+		timeOpenCL(waitEvents[4], "emmisive triangles upload");
+		timeOpenCL(waitEvents[5], "top bvh upload");
 	}
 	else {
-		timeOpenCL(waitEvents[0], "top bvh upload");
+		timeOpenCL(waitEvents[0], "emmisive triangles upload");
+		timeOpenCL(waitEvents[1], "top bvh upload");
 	}
 
 	// Make sure the main queue waits for the copy to finish
 	cl_int err = _queue.enqueueBarrierWithWaitList(&waitEvents);
 	checkClErr(err, "CommandQueue::enqueueBarrierWithWaitList");
 }
+
+void raytracer::RayTracer::CollectTransformedLights(const SceneNode* node, const glm::mat4& transform)
+{
+	auto& newTransform = transform * node->transform.matrix();
+	if (node->mesh != -1)
+	{
+		auto& mesh = _scene->get_meshes()[node->mesh];
+		auto& vertices = mesh.mesh->getVertices();
+		auto& triangles = mesh.mesh->getTriangles();
+		auto& emmisiveTriangles = mesh.mesh->getEmmisiveTriangles();
+		auto& materials = mesh.mesh->getMaterials();
+
+		for (auto& triangleIndex : emmisiveTriangles)
+		{
+			auto& triangle = triangles[triangleIndex];
+			EmmisiveTriangle result;
+			result.vertices[0] = newTransform * vertices[triangle.indices[0]].vertex;
+			result.vertices[1] = newTransform * vertices[triangle.indices[1]].vertex;
+			result.vertices[2] = newTransform * vertices[triangle.indices[2]].vertex;
+			result.material = materials[triangle.material_index];
+			_emmisive_triangles_host.push_back(result);
+		}
+	}
+
+	for (auto& child : node->children)
+	{
+		CollectTransformedLights(child.get(), newTransform);
+	}
+}
+
+
+
+
 
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/
 // https://www.codeproject.com/articles/685281/opengl-opencl-interoperability-a-case-study-using
@@ -713,12 +739,12 @@ void raytracer::RayTracer::InitBuffers(
 
 	_emmisive_trangles[0] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		std::max(1u, numEmmisiveTriangles) * sizeof(u32),
+		std::max(1u, numEmmisiveTriangles) * sizeof(EmmisiveTriangle),
 		NULL,
 		&err);
 	_emmisive_trangles[1] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
-		std::max(1u, numEmmisiveTriangles) * sizeof(u32),
+		std::max(1u, numEmmisiveTriangles) * sizeof(EmmisiveTriangle),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
@@ -756,13 +782,6 @@ void raytracer::RayTracer::InitBuffers(
 	_top_bvh[1] = cl::Buffer(_context,
 		CL_MEM_READ_ONLY,
 		numTopBvhNodes * sizeof(TopBvhNode),// TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
-		NULL,
-		&err);
-	checkClErr(err, "Buffer::Buffer()");
-
-	_lights = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
-		std::max(1u, numLights) * sizeof(Light),
 		NULL,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");

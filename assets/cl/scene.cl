@@ -17,7 +17,7 @@ typedef struct
 	const __global TriangleData* triangles;
 	const __global Material* meshMaterials;
 
-	const __global uint* emmisiveTriangles;
+	const __global EmmisiveTriangle* emmisiveTriangles;
 
 	const __global SubBvhNode* subBvh;
 	const __global TopBvhNode* topLevelBvh;
@@ -37,7 +37,7 @@ void loadScene(
 	const __global TriangleData* triangles,
 	const __global Material* materials,
 	uint numEmmisiveTriangles,
-	const __global uint* emmisiveTriangles,
+	const __global EmmisiveTriangle* emmisiveTriangles,
 	const __global SubBvhNode* subBvh,
 	uint topLevelBvhRoot,
 	const __global TopBvhNode* topLevelBvh,

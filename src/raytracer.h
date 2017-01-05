@@ -33,7 +33,8 @@ private:
 	void ClearAccumulationBuffer();
 	void CalculateAverageGrayscale();
 
-	void CopyNextFramesData();
+	void CopyNextAnimationFrameData();
+	void CollectTransformedLights(const SceneNode* node, const glm::mat4& transform);
 
 	void InitOpenCL();
 	void InitBuffers(
@@ -67,13 +68,13 @@ private:
 
 	std::vector<VertexSceneData> _vertices_host;
 	std::vector<TriangleSceneData> _triangles_host;
-	std::vector<u32> _emmisive_triangles_host;
+	std::vector<EmmisiveTriangle> _emmisive_triangles_host;
 	std::vector<Material> _materials_host;
 	std::vector<SubBvhNode> _sub_bvh_nodes_host;
 
 	cl_uint _num_static_vertices;
 	cl_uint _num_static_triangles;
-	cl_uint _num_static_emmisive_triangles;
+	cl_uint _num_emmisive_triangles[2];
 	cl_uint _num_static_materials;
 	cl_uint _num_static_bvh_nodes;
 	uint _active_buffers = 0;
@@ -82,9 +83,6 @@ private:
 	cl::Buffer _emmisive_trangles[2];
 	cl::Buffer _materials[2];
 	cl::Buffer _sub_bvh[2];
-
-	cl_int _num_lights;
-	cl::Buffer _lights;
 	
 	cl::Image2DArray _material_textures;
 

@@ -36,10 +36,9 @@ __kernel void traceRays(
 	__global KernelData* inputData,
 	__global VertexData* vertices,
 	__global TriangleData* triangles,
-	__global uint* emmisiveTriangles,
+	__global EmmisiveTriangle* emmisiveTriangles,
 	__global Material* materials,
 	__read_only image2d_array_t textures,
-	__global Light* lights,
 	__global SubBvhNode* subBvh,
 	__global TopBvhNode* topLevelBvh,
 	__global clrngMrg31k3pHostStream* randomStreams) {
@@ -70,7 +69,7 @@ __kernel void traceRays(
 	StackInit(&stack);
 	for (int i = 0; i < inputData->raysPerPass; i++)
 	{
-		float corX = x;//(float)(leftSide ? x : x - get_global_size(0) / 2);
+		float corX = (float)(leftSide ? x : x - get_global_size(0) / 2);
 		float3 screenPoint = inputData->screen + \
 			inputData->u_step * corX + inputData->v_step * (float)y;	
 		screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->u_step;
@@ -95,7 +94,7 @@ __kernel void traceRays(
 				float3 intersection = t * item.ray.direction + item.ray.origin;
 				float normalTransform[16];
 				matrixTranspose(invTransform, normalTransform);
-				/*if (leftSide)
+				if (leftSide)
 				{
 					accumulatedColour += naiveShading(
 						&scene,
@@ -120,8 +119,8 @@ __kernel void traceRays(
 						&privateStream,
 						&item,
 						&stack);
-				}*/
-				accumulatedColour += neeShading(
+				}
+				/*accumulatedColour += neeShading(
 						&scene,
 						triangleIndex,
 						intersection,
@@ -131,7 +130,7 @@ __kernel void traceRays(
 						textures,
 						&privateStream,
 						&item,
-						&stack);
+						&stack);*/
 			}
 
 			if (++iteration == MAX_ITERATIONS)
