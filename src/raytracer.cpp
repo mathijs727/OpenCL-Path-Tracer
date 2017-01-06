@@ -33,7 +33,7 @@ struct KernelData
 	cl_float3 v_step;// Vertical distance between pixels in world space
 	uint width;// Render target width
 	byte __cl_padding[12];*/
-	CameraData camera;
+	raytracer::CameraData camera;
 
 	// Scene
 	uint numEmissiveTriangles;
@@ -325,7 +325,7 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 
 void raytracer::RayTracer::TraceRays(const Camera& camera)
 {
-	glm::vec3 eye;
+	/*glm::vec3 eye;
 	glm::vec3 scr_base_origin;
 	glm::vec3 scr_base_u;
 	glm::vec3 scr_base_v;
@@ -333,16 +333,17 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 
 	glm::vec3 u_step = scr_base_u / (float)_scr_width;
 	glm::vec3 v_step = scr_base_v / (float)_scr_height;
+	data.eye = glmToCl(eye);
+	data.screen = glmToCl(scr_base_origin);
+	data.u_step = glmToCl(u_step);
+	data.v_step = glmToCl(v_step);
+	data.width = _scr_width;*/
 
 	
 
 	// Copy camera (and scene) data to the device using a struct so we dont use 20 kernel arguments
 	KernelData data = {};
-	/*data.eye = glmToCl(eye);
-	data.screen = glmToCl(scr_base_origin);
-	data.u_step = glmToCl(u_step);
-	data.v_step = glmToCl(v_step);
-	data.width = _scr_width;*/
+	data.camera = camera.get_camera_data();
 
 	data.numEmissiveTriangles = _num_emissive_triangles[_active_buffers];
 	data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];

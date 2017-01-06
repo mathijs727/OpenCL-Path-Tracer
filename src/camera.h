@@ -8,12 +8,16 @@ namespace raytracer
 
 struct CameraData
 {
-	CameraData() { }
+	UNION_STRUCT_FUNCTIONS(CameraData);
+
+	CL_VEC3(screenPoint);
+	CL_VEC3(u);
+	CL_VEC3(v);
 
 	CL_VEC3(eyePoint);
 	CL_VEC3(lookAtPoint);
-	CL_VEC3(u);
-	CL_VEC3(v);
+	CL_VEC3(u_normalized);
+	CL_VEC3(v_normalized);
 	float apertureRadius;
 	
 	byte __cl_padding[12];

@@ -3,28 +3,33 @@
 
 typedef struct
 {
-	/*float3 eye;// Position of the camera "eye"
-	float3 screen;// Left top of screen in world space
-	float3 u_step;// Horizontal distance between pixels in world space
-	float3 v_step;// Vertical distance between pixels in world space
-	uint width;// Render target width*/
-	float3 eyePoint;
-	float3 lookAtPoint;
+	// Pinhole camera
+	float3 screenPoint;// Top left corner of screen
 	float3 u;
 	float3 v;
+
+	// Physically based camera
+	float3 eyePoint;
+	float3 lookAtPoint;
+	float3 u_normalized;
+	float3 v_normalized;
 	float apertureRadius;
 } Camera;
 
 Ray generateRay(__global Camera* camera, int x, int y, clrngMrg31k3pStream* randomStream)
 {
-	float3 screenPoint = camera->screen + \
-		camera->u_step * (float)x + camera->v_step * (float)y;	
-	screenPoint += (float)clrngMrg31k3pRandomU01(randomStream) * camera->u_step;
-	screenPoint += (float)clrngMrg31k3pRandomU01(randomStream) * camera->v_step;
+	float width = get_global_size(0);
+	float height = get_global_size(1);
+	float3 u_step = camera->u / width;
+	float3 v_step = camera->v / height;
+	float3 screenPoint = camera->screenPoint + \
+		u_step * x + v_step * y;	
+	screenPoint += (float)clrngMrg31k3pRandomU01(randomStream) * u_step;
+	screenPoint += (float)clrngMrg31k3pRandomU01(randomStream) * v_step;
 
 	Ray result;
-	result.origin = camera->eye;
-	result.direction = normalize(screenPoint - camera->eye);
+	result.origin = camera->eyePoint;
+	result.direction = normalize(screenPoint - camera->eyePoint);
 	return result;
 }
 

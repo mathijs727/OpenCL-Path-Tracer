@@ -14,5 +14,9 @@ typedef unsigned char byte;
 #define CL_VEC3(NAME) \
 	union { \
 		glm::vec3 NAME; \
-		cl_float3 __cl_padding; \
+		cl_float3 __cl_padding_ ## NAME; \
 	}
+#define UNION_STRUCT_FUNCTIONS(CLASSNAME) \
+	CLASSNAME() { } \
+	CLASSNAME(CLASSNAME& other) { memcpy(this, &other, sizeof(CLASSNAME)); } \
+	CLASSNAME& operator=(CLASSNAME& other) { memcpy(this, &other, sizeof(CLASSNAME)); return *this; }
