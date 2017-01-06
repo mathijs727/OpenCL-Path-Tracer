@@ -13,16 +13,12 @@
 #include "gamma.cl"
 #include "bvh.cl"
 #include "shading.cl"
-#include "direct_shading.cl"
+#include "camera.cl"
 
 typedef struct
 {
 	// Camera
-	float3 eye;// Position of the camera "eye"
-	float3 screen;// Left top of screen in world space
-	float3 u_step;// Horizontal distance between pixels in world space
-	float3 v_step;// Vertical distance between pixels in world space
-	uint width;// Render target width
+	Camera camera;
 
 	// Scene
 	uint numEmissiveTriangles;
@@ -45,8 +41,9 @@ __kernel void traceRays(
 	//__read_only image2d_array_t textures) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
-	int gid = y * get_global_size(0) + x;
-	bool leftSide = (x < get_global_size(0) / 2);
+	int width = get_global_size(0);
+	int gid = y * width + x;
+	bool leftSide = (x < width / 2);
 
 	// Read random stream
 	clrngMrg31k3pStream privateStream;
@@ -69,14 +66,11 @@ __kernel void traceRays(
 	StackInit(&stack);
 	for (int i = 0; i < inputData->raysPerPass; i++)
 	{
-		float corX = (float)(leftSide ? x : x - get_global_size(0) / 2);
-		float3 screenPoint = inputData->screen + \
-			inputData->u_step * corX + inputData->v_step * (float)y;	
-		screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->u_step;
-		screenPoint += (float)clrngMrg31k3pRandomU01(&privateStream) * inputData->v_step;
+		float corX = (leftSide ? x : x - width / 2);
+		Ray cameraRay = generateRay(&inputData->camera, corX, y, &privateStream);
 		StackPush(&stack,
-			inputData->eye,
-			normalize(screenPoint - inputData->eye),
+			cameraRay.origin,
+			cameraRay.direction,
 			(float3)(1,1,1));
 
 		int iteration = 0;
@@ -108,7 +102,7 @@ __kernel void traceRays(
 						&item,
 						&stack);
 				} else {
-					accumulatedColour += neeMisShading(
+					accumulatedColour += neeIsShading(
 						&scene,
 						triangleIndex,
 						intersection,
@@ -137,7 +131,7 @@ __kernel void traceRays(
 				break;
 		}
 	}
-	output[y * inputData->width + x] += accumulatedColour;
+	output[gid] += accumulatedColour;
 
 	// Store random streams
 	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &privateStream);

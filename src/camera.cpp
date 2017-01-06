@@ -11,6 +11,20 @@ raytracer::Camera::Camera(const Transform& transform, float fov, float aspectRat
 	_eyeDistance = _worldspaceHalfWidth / std::tan(glm::radians(fov * 0.5f));
 }
 
+CameraData raytracer::Camera::get_camera_data() const
+{
+	glm::mat4 transform_matrix = _transform.matrix();
+	glm::mat3 orientation_matrix = glm::mat3_cast(_transform.orientation);
+	float aperture = 1 / 2.0f;
+
+	CameraData result;
+	result.eyePoint = _transform.location, 1.0f;
+	result.lookAtPoint = glm::vec3(transform_matrix * glm::vec4(0, 0, _eyeDistance, 1));
+	result.u = glm::normalize(orientation_matrix * glm::vec3(1, 0, 0));
+	result.v = glm::normalize(orientation_matrix * glm::vec3(0, -1, 0));
+	result.apertureRadius =
+}
+
 void raytracer::Camera::get_frustum(glm::vec3& eye, glm::vec3& scr_base_origin, glm::vec3& scr_base_u, glm::vec3& scr_base_v) const {
 	eye = _transform.location;
 	float halfWidth = _worldspaceHalfWidth;

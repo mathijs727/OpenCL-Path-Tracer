@@ -26,12 +26,14 @@
 
 struct KernelData
 {
-	// Camera
+	/*// Camera
 	cl_float3 eye;// Position of the camera "eye"
 	cl_float3 screen;// Left top of screen in world space
 	cl_float3 u_step;// Horizontal distance between pixels in world space
 	cl_float3 v_step;// Vertical distance between pixels in world space
 	uint width;// Render target width
+	byte __cl_padding[12];*/
+	CameraData camera;
 
 	// Scene
 	uint numEmissiveTriangles;
@@ -336,11 +338,11 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 
 	// Copy camera (and scene) data to the device using a struct so we dont use 20 kernel arguments
 	KernelData data = {};
-	data.eye = glmToCl(eye);
+	/*data.eye = glmToCl(eye);
 	data.screen = glmToCl(scr_base_origin);
 	data.u_step = glmToCl(u_step);
 	data.v_step = glmToCl(v_step);
-	data.width = _scr_width;
+	data.width = _scr_width;*/
 
 	data.numEmissiveTriangles = _num_emissive_triangles[_active_buffers];
 	data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];
@@ -426,7 +428,7 @@ void raytracer::RayTracer::CalculateAverageGrayscale()
 
 	float sumLeft = 0.0f;
 	float sumRight = 0.0f;
-	for (int i = 0; i < sizeInVecs; i++)
+	for (size_t i = 0; i < sizeInVecs; i++)
 	{
 		// https://en.wikipedia.org/wiki/Grayscale
 		glm::vec3 colour = glm::vec3(buffer[i]) / (float)_rays_per_pixel;

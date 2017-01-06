@@ -18,12 +18,6 @@ namespace Tmpl8
 	class Surface;
 }
 
-#define CL_VEC3(NAME) \
-	union { \
-		glm::vec3 NAME; \
-		cl_float3 __cl_padding; \
-	}
-
 namespace raytracer {
 class Scene;
 
