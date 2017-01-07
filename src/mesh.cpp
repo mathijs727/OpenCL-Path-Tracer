@@ -200,7 +200,7 @@ void raytracer::Mesh::loadFromFile(
 	if (fileExists(bvhFileName))
 	{
 		std::cout << "Loading bvh from file: " << bvhFileName << std::endl;
-		//buildBvh = !loadBvh(bvhFileName.c_str());
+		buildBvh = !loadBvh(bvhFileName.c_str());
 	}
 
 	if (buildBvh) {

@@ -30,7 +30,7 @@ void Game::Init()
 	//camera_transform.location = glm::vec3(2.5f, 2.0f, 0.01f);
 	//camera_transform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
 	//camera_transform.location = glm::vec3(6.425, 0.695, -3.218);
-	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.f);
+	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.0f);
 
 	{
 		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(-3, 1, 0));
@@ -64,7 +64,7 @@ void Game::Init()
 
 	{
 		Transform transform;
-		transform.location = glm::vec3(0, 3, -1);
+		transform.location = glm::vec3(0, 5, -1);
 		transform.scale = glm::vec3(0.1f, 1, 0.1f);
 		transform.orientation = glm::quat(glm::vec3(PI, 0, 0));// Flip upside down
 		auto lightPlane = std::make_shared<Mesh>();
@@ -82,10 +82,13 @@ void Game::Init()
 		_cube_scene_node = &_scene->add_node(cube, transform);
 	}
 	
-	/*_animatedHeli = std::make_shared<MeshSequence>();
-	_animatedHeli->loadFromFiles("assets/3dmodels/heli/Helicopter_UH60_%04d.obj", true);
-	_scene->add_node(_animatedHeli);
-	//_animatedHeli->goToNextFrame();*/
+	/*{
+		Transform transform;
+		transform.scale = glm::vec3(0.005f);
+		auto sponza = std::make_shared<Mesh>();
+		sponza->loadFromFile("assets/3dmodels/sponza-crytek/sponza.obj");
+		_scene->add_node(sponza, transform);
+	}*/
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);

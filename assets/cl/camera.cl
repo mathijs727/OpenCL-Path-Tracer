@@ -4,19 +4,19 @@
 typedef struct
 {
 	// Pinhole camera
+	float3 eyePoint;
 	float3 screenPoint;// Top left corner of screen
 	float3 u;
 	float3 v;
 
 	// Physically based camera
-	float3 eyePoint;
-	float3 lookAtPoint;
 	float3 u_normalized;
 	float3 v_normalized;
+	float focalDistance;
 	float apertureRadius;
 } Camera;
 
-Ray generateRay(__global Camera* camera, int x, int y, clrngMrg31k3pStream* randomStream)
+Ray generateRayPinhole(__global Camera* camera, int x, int y, clrngMrg31k3pStream* randomStream)
 {
 	float width = get_global_size(0);
 	float height = get_global_size(1);
@@ -33,10 +33,30 @@ Ray generateRay(__global Camera* camera, int x, int y, clrngMrg31k3pStream* rand
 	return result;
 }
 
-// https://steveharveynz.wordpress.com/2012/12/21/ray-tracer-part-5-depth-of-field/
-Ray generateRayDOF(__global Camera* camera, int x, int y, clrngMrg31k3pStream* randomStream)
+/*float length(float3 vec)
 {
+	return sqrt(dot(vec, vec));
+}*/
 
+// http://http.developer.nvidia.com/GPUGems/gpugems_ch23.html
+// https://courses.cs.washington.edu/courses/cse457/99sp/projects/trace/depthoffield.doc
+Ray generateRayThinLens(__global Camera* camera, int x, int y, clrngMrg31k3pStream* randomStream)
+{
+	float r1 = (float)clrngMrg31k3pRandomU01(randomStream) * 2.0f - 1.0f;
+	float r2 = (float)clrngMrg31k3pRandomU01(randomStream) * 2.0f - 1.0f;
+	// TODO: Round aperture
+	float3 offsetOnLense = r1 * camera->u_normalized * camera->apertureRadius + \
+						   r2 * camera->v_normalized * camera->apertureRadius;
+
+	Ray primaryRay = generateRayPinhole(camera, x, y, randomStream);
+	float3 focalPoint = primaryRay.origin + camera->focalDistance * primaryRay.direction;
+	float3 pointOnLens = primaryRay.origin + offsetOnLense;
+	float3 direction = focalPoint - pointOnLens;
+
+	Ray secondaryRay;
+	secondaryRay.origin = pointOnLens;
+	secondaryRay.direction = focalPoint - pointOnLens;
+	return secondaryRay;
 }
 
 #endif // __CAMERA_CL

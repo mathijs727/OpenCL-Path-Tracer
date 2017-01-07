@@ -67,7 +67,7 @@ __kernel void traceRays(
 	for (int i = 0; i < inputData->raysPerPass; i++)
 	{
 		float corX = (leftSide ? x : x - width / 2);
-		Ray cameraRay = generateRay(&inputData->camera, corX, y, &privateStream);
+		Ray cameraRay = generateRayThinLens(&inputData->camera, corX, y, &privateStream);
 		StackPush(&stack,
 			cameraRay.origin,
 			cameraRay.direction,

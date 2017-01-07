@@ -2,6 +2,11 @@
 #define __SHADING_CL
 #include "shading_helper.cl"
 
+__constant sampler_t sampler =
+	CLK_NORMALIZED_COORDS_TRUE |
+	CLK_ADDRESS_REPEAT |
+	CLK_FILTER_LINEAR;
+
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
 // Slide 49/51
@@ -169,6 +174,29 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 }
 
 
+float3 diffuseColour(
+	const __global Material* material,
+	VertexData* vertices,
+	float2 uv,
+	image2d_array_t textures)
+{
+	if (material->diffuse.tex_id == -1)
+	{
+		return material->diffuse.diffuseColour;
+	} else {
+		float2 t0 = vertices[0].texCoord;
+		float2 t1 = vertices[1].texCoord;
+		float2 t2 = vertices[2].texCoord;
+		float2 tex_coords = t0 + (t1-t0) * uv.x + (t2-t0) * uv.y;
+
+		float4 texCoords3d = (float4)(tex_coords.x, 1.0f - tex_coords.y, material->diffuse.tex_id, 0.0f);
+		float4 colourWithAlpha = read_imagef(
+			textures,
+			sampler,
+			texCoords3d);
+		return colourWithAlpha.xyz;
+	}
+}
 
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
@@ -198,7 +226,7 @@ float3 neeShading(
 	if (dot(realNormal, -rayDirection) < 0.0f)
 		return BLACK;
 
-	float3 BRDF = material->diffuse.diffuseColour * INVPI;
+	float3 BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 
 	// Terminate if we hit a light source
 	if (material->type == Emissive)

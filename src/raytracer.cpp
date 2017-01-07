@@ -21,7 +21,7 @@
 //#define PROFILE_OPENCL
 #define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
-#define RAYS_PER_PASS 1
+#define RAYS_PER_PASS 4
 #define MAX_NUM_LIGHTS 256
 
 struct KernelData
@@ -537,8 +537,8 @@ void raytracer::RayTracer::CopyNextAnimationFrameData()
 		timeOpenCL(waitEvents[5], "top bvh upload");
 	}
 	else {
-		timeOpenCL(waitEvents[0], "emissive triangles upload");
-		timeOpenCL(waitEvents[1], "top bvh upload");
+		//timeOpenCL(waitEvents[0], "emissive triangles upload");
+		//timeOpenCL(waitEvents[1], "top bvh upload");
 	}
 
 	// Make sure the main queue waits for the copy to finish
