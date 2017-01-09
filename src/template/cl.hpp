@@ -2088,6 +2088,12 @@ struct param_traits<detail:: token,param_name>       \
 			return *this;
 		}
 
+		// REALLY KHRONOS, REALLY?
+		cl_device_id getDeviceId() const
+		{
+			return object_;
+		}
+
 #if defined(CL_HPP_RVALUE_REFERENCES_SUPPORTED)
 		/*! \brief Move constructor to forward move to the superclass correctly.
 		* Required for MSVC.

@@ -53,7 +53,7 @@ private:
 	cl_uint _scr_width, _scr_height;
 
 	cl::Context _context;
-	std::vector<cl::Device> _devices;
+	cl::Device _device;
 	cl::CommandQueue _queue;
 	cl::CommandQueue _copyQueue;
 
