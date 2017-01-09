@@ -8,6 +8,7 @@ build_make/
 *.sublime-project
 *.DS_Store
 
+assets/cl/analyze/
 assets/3dmodels/
 
 ipch/

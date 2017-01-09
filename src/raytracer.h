@@ -66,6 +66,10 @@ private:
 	cl::Buffer _accumulation_buffer;
 	cl::ImageGL _output_image;
 
+	GLuint _output_image_gl;
+	cl::Image2D _output_image_cl;
+	std::unique_ptr<float[]> _output_image_cpu;
+
 	std::vector<VertexSceneData> _vertices_host;
 	std::vector<TriangleSceneData> _triangles_host;
 	std::vector<EmissiveTriangle> _emissive_triangles_host;

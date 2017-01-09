@@ -19,7 +19,8 @@
 #include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
-#define OUTPUT_AVERAGE_GRAYSCALE
+#define OPENCL_CPU
+//#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
 #define RAYS_PER_PASS 4
 #define MAX_NUM_LIGHTS 256
@@ -281,17 +282,34 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 void raytracer::RayTracer::SetTarget(GLuint glTexture)
 {
 	cl_int err;
+#ifdef OPENCL_CPU
+	_output_image_cl = cl::Image2D(_context,
+		CL_MEM_WRITE_ONLY,
+		cl::ImageFormat(CL_RGBA, CL_SNORM_INT8),
+		_scr_width,
+		_scr_height,
+		0,
+		0,
+		&err);
+	checkClErr(err, "Image2D");
+
+	_output_image_gl = glTexture;
+	_output_image_cpu = std::make_unique<float[]>(_scr_width * _scr_height * 4);
+#else
 	_output_image = cl::ImageGL(_context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, glTexture, &err);
 	checkClErr(err, "ImageGL");
+#endif
 }
 
 void raytracer::RayTracer::RayTrace(Camera& camera)
 {
+#ifndef OPENCL_CPU
 	// We must make sure that OpenGL is done with the textures, so we ask to sync.
 	glFinish();
 	
 	std::vector<cl::Memory> images = { _output_image };
 	_queue.enqueueAcquireGLObjects(&images);
+#endif
 
 	if (camera.dirty)
 	{
@@ -314,11 +332,31 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 	// Lot of CPU work
 	CopyNextAnimationFrameData();
 
+#ifdef OPENCL_CPU
+	// Copy OpenCL image to the CPU
+	cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = 0;
+	cl::size_t<3> r; r[0] = _scr_width; r[1] = _scr_height; r[2] = 1;
+	_queue.enqueueReadImage(_output_image_cl, CL_TRUE, o, r, 0, 0, _output_image_cpu.get(), nullptr, nullptr);
+
+	// And upload it to teh GPU (OpenGL)
+	glBindTexture(GL_TEXTURE_2D, _output_image_gl);
+	glTexImage2D(
+		GL_TEXTURE_2D,
+		0,
+		GL_RGBA,
+		_scr_width,
+		_scr_height,
+		0,
+		GL_RGBA,
+		GL_UNSIGNED_BYTE,
+		_output_image_cpu.get());
+#else
 	// Before returning the objects to OpenGL, we sync to make sure OpenCL is done.
 	cl_int err = _queue.finish();
 	checkClErr(err, "CommandQueue::finish");
 
 	_queue.enqueueReleaseGLObjects(&images);
+#endif
 
 	_active_buffers = (_active_buffers + 1) % 2;
 }
@@ -386,7 +424,11 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 void raytracer::RayTracer::Accumulate()
 {
 	_accumulate_kernel.setArg(0, _accumulation_buffer);
+#ifdef OPENCL_CPU
+	_accumulate_kernel.setArg(1, _output_image_cl);
+#else
 	_accumulate_kernel.setArg(1, _output_image);
+#endif
 	_accumulate_kernel.setArg(2, _rays_per_pixel);
 	_accumulate_kernel.setArg(3, _scr_width);
 	_queue.enqueueNDRangeKernel(
@@ -618,9 +660,16 @@ void raytracer::RayTracer::InitOpenCL()
 	{
 		const cl_platform_id lPlatformIdToTry = lPlatformIds[i];
 
+		cl_device_type deviceType;
+#ifdef OPENCL_CPU
+		deviceType = CL_DEVICE_TYPE_CPU;
+#else
+		deviceType = CL_DEVICE_TYPE_GPU;
+#endif
+
 		// Get devices.
 		cl_uint lNbDeviceId = 0;
-		clGetDeviceIDs(lPlatformIdToTry, CL_DEVICE_TYPE_GPU, 0, 0, &lNbDeviceId);
+		clGetDeviceIDs(lPlatformIdToTry, deviceType, 0, 0, &lNbDeviceId);
 
 		if (lNbDeviceId == 0)
 		{
@@ -628,7 +677,7 @@ void raytracer::RayTracer::InitOpenCL()
 		}
 
 		std::vector< cl_device_id > lDeviceIds(lNbDeviceId);
-		clGetDeviceIDs(lPlatformIdToTry, CL_DEVICE_TYPE_GPU, lNbDeviceId, lDeviceIds.data(), 0);
+		clGetDeviceIDs(lPlatformIdToTry, deviceType, lNbDeviceId, lDeviceIds.data(), 0);
 
 
 		// Create the properties for this context.
@@ -664,12 +713,19 @@ void raytracer::RayTracer::InitOpenCL()
 			cl_device_id lDeviceIdToTry = lDeviceIds[j];
 			cl_context lContextToTry = 0;
 
+#ifdef OPENCL_CPU
+			lContextToTry = clCreateContext(
+				nullptr,// Dont request any extensions
+				1, &lDeviceIdToTry,
+				0, 0,
+				&lError);
+#else
 			lContextToTry = clCreateContext(
 				lContextProperties,
 				1, &lDeviceIdToTry,
 				0, 0,
-				&lError
-			);
+				&lError);
+#endif
 			if (lError == CL_SUCCESS)
 			{
 				// We found the context.
