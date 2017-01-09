@@ -7,6 +7,17 @@ __constant sampler_t sampler =
 	CLK_ADDRESS_REPEAT |
 	CLK_FILTER_LINEAR;
 
+enum {
+	SHADINGFLAGS_HASFINISHED = 1,
+	SHADINGFLAGS_LASTSPECULAR = 2
+};
+
+typedef struct {
+	Ray ray;
+	float3 multiplier;
+	int flags;
+} ShadingData;
+
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
 // Slide 49/51
@@ -19,8 +30,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	float2 uv,
 	image2d_array_t textures,
 	clrngMrg31k3pStream* randomStream,
-	StackItem* stackItem,
-	Stack* stack)
+	ShadingData* data)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -33,6 +43,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
+		data->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
 
 	float3 BRDF = material->diffuse.diffuseColour * INVPI;
@@ -40,8 +51,9 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
 	{
-		if (stackItem->lastSpecular) {
-			return stackItem->multiplier * material->emissive.emissiveColour;
+		data->flags |= SHADINGFLAGS_HASFINISHED;
+		if (data->flags & SHADINGFLAGS_LASTSPECULAR) {
+			return data->multiplier * material->emissive.emissiveColour;
 		} else {
 			return BLACK;
 		}
@@ -77,17 +89,16 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	}
 
 	// Continue random walk
+	data->flags = 0;
 	float3 reflection = cosineWeightedDiffuseReflection(edge1, edge2, normalTransform, randomStream);
 	//float lightPdf = dot(realNormal, reflection) / PI;
 	//float3 integral = (dot(realNormal, reflection) / lightPdf) * BRDF;
 	float3 integral = PI * BRDF;
-	StackPushNEE(
-		stack,
-		intersection + reflection * EPSILON,
-		reflection,
-		stackItem->multiplier * integral,
-		false);
-	return stackItem->multiplier * Ld;
+	float3 oldMultiplier = data->multiplier;
+	data->ray.origin = intersection + reflection * EPSILON;
+	data->ray.direction = reflection;
+	data->multiplier = oldMultiplier * integral;
+	return oldMultiplier * Ld;
 }
 
 
@@ -104,8 +115,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float2 uv,
 	image2d_array_t textures,
 	clrngMrg31k3pStream* randomStream,
-	StackItem* stackItem,
-	Stack* stack)
+	ShadingData* data)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -118,6 +128,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
+		data->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
 
 	float3 BRDF = material->diffuse.diffuseColour * INVPI;
@@ -125,8 +136,9 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
 	{
-		if (stackItem->lastSpecular) {
-			return stackItem->multiplier * material->emissive.emissiveColour;
+		data->flags |= SHADINGFLAGS_HASFINISHED;
+		if (data->flags & SHADINGFLAGS_LASTSPECULAR) {
+			return data->multiplier * material->emissive.emissiveColour;
 		} else {
 			return BLACK;
 		}
@@ -159,18 +171,17 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	}
 
 	// Continue random walk
+	data->flags = 0;
 	float3 reflection = cosineWeightedDiffuseReflection(edge1, edge2, normalTransform, randomStream);
 	//float PDF = dot(realNormal, reflection) / PI;
 	//float3 Ei = dot(realNormal, reflection) / PDF;
 	float3 Ei = PI;
 	float3 integral = BRDF * Ei;
-	StackPushNEE(
-		stack,
-		intersection + reflection * EPSILON,
-		reflection,
-		stackItem->multiplier * integral,
-		false);
-	return stackItem->multiplier * Ld;
+	float3 oldMultiplier = data->multiplier;
+	data->ray.origin = intersection + reflection * EPSILON;
+	data->ray.direction = reflection;
+	data->multiplier = oldMultiplier * integral;
+	return oldMultiplier * Ld;
 }
 
 
@@ -210,8 +221,7 @@ float3 neeShading(
 	float2 uv,
 	image2d_array_t textures,
 	clrngMrg31k3pStream* randomStream,
-	StackItem* stackItem,
-	Stack* stack)
+	ShadingData* data)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -224,6 +234,7 @@ float3 neeShading(
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
+		data->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
 
 	float3 BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
@@ -231,8 +242,9 @@ float3 neeShading(
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
 	{
-		if (stackItem->lastSpecular) {
-			return stackItem->multiplier * material->emissive.emissiveColour;
+		data->flags |= SHADINGFLAGS_HASFINISHED;
+		if (data->flags & SHADINGFLAGS_LASTSPECULAR) {
+			return data->multiplier * material->emissive.emissiveColour;
 		} else {
 			return BLACK;
 		}
@@ -266,16 +278,14 @@ float3 neeShading(
 
 	// Continue random walk
 	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
-
+	data->flags = 0;
 	float3 Ei = dot(realNormal, reflection);
 	float3 integral = PI * 2.0f * BRDF * Ei;
-	StackPushNEE(
-		stack,
-		intersection + reflection * EPSILON,
-		reflection,
-		stackItem->multiplier * integral,
-		false);
-	return stackItem->multiplier * Ld;
+	float3 oldMultiplier = data->multiplier;
+	data->ray.origin = intersection + reflection * EPSILON;
+	data->ray.direction = reflection;
+	data->multiplier = oldMultiplier * integral;
+	return oldMultiplier * Ld;
 }
 
 
@@ -289,8 +299,7 @@ float3 naiveShading(
 	float2 uv,
 	image2d_array_t textures,
 	clrngMrg31k3pStream* randomStream,
-	StackItem* stackItem,
-	Stack* stack)
+	ShadingData* data)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -303,20 +312,26 @@ float3 naiveShading(
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
+		data->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
 
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
-		return stackItem->multiplier * material->emissive.emissiveColour;
+		data->flags = SHADINGFLAGS_HASFINISHED;
+		return data->multiplier * material->emissive.emissiveColour;
 
 	// Continue in random direction
 	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
 
 	// Update throughput
+	data->flags = 0;
 	float3 BRDF = material->diffuse.diffuseColour / PI;
 	float3 Ei = dot(realNormal , reflection);// Irradiance
 	float3 integral = PI * 2.0f * BRDF * Ei;
-	StackPush(stack, intersection + reflection * EPSILON, reflection, stackItem->multiplier * integral);
+	float3 oldMultiplier = data->multiplier;
+	data->ray.origin = intersection + reflection * EPSILON;
+	data->ray.direction = reflection;
+	data->multiplier = oldMultiplier * integral;
 	return BLACK;
 }
 

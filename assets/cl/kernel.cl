@@ -61,31 +61,29 @@ __kernel void traceRays(
 		topLevelBvh,
 		&scene);
 
+	ShadingData shadingData;
+
 	float3 accumulatedColour = (float3)(0, 0, 0);
-	Stack stack;
-	StackInit(&stack);
 	for (int i = 0; i < inputData->raysPerPass; i++)
 	{
 		float corX = (leftSide ? x : x - width / 2);
 		Ray cameraRay = generateRayThinLens(&inputData->camera, corX, y, &privateStream);
-		StackPush(&stack,
-			cameraRay.origin,
-			cameraRay.direction,
-			(float3)(1,1,1));
+		
+		shadingData.ray = cameraRay;
+		shadingData.multiplier = (float3)(1, 1, 1);
+		shadingData.flags = SHADINGFLAGS_LASTSPECULAR;
 
-		int iteration = 0;
-		while (!StackEmpty(&stack))
+		bool shouldFinish = false;
+		for (int iteration = 0; iteration < MAX_ITERATIONS && !shouldFinish; ++iteration)
 		{
-			StackItem item = StackPop(&stack);
-
 			int triangleIndex;
 			float t;
 			float2 uv;
 			const __global float* invTransform;
-			bool hit = traceRay(&scene, &item.ray, false, INFINITY, &triangleIndex, &t, &uv, &invTransform);
+			bool hit = traceRay(&scene, &shadingData.ray, false, INFINITY, &triangleIndex, &t, &uv, &invTransform);
 			if (hit)
 			{
-				float3 intersection = t * item.ray.direction + item.ray.origin;
+				float3 intersection = t * shadingData.ray.direction + shadingData.ray.origin;
 				float normalTransform[16];
 				matrixTranspose(invTransform, normalTransform);
 				if (leftSide)
@@ -94,41 +92,26 @@ __kernel void traceRays(
 						&scene,
 						triangleIndex,
 						intersection,
-						item.ray.direction,
+						shadingData.ray.direction,
 						normalTransform,
 						uv,
 						textures,
 						&privateStream,
-						&item,
-						&stack);
+						&shadingData);
 				} else {
-					accumulatedColour += neeIsShading(
+					accumulatedColour += neeShading(
 						&scene,
 						triangleIndex,
 						intersection,
-						item.ray.direction,
+						shadingData.ray.direction,
 						normalTransform,
 						uv,
 						textures,
 						&privateStream,
-						&item,
-						&stack);
+						&shadingData);
 				}
-				/*accumulatedColour += neeShading(
-						&scene,
-						triangleIndex,
-						intersection,
-						item.ray.direction,
-						normalTransform,
-						uv,
-						textures,
-						&privateStream,
-						&item,
-						&stack);*/
 			}
-
-			if (++iteration == MAX_ITERATIONS)
-				break;
+			shouldFinish = !hit || (shadingData.flags & SHADINGFLAGS_HASFINISHED);
 		}
 	}
 	output[gid] += accumulatedColour;

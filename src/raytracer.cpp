@@ -19,10 +19,10 @@
 #include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
-#define OPENCL_CPU
+#define OPENCL_GL_INTEROP
 //#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
-#define RAYS_PER_PASS 4
+#define RAYS_PER_PASS 1
 #define MAX_NUM_LIGHTS 256
 
 struct KernelData
@@ -282,7 +282,7 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 void raytracer::RayTracer::SetTarget(GLuint glTexture)
 {
 	cl_int err;
-#ifdef OPENCL_CPU
+#ifndef OPENCL_GL_INTEROP
 	_output_image_cl = cl::Image2D(_context,
 		CL_MEM_WRITE_ONLY,
 		cl::ImageFormat(CL_RGBA, CL_SNORM_INT8),
@@ -303,7 +303,7 @@ void raytracer::RayTracer::SetTarget(GLuint glTexture)
 
 void raytracer::RayTracer::RayTrace(Camera& camera)
 {
-#ifndef OPENCL_CPU
+#ifdef OPENCL_GL_INTEROP
 	// We must make sure that OpenGL is done with the textures, so we ask to sync.
 	glFinish();
 	
@@ -332,7 +332,7 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 	// Lot of CPU work
 	CopyNextAnimationFrameData();
 
-#ifdef OPENCL_CPU
+#ifndef OPENCL_GL_INTEROP
 	// Copy OpenCL image to the CPU
 	cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = 0;
 	cl::size_t<3> r; r[0] = _scr_width; r[1] = _scr_height; r[2] = 1;
@@ -424,10 +424,10 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 void raytracer::RayTracer::Accumulate()
 {
 	_accumulate_kernel.setArg(0, _accumulation_buffer);
-#ifdef OPENCL_CPU
-	_accumulate_kernel.setArg(1, _output_image_cl);
-#else
+#ifdef OPENCL_GL_INTEROP
 	_accumulate_kernel.setArg(1, _output_image);
+#else
+	_accumulate_kernel.setArg(1, _output_image_cl);
 #endif
 	_accumulate_kernel.setArg(2, _rays_per_pixel);
 	_accumulate_kernel.setArg(3, _scr_width);
@@ -552,7 +552,7 @@ void raytracer::RayTracer::CopyNextAnimationFrameData()
 	// Get the light emmiting triangles transformed by the scene graph
 	_emissive_triangles_host.clear();
 	CollectTransformedLights(&_scene->get_root_node(), glm::mat4());
-	_num_emissive_triangles[copyBuffers] = _emissive_triangles_host.size();
+	_num_emissive_triangles[copyBuffers] = (u32)_emissive_triangles_host.size();
 	writeToBuffer(_copyQueue, _emissive_trangles[copyBuffers], _emissive_triangles_host, 0, waitEvents);
 
 	if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices))// Dont copy if we dont have any dynamic geometry
@@ -625,13 +625,10 @@ void raytracer::RayTracer::CollectTransformedLights(const SceneNode* node, const
 // https://www.codeproject.com/articles/685281/opengl-opencl-interoperability-a-case-study-using
 void raytracer::RayTracer::InitOpenCL()
 {
+#ifdef OPENCL_GL_INTEROP
 	setenv("CUDA_CACHE_DISABLE", "1", 1);
 	cl_int lError = CL_SUCCESS;
 	std::string lBuffer;
-
-	//
-	// Generic OpenCL creation.
-	//
 
 	// Get platforms.
 	cl_uint lNbPlatformId = 0;
@@ -660,16 +657,9 @@ void raytracer::RayTracer::InitOpenCL()
 	{
 		const cl_platform_id lPlatformIdToTry = lPlatformIds[i];
 
-		cl_device_type deviceType;
-#ifdef OPENCL_CPU
-		deviceType = CL_DEVICE_TYPE_CPU;
-#else
-		deviceType = CL_DEVICE_TYPE_GPU;
-#endif
-
 		// Get devices.
 		cl_uint lNbDeviceId = 0;
-		clGetDeviceIDs(lPlatformIdToTry, deviceType, 0, 0, &lNbDeviceId);
+		clGetDeviceIDs(lPlatformIdToTry, CL_DEVICE_TYPE_GPU, 0, 0, &lNbDeviceId);
 
 		if (lNbDeviceId == 0)
 		{
@@ -677,7 +667,7 @@ void raytracer::RayTracer::InitOpenCL()
 		}
 
 		std::vector< cl_device_id > lDeviceIds(lNbDeviceId);
-		clGetDeviceIDs(lPlatformIdToTry, deviceType, lNbDeviceId, lDeviceIds.data(), 0);
+		clGetDeviceIDs(lPlatformIdToTry, CL_DEVICE_TYPE_GPU, lNbDeviceId, lDeviceIds.data(), 0);
 
 
 		// Create the properties for this context.
@@ -713,25 +703,19 @@ void raytracer::RayTracer::InitOpenCL()
 			cl_device_id lDeviceIdToTry = lDeviceIds[j];
 			cl_context lContextToTry = 0;
 
-#ifdef OPENCL_CPU
-			lContextToTry = clCreateContext(
-				nullptr,// Dont request any extensions
-				1, &lDeviceIdToTry,
-				0, 0,
-				&lError);
-#else
 			lContextToTry = clCreateContext(
 				lContextProperties,
 				1, &lDeviceIdToTry,
 				0, 0,
 				&lError);
-#endif
 			if (lError == CL_SUCCESS)
 			{
 				// We found the context.
 				lPlatformId = lPlatformIdToTry;
 				lDeviceId = lDeviceIdToTry;
 				lContext = lContextToTry;
+				_device = cl::Device(lDeviceId);
+				_context = cl::Context(lContext);
 				break;
 			}
 		}
@@ -745,19 +729,60 @@ void raytracer::RayTracer::InitOpenCL()
 #endif
 		exit(EXIT_FAILURE);
 	}
+#else
+	// Let the user select a platform
+	std::vector<cl::Platform> platforms;
+	cl::Platform::get(&platforms);
+	std::cout << "Platforms:" << std::endl;
+	for (int i = 0; i < platforms.size(); i++)
+	{
+		std::string platformName;
+		platforms[i].getInfo(CL_PLATFORM_NAME, &platformName);
+		std::cout << "[" << i << "] " << platformName << std::endl;
+	}
+	cl::Platform platform;
+	{
+		int platformIndex;
+		std::cout << "Select a platform: ";
+		std::cin >> platformIndex;
+		platform = platforms[platformIndex];
+	}
+
+	// Let the user select a device
+	std::vector<cl::Device> devices;
+	platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+	std::cout << "\nDevices:" << std::endl;
+	for (int i = 0; i < devices.size(); i++)
+	{
+		std::string deviceName;
+		devices[i].getInfo(CL_DEVICE_NAME, &deviceName);
+		std::cout << "[" << i << "] " << deviceName << std::endl;
+	}
+	{
+		int deviceIndex;
+		std::cout << "Select a device: ";
+		std::cin >> deviceIndex;
+		_device = devices[deviceIndex];
+	}
+
+	// Create OpenCL context
+	cl_int lError;
+	_context = cl::Context(devices, NULL, NULL, NULL, &lError);
+	checkClErr(lError, "cl::Context")
+#endif
 
 
 	// Create a command queue.
-	_context = lContext;
-	_devices.push_back(cl::Device(lDeviceId));
 #ifdef PROFILE_OPENCL
 	cl_command_queue_properties props = CL_QUEUE_PROFILING_ENABLE;
 #else
 	cl_command_queue_properties props = 0;
 #endif
-	_queue = clCreateCommandQueue(lContext, lDeviceId, props, &lError);
+	//_queue = clCreateCommandQueue(lContext, lDeviceId, props, &lError);
+	_queue = cl::CommandQueue(_context, _device, props, &lError);
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
-	_copyQueue = clCreateCommandQueue(lContext, lDeviceId, props, &lError);
+	//_copyQueue = clCreateCommandQueue(lContext, lDeviceId, props, &lError);
+	_copyQueue = cl::CommandQueue(_context, _device, props, &lError);
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
 }
 
@@ -902,11 +927,14 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 		checkClErr(file.is_open() ? CL_SUCCESS : -1, errorMessage.c_str());
 	}
 
+	std::vector<cl::Device> devices;
+	devices.push_back(_device);
+
 	std::string prog(std::istreambuf_iterator<char>(file),
 		(std::istreambuf_iterator<char>()));
 	cl::Program::Sources source(1, std::make_pair(prog.c_str(), prog.length()+1));
 	cl::Program program(_context, source);
-	err = program.build(_devices, "-I assets/cl/ -I assets/cl/clRNG/");
+	err = program.build(devices, "-I assets/cl/ -I assets/cl/clRNG/");
 	{
 		if (err != CL_SUCCESS)
 		{
@@ -915,7 +943,7 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 			std::cout << "Cannot build program: " << fileName << std::endl;
 
 			std::string error;
-			program.getBuildInfo(_devices[0], CL_PROGRAM_BUILD_LOG, &error);
+			program.getBuildInfo(_device, CL_PROGRAM_BUILD_LOG, &error);
 			std::cout << error << std::endl;
 
 #ifdef _WIN32
