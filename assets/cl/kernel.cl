@@ -99,7 +99,7 @@ __kernel void traceRays(
 						&privateStream,
 						&shadingData);
 				} else {
-					accumulatedColour += neeShading(
+					accumulatedColour += neeIsShading(
 						&scene,
 						triangleIndex,
 						intersection,

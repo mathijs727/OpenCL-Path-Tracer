@@ -43,8 +43,10 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
+	{
 		data->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
+	}
 
 	float3 BRDF = material->diffuse.diffuseColour * INVPI;
 
@@ -128,8 +130,10 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
+	{
 		data->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
+	}
 
 	float3 BRDF = material->diffuse.diffuseColour * INVPI;
 
@@ -234,8 +238,10 @@ float3 neeShading(
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
+	{
 		data->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
+	}
 
 	float3 BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 
@@ -312,13 +318,17 @@ float3 naiveShading(
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
+	{
 		data->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
+	}
 
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
+	{
 		data->flags = SHADINGFLAGS_HASFINISHED;
 		return data->multiplier * material->emissive.emissiveColour;
+	}
 
 	// Continue in random direction
 	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
