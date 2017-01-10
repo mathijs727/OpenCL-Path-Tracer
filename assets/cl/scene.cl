@@ -76,7 +76,6 @@ bool traceRay(
 	float closestT = maxT;
 	float2 closestUV;
 	const __global float* closestMatrix;
-
 #ifdef USE_BVH
 
 #ifdef COUNT_TRAVERSAL

@@ -443,9 +443,10 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 	}
 
-	// Test kernel to get device enqueue working
+	/*// Test kernel to get device enqueue working
 	_red_kernel.setArg(0, _accumulation_buffer);
 	_red_kernel.setArg(1, 2);
+	_red_kernel.setArg(2, _random_streams);
 	err = _queue.enqueueNDRangeKernel(
 		_red_kernel,
 		cl::NullRange,
@@ -453,7 +454,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		cl::NullRange,
 		NULL,
 		nullptr);
-	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");*/
 
 	_rays_per_pixel += 1;
 }
@@ -780,9 +781,9 @@ void raytracer::RayTracer::InitOpenCL()
 	cl::Platform platform;
 	{
 		int platformIndex;
-		std::cout << "Select a platform: ";
+		//std::cout << "Select a platform: ";
 		std::cin >> platformIndex;
-		//platformIndex = 3;
+		platformIndex = 3;
 		platform = platforms[platformIndex];
 	}
 

@@ -93,93 +93,77 @@ __kernel void intersectAndShade(
 	__global clrngMrg31k3pHostStream* randomStreams)
 {
 	size_t gid = get_global_id(1) * get_global_size(0) + get_global_id(0);
-
 	ShadingData shadingData = outRays[gid];
-	if (shadingData.flags == SHADINGFLAGS_HASFINISHED)
-		return;
-
-	clrngMrg31k3pStream randomStream;
-	clrngMrg31k3pCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
-
-	Scene scene;
-	loadScene(
-		vertices,
-		triangles,
-		materials,
-		inputData->numEmissiveTriangles,
-		emissiveTriangles,
-		subBvh,
-		inputData->topLevelBvhRoot,
-		topLevelBvh,
-		&scene);
-
-	// Trace rays
-	int triangleIndex;
-	float t;
-	float2 uv;
-	const __global float* invTransform;
-	bool hit = traceRay(
-		&scene,
-		&shadingData.ray,
-		false,
-		INFINITY,
-		&triangleIndex,
-		&t,
-		&uv,
-		&invTransform);
-	float3 intersection = shadingData.ray.origin + shadingData.ray.direction * t;
-	float normalTransform[16];
-	matrixTranspose(invTransform, normalTransform);
-
-	if (hit)
+	
+	if (shadingData.flags != SHADINGFLAGS_HASFINISHED)
 	{
-		outputPixels[gid] += neeShading(
+		clrngMrg31k3pStream randomStream;
+		clrngMrg31k3pCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+
+		Scene scene;
+		loadScene(
+			vertices,
+			triangles,
+			materials,
+			inputData->numEmissiveTriangles,
+			emissiveTriangles,
+			subBvh,
+			inputData->topLevelBvhRoot,
+			topLevelBvh,
+			&scene);
+
+		// Trace rays
+		int triangleIndex;
+		float t;
+		float2 uv;
+		const __global float* invTransform;
+		bool hit = traceRay(
 			&scene,
-			triangleIndex,
-			intersection,
-			shadingData.ray.direction,
-			normalTransform,
-			uv,
-			textures,
-			&randomStream,
-			&shadingData);
+			&shadingData.ray,
+			false,
+			INFINITY,
+			&triangleIndex,
+			&t,
+			&uv,
+			&invTransform);
+		float3 intersection = shadingData.ray.origin + shadingData.ray.direction * t;
+		float normalTransform[16];
+		matrixTranspose(invTransform, normalTransform);
+
+		if (hit)
+		{
+			//outputPixels[gid] += (float3)(0, 0.1, 0);
+			outputPixels[gid] += neeShading(
+				&scene,
+				triangleIndex,
+				intersection,
+				shadingData.ray.direction,
+				normalTransform,
+				uv,
+				textures,
+				&randomStream,
+				&shadingData);
+		}
+
+		outRays[gid] = shadingData;
+
+		// Store random streams
+		clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 	}
-
-	outRays[gid] = shadingData;
-
-	// Store random streams
-	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
-
+	
 	if (gid == 0)
 	{
-		if ((inputData->iteration++) < 3)
-		{
-			size_t global_work_size[2];
-			global_work_size[0] = get_global_size(0);
-			global_work_size[1] = get_global_size(1);
-			ndrange_t ndrange = ndrange_2D(global_work_size);
-
-			/*enqueue_kernel(
-				get_default_queue(),
-				CLK_ENQUEUE_FLAGS_WAIT_KERNEL,
-				ndrange,
-				^{
-					//addRed(outputPixels, 1);
-					intersectAndShade(
-						outputPixels,
-						outRays,
-						outShadowRays,
-						inputData,
-						vertices,
-						triangles,
-						emissiveTriangles,
-						materials,
-						textures,
-						subBvh,
-						topLevelBvh,
-						randomStreams);
-				});*/
-		}
+		size_t work_size[2];
+		work_size[0] = get_global_size(0);
+		work_size[1] = get_global_size(1);
+		ndrange_t ndrange = ndrange_2D(work_size);
+		enqueue_kernel(
+			get_default_queue(),
+			CLK_ENQUEUE_FLAGS_WAIT_KERNEL,
+			ndrange,
+			^{
+				addRed(outputPixels, 3);
+			});
 	}
 }
 
