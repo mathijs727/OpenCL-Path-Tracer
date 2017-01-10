@@ -132,7 +132,7 @@ __kernel void intersectAndShade(
 
 		if (hit)
 		{
-			//outputPixels[gid] += (float3)(0, 0.1, 0);
+			//outputPixels[gid] += (float3)(0, 0.5, 0);
 			outputPixels[gid] += neeShading(
 				&scene,
 				triangleIndex,

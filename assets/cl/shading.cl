@@ -245,7 +245,7 @@ float3 neeShading(
 		data->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
 	}
-
+	
 	float3 BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 
 	// Terminate if we hit a light source
@@ -273,6 +273,8 @@ float3 neeShading(
 	float dist = sqrt(dist2);
 	L /= dist;
 
+	lightArea = 1.0f;
+
 	float3 Ld = BLACK;
 	Ray lightRay = createRay(intersection + L * EPSILON, L);
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
@@ -281,7 +283,7 @@ float3 neeShading(
 		{
 			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
 			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
-			Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
+			Ld = scene->numEmissiveTriangles * lightColour* solidAngle * BRDF * dot(realNormal, L);
 		}
 	}
 
