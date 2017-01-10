@@ -47,6 +47,7 @@
     <ClInclude Include="src\mesh_sequence.h" />
     <ClInclude Include="src\refit_bvh.h" />
     <ClInclude Include="src\sbvh.h" />
+    <ClInclude Include="src\template\cl2.hpp" />
     <ClInclude Include="src\top_bvh.h" />
     <ClInclude Include="src\bvh_nodes.h" />
     <ClInclude Include="src\camera.h" />
@@ -60,7 +61,7 @@
     <ClInclude Include="src\raytracer.h" />
     <ClInclude Include="src\scene.h" />
     <ClInclude Include="src\shapes.h" />
-    <ClInclude Include="src\template\cl.hpp" />
+    <ClInclude Include="src\template\cl12.hpp" />
     <ClInclude Include="src\template\includes.h" />
     <ClInclude Include="src\template\surface.h" />
     <ClInclude Include="src\template\template.h" />

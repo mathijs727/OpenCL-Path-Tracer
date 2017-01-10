@@ -24,7 +24,7 @@ typedef struct
 	uint numEmissiveTriangles;
 	uint topLevelBvhRoot;
 
-	uint raysPerPass;
+	uint iteration;
 } KernelData;
 
 __kernel void generatePrimaryRays(
@@ -46,6 +46,36 @@ __kernel void generatePrimaryRays(
 
 	// Store random streams
 	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+}
+
+__kernel void addGreen(__global float3* outputPixels)
+{
+	size_t gid = get_global_id(0);
+	outputPixels[gid].y += 0.5f;
+}
+
+__kernel void addRed(__global float3* outputPixels, int iteration)
+{
+	size_t gid = get_global_id(1) * get_global_size(0) + get_global_id(0);
+	outputPixels[gid].x += 0.1f;
+
+	if (iteration > 0)
+	{
+		if (gid == 0)
+		{
+			size_t work_size[2];
+			work_size[0] = get_global_size(0);
+			work_size[1] = get_global_size(1);
+			ndrange_t ndrange = ndrange_2D(work_size);
+			enqueue_kernel(
+				get_default_queue(),
+				CLK_ENQUEUE_FLAGS_WAIT_KERNEL,
+				ndrange,
+				^{
+					addRed(outputPixels, iteration - 1);
+				});
+		}
+	}
 }
 
 __kernel void intersectAndShade(
@@ -103,7 +133,7 @@ __kernel void intersectAndShade(
 
 	if (hit)
 	{
-		outputPixels[gid] += neeIsShading(
+		outputPixels[gid] += neeShading(
 			&scene,
 			triangleIndex,
 			intersection,
@@ -119,6 +149,38 @@ __kernel void intersectAndShade(
 
 	// Store random streams
 	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+
+	if (gid == 0)
+	{
+		if ((inputData->iteration++) < 3)
+		{
+			size_t global_work_size[2];
+			global_work_size[0] = get_global_size(0);
+			global_work_size[1] = get_global_size(1);
+			ndrange_t ndrange = ndrange_2D(global_work_size);
+
+			/*enqueue_kernel(
+				get_default_queue(),
+				CLK_ENQUEUE_FLAGS_WAIT_KERNEL,
+				ndrange,
+				^{
+					//addRed(outputPixels, 1);
+					intersectAndShade(
+						outputPixels,
+						outRays,
+						outShadowRays,
+						inputData,
+						vertices,
+						triangles,
+						emissiveTriangles,
+						materials,
+						textures,
+						subBvh,
+						topLevelBvh,
+						randomStreams);
+				});*/
+		}
+	}
 }
 
 /*__kernel void traceRays(

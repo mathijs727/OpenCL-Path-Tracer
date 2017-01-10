@@ -72,9 +72,6 @@
     <ClInclude Include="src\ray.h" />
     <ClInclude Include="src\raytracer.h" />
     <ClInclude Include="src\light.h" />
-    <ClInclude Include="src\template\cl.hpp">
-      <Filter>template code</Filter>
-    </ClInclude>
     <ClInclude Include="src\gloutput.h" />
     <ClInclude Include="src\pixel.h" />
     <ClInclude Include="src\template\includes.h">
@@ -119,6 +116,12 @@
     </ClInclude>
     <ClInclude Include="src\fast_binned_bvh.h">
       <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\template\cl12.hpp">
+      <Filter>template code</Filter>
+    </ClInclude>
+    <ClInclude Include="src\template\cl2.hpp">
+      <Filter>template code</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

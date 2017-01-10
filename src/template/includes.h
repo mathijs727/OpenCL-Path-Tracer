@@ -6,7 +6,10 @@
 #else
 #include <GL/glew.h>// Provided by system
 #endif
-#include "cl.hpp"
+
+#define CL_HPP_MINIMUM_OPENCL_VERSION 200
+#define CL_HPP_TARGET_OPENCL_VERSION 200
+#include "cl2.hpp"
 
 #ifdef __APPLE__
 #include <OpenCL/cl.h>

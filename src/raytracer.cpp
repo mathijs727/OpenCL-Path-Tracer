@@ -22,7 +22,6 @@
 //#define OPENCL_GL_INTEROP
 //#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
-#define RAYS_PER_PASS 1
 #define MAX_NUM_LIGHTS 256
 
 struct KernelData
@@ -40,7 +39,7 @@ struct KernelData
 	uint numEmissiveTriangles;
 	uint topLevelBvhRoot;
 
-	uint raysPerPass;
+	uint iteration;
 };
 
 
@@ -149,6 +148,7 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 	_scr_height = height;
 
 	InitOpenCL();
+	_red_kernel = LoadKernel("assets/cl/kernel.cl", "addRed");
 	_generate_kernel = LoadKernel("assets/cl/kernel.cl", "generatePrimaryRays");
 	_intersect_kernel = LoadKernel("assets/cl/kernel.cl", "intersectAndShade");
 	_accumulate_kernel = LoadKernel("assets/cl/accumulate.cl", "accumulate");
@@ -262,9 +262,9 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 		Tmpl8::Surface* surface = Texture::getSurface(texId);
 
 		// Origin (o) and region (r)
-		cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = texId;
+		std::array<size_t, 3> o; o[0] = 0; o[1] = 0; o[2] = texId;
 
-		cl::size_t<3> r;
+		cl::array<size_t, 3> r;
 		r[0] = Texture::TEXTURE_WIDTH;
 		r[1] = Texture::TEXTURE_HEIGHT;
 		r[2] = 1;// r[2] must be 1?
@@ -339,8 +339,8 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 
 #ifndef OPENCL_GL_INTEROP
 	// Copy OpenCL image to the CPU
-	cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = 0;
-	cl::size_t<3> r; r[0] = _scr_width; r[1] = _scr_height; r[2] = 1;
+	cl::array<size_t, 3> o; o[0] = 0; o[1] = 0; o[2] = 0;
+	cl::array<size_t, 3> r; r[0] = _scr_width; r[1] = _scr_height; r[2] = 1;
 	_queue.enqueueReadImage(_output_image_cl, CL_TRUE, o, r, 0, 0, _output_image_cpu.get(), nullptr, nullptr);
 
 	// And upload it to teh GPU (OpenGL)
@@ -395,7 +395,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	data.numEmissiveTriangles = _num_emissive_triangles[_active_buffers];
 	data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];
 
-	data.raysPerPass = RAYS_PER_PASS;
+	data.iteration = 0;
 
 	cl_int err = _queue.enqueueWriteBuffer(
 		_ray_kernel_data,
@@ -418,7 +418,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		nullptr);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
-	for (int i = 0; i < 1; i++)// Number of bounces
+	for (int i = 0; i < 1; i++)
 	{
 		_intersect_kernel.setArg(0, _accumulation_buffer);
 		_intersect_kernel.setArg(1, _rays_buffer);
@@ -442,6 +442,18 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 			nullptr);
 		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 	}
+
+	// Test kernel to get device enqueue working
+	_red_kernel.setArg(0, _accumulation_buffer);
+	_red_kernel.setArg(1, 2);
+	err = _queue.enqueueNDRangeKernel(
+		_red_kernel,
+		cl::NullRange,
+		cl::NDRange(_scr_width, _scr_height),
+		cl::NullRange,
+		NULL,
+		nullptr);
+	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
 	_rays_per_pixel += 1;
 }
@@ -770,6 +782,7 @@ void raytracer::RayTracer::InitOpenCL()
 		int platformIndex;
 		std::cout << "Select a platform: ";
 		std::cin >> platformIndex;
+		//platformIndex = 3;
 		platform = platforms[platformIndex];
 	}
 
@@ -787,15 +800,19 @@ void raytracer::RayTracer::InitOpenCL()
 		int deviceIndex;
 		std::cout << "Select a device: ";
 		std::cin >> deviceIndex;
+		//deviceIndex = 0;
 		_device = devices[deviceIndex];
 	}
 
 	// Create OpenCL context
 	cl_int lError;
 	_context = cl::Context(devices, NULL, NULL, NULL, &lError);
-	checkClErr(lError, "cl::Context")
+	checkClErr(lError, "cl::Context");
 #endif
 
+	std::string openCLVersion;
+	_device.getInfo(CL_DEVICE_VERSION, &openCLVersion);
+	std::cout << "OpenCL version: " << openCLVersion << std::endl;
 
 	// Create a command queue.
 #ifdef PROFILE_OPENCL
@@ -803,10 +820,10 @@ void raytracer::RayTracer::InitOpenCL()
 #else
 	cl_command_queue_properties props = 0;
 #endif
-	//_queue = clCreateCommandQueue(lContext, lDeviceId, props, &lError);
+	_deviceQueue = cl::DeviceCommandQueue(_context, _device, cl::DeviceQueueProperties::None, &lError);
+	checkClErr(lError, "Unable to create an OpenCL command queue.");
 	_queue = cl::CommandQueue(_context, _device, props, &lError);
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
-	//_copyQueue = clCreateCommandQueue(lContext, lDeviceId, props, &lError);
 	_copyQueue = cl::CommandQueue(_context, _device, props, &lError);
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
 }
@@ -910,7 +927,7 @@ void raytracer::RayTracer::InitBuffers(
 
 
 	_ray_kernel_data = cl::Buffer(_context,
-		CL_MEM_READ_ONLY,
+		CL_MEM_READ_WRITE,
 		sizeof(KernelData),
 		NULL,
 		&err);
@@ -970,9 +987,10 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 
 	std::string prog(std::istreambuf_iterator<char>(file),
 		(std::istreambuf_iterator<char>()));
-	cl::Program::Sources source(1, std::make_pair(prog.c_str(), prog.length()+1));
-	cl::Program program(_context, source);
-	err = program.build(devices, "-I assets/cl/ -I assets/cl/clRNG/");
+	std::vector<std::string> sources;
+	sources.push_back(prog);
+	cl::Program program(_context, sources);
+	err = program.build(devices, "-cl-std=CL2.0 -I assets/cl/ -I assets/cl/clRNG/");
 	{
 		if (err != CL_SUCCESS)
 		{
