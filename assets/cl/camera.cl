@@ -55,7 +55,7 @@ Ray generateRayThinLens(__global Camera* camera, int x, int y, clrngMrg31k3pStre
 
 	Ray secondaryRay;
 	secondaryRay.origin = pointOnLens;
-	secondaryRay.direction = focalPoint - pointOnLens;
+	secondaryRay.direction = direction;
 	return secondaryRay;
 }
 

@@ -27,7 +27,101 @@ typedef struct
 	uint raysPerPass;
 } KernelData;
 
-__kernel void traceRays(
+__kernel void generatePrimaryRays(
+	__global ShadingData* outRays,
+	__global KernelData* inputData,
+	__global clrngMrg31k3pHostStream* randomStreams)
+{
+	size_t x = get_global_id(0);
+	size_t y = get_global_id(1);
+	size_t gid = y * get_global_size(0) + x;
+
+	clrngMrg31k3pStream randomStream;
+	clrngMrg31k3pCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+
+	outRays[gid].ray = generateRayThinLens(&inputData->camera, x, y, &randomStream);
+	outRays[gid].multiplier = (float3)(1, 1, 1);
+	outRays[gid].flags = SHADINGFLAGS_LASTSPECULAR;
+	outRays[gid].outputPixel = gid;
+
+	// Store random streams
+	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+}
+
+__kernel void intersectAndShade(
+	__global float3* outputPixels,
+	__global ShadingData* outRays,
+	__global ShadingData* outShadowRays,
+	__global KernelData* inputData,
+	__global VertexData* vertices,
+	__global TriangleData* triangles,
+	__global EmissiveTriangle* emissiveTriangles,
+	__global Material* materials,
+	__read_only image2d_array_t textures,
+	__global SubBvhNode* subBvh,
+	__global TopBvhNode* topLevelBvh,
+	__global clrngMrg31k3pHostStream* randomStreams)
+{
+	size_t gid = get_global_id(1) * get_global_size(0) + get_global_id(0);
+
+	ShadingData shadingData = outRays[gid];
+	if (shadingData.flags == SHADINGFLAGS_HASFINISHED)
+		return;
+
+	clrngMrg31k3pStream randomStream;
+	clrngMrg31k3pCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+
+	Scene scene;
+	loadScene(
+		vertices,
+		triangles,
+		materials,
+		inputData->numEmissiveTriangles,
+		emissiveTriangles,
+		subBvh,
+		inputData->topLevelBvhRoot,
+		topLevelBvh,
+		&scene);
+
+	// Trace rays
+	int triangleIndex;
+	float t;
+	float2 uv;
+	const __global float* invTransform;
+	bool hit = traceRay(
+		&scene,
+		&shadingData.ray,
+		false,
+		INFINITY,
+		&triangleIndex,
+		&t,
+		&uv,
+		&invTransform);
+	float3 intersection = shadingData.ray.origin + shadingData.ray.direction * t;
+	float normalTransform[16];
+	matrixTranspose(invTransform, normalTransform);
+
+	if (hit)
+	{
+		outputPixels[gid] += neeIsShading(
+			&scene,
+			triangleIndex,
+			intersection,
+			shadingData.ray.direction,
+			normalTransform,
+			uv,
+			textures,
+			&randomStream,
+			&shadingData);
+	}
+
+	outRays[gid] = shadingData;
+
+	// Store random streams
+	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+}
+
+/*__kernel void traceRays(
 	__global float3* output,
 	__global KernelData* inputData,
 	__global VertexData* vertices,
@@ -118,4 +212,4 @@ __kernel void traceRays(
 
 	// Store random streams
 	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &privateStream);
-}
+}*/

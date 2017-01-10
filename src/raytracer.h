@@ -26,6 +26,8 @@ public:
 	void SetScene(std::shared_ptr<Scene> scene);
 	void SetTarget(GLuint glTexture);
 	void RayTrace(Camera& camera);
+
+	void FrameTick();// Load next animation frame data
 private:
 	void TraceRays(const Camera& camera);
 	void Accumulate();
@@ -57,9 +59,13 @@ private:
 	cl::CommandQueue _queue;
 	cl::CommandQueue _copyQueue;
 
-	cl::Kernel _ray_trace_kernel;
+	cl::Kernel _intersect_kernel;
+	cl::Kernel _generate_kernel;
 	cl::Buffer _ray_kernel_data;
 	cl::Buffer _random_streams;
+
+	cl::Buffer _rays_buffer;
+	cl::Buffer _shadow_rays_buffer;
 
 	cl_uint _rays_per_pixel;
 	cl::Kernel _accumulate_kernel;

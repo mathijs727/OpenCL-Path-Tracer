@@ -9,13 +9,16 @@ __constant sampler_t sampler =
 
 enum {
 	SHADINGFLAGS_HASFINISHED = 1,
-	SHADINGFLAGS_LASTSPECULAR = 2
+	SHADINGFLAGS_LASTSPECULAR = 2,
+	SHADINGFLAGS_SHADOW = 4
 };
 
 typedef struct {
-	Ray ray;
-	float3 multiplier;
-	int flags;
+	Ray ray;// 2 * float3 = 32 bytes
+	float3 multiplier;// 16 bytes
+	size_t outputPixel;// 8 bytes?
+	int flags;// 4 bytes
+	// Aligned to 16 bytes so struct has size of 64 bytes
 } ShadingData;
 
 
