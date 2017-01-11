@@ -115,7 +115,7 @@ void randomPointOnLight(
 		lightTriangle.vertices[2] - lightTriangle.vertices[0]));
 	*outLightColour = lightTriangle.material.emissive.emissiveColour;
 	*outPoint = uniformSampleTriangle(lightTriangle.vertices, randomStream);
-	*outLightArea = 0.15f;// triangleArea(lightTriangle.vertices);
+	*outLightArea = triangleArea(lightTriangle.vertices);
 }
 
 #endif// __SHADER_HELPER_CL

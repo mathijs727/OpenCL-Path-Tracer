@@ -423,7 +423,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		nullptr);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 	
-	for (int i = 0; i < 3; i++)// 3 bounces
+	for (int i = 0; i < 5; i++)// 5 bounces
 	{
 		_intersect_shade_kernel.setArg(0, _accumulation_buffer);
 		_intersect_shade_kernel.setArg(1, _rays_buffer[outRayBuffer]);

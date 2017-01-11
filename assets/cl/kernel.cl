@@ -2,8 +2,6 @@
 #define USE_BVH
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
 
-#define MAX_ITERATIONS 1
-
 #include <clRNG/mrg31k3p.clh>
 #include "shapes.cl"
 #include "material.cl"
