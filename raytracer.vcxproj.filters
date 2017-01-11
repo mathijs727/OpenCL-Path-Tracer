@@ -120,8 +120,5 @@
     <ClInclude Include="src\template\cl12.hpp">
       <Filter>template code</Filter>
     </ClInclude>
-    <ClInclude Include="src\template\cl2.hpp">
-      <Filter>template code</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

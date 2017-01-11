@@ -19,7 +19,7 @@
 #include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
-//#define OPENCL_GL_INTEROP
+#define OPENCL_GL_INTEROP
 //#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
@@ -149,8 +149,9 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 
 	InitOpenCL();
 	//_red_kernel = LoadKernel("assets/cl/kernel.cl", "addRed");
-	_generate_kernel = LoadKernel("assets/cl/kernel.cl", "generatePrimaryRays");
-	_intersect_kernel = LoadKernel("assets/cl/kernel.cl", "intersectAndShade");
+	_generate_rays_kernel = LoadKernel("assets/cl/kernel.cl", "generatePrimaryRays");
+	_intersect_shadows_kernel = LoadKernel("assets/cl/kernel.cl", "intersectShadows");
+	_intersect_shade_kernel = LoadKernel("assets/cl/kernel.cl", "intersectAndShade");
 	_accumulate_kernel = LoadKernel("assets/cl/accumulate.cl", "accumulate");
 
 	_top_bvh_root_node[0] = 0;
@@ -262,9 +263,9 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 		Tmpl8::Surface* surface = Texture::getSurface(texId);
 
 		// Origin (o) and region (r)
-		std::array<size_t, 3> o; o[0] = 0; o[1] = 0; o[2] = texId;
+		cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = texId;
 
-		cl::array<size_t, 3> r;
+		cl::size_t<3> r;
 		r[0] = Texture::TEXTURE_WIDTH;
 		r[1] = Texture::TEXTURE_HEIGHT;
 		r[2] = 1;// r[2] must be 1?
@@ -339,8 +340,8 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 
 #ifndef OPENCL_GL_INTEROP
 	// Copy OpenCL image to the CPU
-	cl::array<size_t, 3> o; o[0] = 0; o[1] = 0; o[2] = 0;
-	cl::array<size_t, 3> r; r[0] = _scr_width; r[1] = _scr_height; r[2] = 1;
+	cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = 0;
+	cl::size_t<3> r; r[0] = _scr_width; r[1] = _scr_height; r[2] = 1;
 	_queue.enqueueReadImage(_output_image_cl, CL_TRUE, o, r, 0, 0, _output_image_cpu.get(), nullptr, nullptr);
 
 	// And upload it to teh GPU (OpenGL)
@@ -405,46 +406,72 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		&data);
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 
+
+	int inRayBuffer = 0;
+	int outRayBuffer = 1;
+
 	// Generate primary rays
-	_generate_kernel.setArg(0, _rays_buffer[0]);
-	_generate_kernel.setArg(1, _ray_kernel_data);
-	_generate_kernel.setArg(2, _random_streams);
+	_generate_rays_kernel.setArg(0, _rays_buffer[inRayBuffer]);
+	_generate_rays_kernel.setArg(1, _ray_kernel_data);
+	_generate_rays_kernel.setArg(2, _random_streams);
 	err = _queue.enqueueNDRangeKernel(
-		_generate_kernel,
+		_generate_rays_kernel,
 		cl::NullRange,
 		cl::NDRange(_scr_width, _scr_height),
 		cl::NullRange,
 		NULL,
 		nullptr);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+	
+	for (int i = 0; i < 3; i++)// 3 bounces
+	{
+		_intersect_shade_kernel.setArg(0, _accumulation_buffer);
+		_intersect_shade_kernel.setArg(1, _rays_buffer[outRayBuffer]);
+		_intersect_shade_kernel.setArg(2, _shadow_rays_buffer);
+		_intersect_shade_kernel.setArg(3, _rays_buffer[inRayBuffer]);
+		_intersect_shade_kernel.setArg(4, _ray_kernel_data);
+		_intersect_shade_kernel.setArg(5, _vertices[_active_buffers]);
+		_intersect_shade_kernel.setArg(6, _triangles[_active_buffers]);
+		_intersect_shade_kernel.setArg(7, _emissive_trangles[_active_buffers]);
+		_intersect_shade_kernel.setArg(8, _materials[_active_buffers]);
+		_intersect_shade_kernel.setArg(9, _material_textures);
+		_intersect_shade_kernel.setArg(10, _sub_bvh[_active_buffers]);
+		_intersect_shade_kernel.setArg(11, _top_bvh[_active_buffers]);
+		_intersect_shade_kernel.setArg(12, _random_streams);
+
+		err = _queue.enqueueNDRangeKernel(
+			_intersect_shade_kernel,
+			cl::NullRange,
+			cl::NDRange(_scr_width * _scr_height),
+			cl::NullRange,
+			NULL,
+			nullptr);
+		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+
+		_intersect_shadows_kernel.setArg(0, _accumulation_buffer);
+		_intersect_shadows_kernel.setArg(1, _shadow_rays_buffer);
+
+		_intersect_shadows_kernel.setArg(2, _ray_kernel_data);
+		_intersect_shadows_kernel.setArg(3, _vertices[_active_buffers]);
+		_intersect_shadows_kernel.setArg(4, _triangles[_active_buffers]);
+		_intersect_shadows_kernel.setArg(5, _emissive_trangles[_active_buffers]);
+		_intersect_shadows_kernel.setArg(6, _materials[_active_buffers]);
+		_intersect_shadows_kernel.setArg(7, _sub_bvh[_active_buffers]);
+		_intersect_shadows_kernel.setArg(8, _top_bvh[_active_buffers]);
+
+		err = _queue.enqueueNDRangeKernel(
+			_intersect_shadows_kernel,
+			cl::NullRange,
+			cl::NDRange(_scr_width * _scr_height),
+			cl::NullRange,
+			NULL,
+			nullptr);
+		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+
+		std::swap(inRayBuffer, outRayBuffer);
+	}
 
 
-	_intersect_kernel.setArg(0, _accumulation_buffer);
-	_intersect_kernel.setArg(1, _rays_buffer[1]);
-	_intersect_kernel.setArg(2, _shadow_rays_buffer);
-	_intersect_kernel.setArg(3, _rays_buffer[0]);
-	_intersect_kernel.setArg(4, _ray_kernel_data);
-	_intersect_kernel.setArg(5, _vertices[_active_buffers]);
-	_intersect_kernel.setArg(6, _triangles[_active_buffers]);
-	_intersect_kernel.setArg(7, _emissive_trangles[_active_buffers]);
-	_intersect_kernel.setArg(8, _materials[_active_buffers]);
-	_intersect_kernel.setArg(9, _material_textures);
-	_intersect_kernel.setArg(10, _sub_bvh[_active_buffers]);
-	_intersect_kernel.setArg(11, _top_bvh[_active_buffers]);
-	_intersect_kernel.setArg(12, _random_streams);
-
-	err = _queue.enqueueNDRangeKernel(
-		_intersect_kernel,
-		cl::NullRange,
-		cl::NDRange(_scr_width * _scr_height),
-		cl::NullRange,
-		NULL,
-		nullptr);
-	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
-
-	// Wait for the queue to finish because we dont know when the recursive kernel is done
-	_queue.flush();
-	_queue.finish();
 	/*// Test kernel to get device enqueue working
 	_red_kernel.setArg(0, _accumulation_buffer);
 	_red_kernel.setArg(1, 2);
@@ -823,7 +850,6 @@ void raytracer::RayTracer::InitOpenCL()
 #else
 	cl_command_queue_properties props = 0;
 #endif
-	_deviceQueue = cl::DeviceCommandQueue(_context, _device, cl::DeviceQueueProperties::None, &lError);
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
 	_queue = cl::CommandQueue(_context, _device, props, &lError);
 	checkClErr(lError, "Unable to create an OpenCL command queue.");
@@ -997,10 +1023,10 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 
 	std::string prog(std::istreambuf_iterator<char>(file),
 		(std::istreambuf_iterator<char>()));
-	std::vector<std::string> sources;
-	sources.push_back(prog);
+	cl::Program::Sources sources;
+	sources.push_back(std::make_pair(prog.c_str(), prog.length()));
 	cl::Program program(_context, sources);
-	err = program.build(devices, "-cl-std=CL2.0 -I assets/cl/ -I assets/cl/clRNG/");
+	err = program.build(devices, "-I assets/cl/ -I assets/cl/clRNG/");
 	{
 		if (err != CL_SUCCESS)
 		{

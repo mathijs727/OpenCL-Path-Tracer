@@ -48,36 +48,6 @@ __kernel void generatePrimaryRays(
 	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 }
 
-/*__kernel void addGreen(__global float3* outputPixels)
-{
-	size_t gid = get_global_id(0);
-	outputPixels[gid].y += 0.5f;
-}
-
-__kernel void addRed(__global float3* outputPixels, int iteration)
-{
-	size_t gid = get_global_id(1) * get_global_size(0) + get_global_id(0);
-	outputPixels[gid].x += 0.1f;
-
-	if (iteration > 0)
-	{
-		if (gid == 0)
-		{
-			size_t work_size[2];
-			work_size[0] = get_global_size(0);
-			work_size[1] = get_global_size(1);
-			ndrange_t ndrange = ndrange_2D(work_size);
-			enqueue_kernel(
-				get_default_queue(),
-				CLK_ENQUEUE_FLAGS_WAIT_KERNEL,
-				ndrange,
-				^{
-					addRed(outputPixels, iteration - 1);
-				});
-		}
-	}
-}*/
-
 __kernel void intersectShadows(
 	__global float3* outputPixels,
 	__global ShadingData* inShadowRays,
@@ -206,60 +176,6 @@ __kernel void intersectAndShade(
 
 		// Store random streams
 		clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
-	}
-	
-	if (gid == 0)
-	{
-		ndrange_t ndrange = ndrange_1D(get_global_size(0));
-
-		// Trace shadows rays
-		clk_event_t shadowTraceEvent;
-		enqueue_kernel(
-			get_default_queue(),
-			CLK_ENQUEUE_FLAGS_WAIT_KERNEL,
-			ndrange,
-			0, NULL,// Doesnt wait on anything
-			&shadowTraceEvent,// But returns an event
-			^{
-				intersectShadows(
-					outputPixels,
-					outShadowRays,
-					inputData,
-					vertices,
-					triangles,
-					emissiveTriangles,
-					materials,
-					subBvh,
-					topLevelBvh);
-			});
-
-		if (++inputData->iteration < MAX_ITERATIONS)
-		{
-			// Trace random walk rays
-			enqueue_kernel(
-				get_default_queue(),
-				CLK_ENQUEUE_FLAGS_WAIT_KERNEL,
-				ndrange,
-				1, &shadowTraceEvent,// Wait for the shadow tracing to complete first
-				NULL,// Does not return an event
-				^{
-					intersectAndShade(
-						outputPixels,
-						outRays,
-						outShadowRays,
-						inRays,
-						inputData,
-						vertices,
-						triangles,
-						emissiveTriangles,
-						materials,
-						textures,
-						subBvh,
-						topLevelBvh,
-						randomStreams);
-				});
-		}
-		release_event(shadowTraceEvent);
 	}
 }
 

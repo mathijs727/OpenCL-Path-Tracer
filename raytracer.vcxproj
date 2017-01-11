@@ -47,7 +47,6 @@
     <ClInclude Include="src\mesh_sequence.h" />
     <ClInclude Include="src\refit_bvh.h" />
     <ClInclude Include="src\sbvh.h" />
-    <ClInclude Include="src\template\cl2.hpp" />
     <ClInclude Include="src\top_bvh.h" />
     <ClInclude Include="src\bvh_nodes.h" />
     <ClInclude Include="src\camera.h" />
