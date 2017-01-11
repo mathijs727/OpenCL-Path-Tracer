@@ -66,7 +66,7 @@ private:
 	cl::Buffer _ray_kernel_data;
 	cl::Buffer _random_streams;
 
-	cl::Buffer _rays_buffer;
+	cl::Buffer _rays_buffer[2];
 	cl::Buffer _shadow_rays_buffer;
 
 	cl_uint _rays_per_pixel;

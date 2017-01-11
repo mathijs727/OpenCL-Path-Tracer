@@ -18,6 +18,7 @@ typedef struct {
 	float3 multiplier;// 16 bytes
 	size_t outputPixel;// 8 bytes?
 	int flags;// 4 bytes
+	int rayLength;// 4 bytes
 	// Aligned to 16 bytes so struct has size of 64 bytes
 } ShadingData;
 
@@ -228,7 +229,9 @@ float3 neeShading(
 	float2 uv,
 	image2d_array_t textures,
 	clrngMrg31k3pStream* randomStream,
-	ShadingData* data)
+	ShadingData* inData,
+	ShadingData* outData,
+	ShadingData* outShadowData)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -242,7 +245,9 @@ float3 neeShading(
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
 	{
-		data->flags = SHADINGFLAGS_HASFINISHED;
+		// Stop if we hit the back side
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
 	}
 	
@@ -251,9 +256,10 @@ float3 neeShading(
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
 	{
-		data->flags |= SHADINGFLAGS_HASFINISHED;
-		if (data->flags & SHADINGFLAGS_LASTSPECULAR) {
-			return data->multiplier * material->emissive.emissiveColour;
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
+		if (inData->flags & SHADINGFLAGS_LASTSPECULAR) {
+			return inData->multiplier * material->emissive.emissiveColour;
 		} else {
 			return BLACK;
 		}
@@ -273,28 +279,36 @@ float3 neeShading(
 	float dist = sqrt(dist2);
 	L /= dist;
 
-	float3 Ld = BLACK;
-	Ray lightRay = createRay(intersection + L * EPSILON, L);
+	//float3 Ld = BLACK;
+	//Ray lightRay = createRay(intersection + L * EPSILON, L);
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
-		if (!traceRay(scene, &lightRay, true, dist - 2 * EPSILON, NULL, NULL, NULL, NULL))
+		/*if (!traceRay(scene, &lightRay, true, dist - 2 * EPSILON, NULL, NULL, NULL, NULL))
 		{
 			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
 			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
 			Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
-		}
+		}*/
+		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
+		solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
+		float3 Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
+		outShadowData->flags = SHADINGFLAGS_SHADOW;
+		outShadowData->multiplier = Ld * inData->multiplier;
+		outShadowData->ray = createRay(intersection + L * EPSILON, L);
+		outShadowData->rayLength = dist;
+	} else {
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 	}
 
 	// Continue random walk
 	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
-	data->flags = 0;
+	outData->flags = 0;
 	float3 Ei = dot(realNormal, reflection);
 	float3 integral = PI * 2.0f * BRDF * Ei;
-	float3 oldMultiplier = data->multiplier;
-	data->ray.origin = intersection + reflection * EPSILON;
-	data->ray.direction = reflection;
-	data->multiplier = oldMultiplier * integral;
-	return oldMultiplier * Ld;
+	outData->ray.origin = intersection + reflection * EPSILON;
+	outData->ray.direction = reflection;
+	outData->multiplier = inData->multiplier * integral;
+	return BLACK;
 }
 
 

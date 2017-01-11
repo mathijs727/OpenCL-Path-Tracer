@@ -148,7 +148,7 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 	_scr_height = height;
 
 	InitOpenCL();
-	_red_kernel = LoadKernel("assets/cl/kernel.cl", "addRed");
+	//_red_kernel = LoadKernel("assets/cl/kernel.cl", "addRed");
 	_generate_kernel = LoadKernel("assets/cl/kernel.cl", "generatePrimaryRays");
 	_intersect_kernel = LoadKernel("assets/cl/kernel.cl", "intersectAndShade");
 	_accumulate_kernel = LoadKernel("assets/cl/accumulate.cl", "accumulate");
@@ -406,7 +406,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 
 	// Generate primary rays
-	_generate_kernel.setArg(0, _rays_buffer);
+	_generate_kernel.setArg(0, _rays_buffer[0]);
 	_generate_kernel.setArg(1, _ray_kernel_data);
 	_generate_kernel.setArg(2, _random_streams);
 	err = _queue.enqueueNDRangeKernel(
@@ -421,22 +421,23 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	for (int i = 0; i < 1; i++)
 	{
 		_intersect_kernel.setArg(0, _accumulation_buffer);
-		_intersect_kernel.setArg(1, _rays_buffer);
+		_intersect_kernel.setArg(1, _rays_buffer[1]);
 		_intersect_kernel.setArg(2, _shadow_rays_buffer);
-		_intersect_kernel.setArg(3, _ray_kernel_data);
-		_intersect_kernel.setArg(4, _vertices[_active_buffers]);
-		_intersect_kernel.setArg(5, _triangles[_active_buffers]);
-		_intersect_kernel.setArg(6, _emissive_trangles[_active_buffers]);
-		_intersect_kernel.setArg(7, _materials[_active_buffers]);
-		_intersect_kernel.setArg(8, _material_textures);
-		_intersect_kernel.setArg(9, _sub_bvh[_active_buffers]);
-		_intersect_kernel.setArg(10, _top_bvh[_active_buffers]);
-		_intersect_kernel.setArg(11, _random_streams);
+		_intersect_kernel.setArg(3, _rays_buffer[0]);
+		_intersect_kernel.setArg(4, _ray_kernel_data);
+		_intersect_kernel.setArg(5, _vertices[_active_buffers]);
+		_intersect_kernel.setArg(6, _triangles[_active_buffers]);
+		_intersect_kernel.setArg(7, _emissive_trangles[_active_buffers]);
+		_intersect_kernel.setArg(8, _materials[_active_buffers]);
+		_intersect_kernel.setArg(9, _material_textures);
+		_intersect_kernel.setArg(10, _sub_bvh[_active_buffers]);
+		_intersect_kernel.setArg(11, _top_bvh[_active_buffers]);
+		_intersect_kernel.setArg(12, _random_streams);
 
 		err = _queue.enqueueNDRangeKernel(
 			_intersect_kernel,
 			cl::NullRange,
-			cl::NDRange(_scr_width, _scr_height),
+			cl::NDRange(_scr_width * _scr_height),
 			cl::NullRange,
 			NULL,
 			nullptr);
@@ -782,8 +783,8 @@ void raytracer::RayTracer::InitOpenCL()
 	{
 		int platformIndex;
 		std::cout << "Select a platform: ";
-		std::cin >> platformIndex;
-		//platformIndex = 3;
+		//std::cin >> platformIndex;
+		platformIndex = 3;
 		platform = platforms[platformIndex];
 	}
 
@@ -800,8 +801,8 @@ void raytracer::RayTracer::InitOpenCL()
 	{
 		int deviceIndex;
 		std::cout << "Select a device: ";
-		std::cin >> deviceIndex;
-		//deviceIndex = 0;
+		//std::cin >> deviceIndex;
+		deviceIndex = 0;
 		_device = devices[deviceIndex];
 	}
 
@@ -959,11 +960,18 @@ void raytracer::RayTracer::InitBuffers(
 	checkClErr(err, "cl::Buffer");
 
 	const int shadingDataStructSize = 64;
-	_rays_buffer = cl::Buffer(_context,
+	_rays_buffer[0] = cl::Buffer(_context,
 		CL_MEM_READ_WRITE,
 		_scr_width * _scr_height * shadingDataStructSize,
 		nullptr,
 		&err);
+	checkClErr(err, "cl::Buffer");
+	_rays_buffer[1] = cl::Buffer(_context,
+		CL_MEM_READ_WRITE,
+		_scr_width * _scr_height * shadingDataStructSize,
+		nullptr,
+		&err);
+	checkClErr(err, "cl::Buffer");
 	_shadow_rays_buffer = cl::Buffer(_context,
 		CL_MEM_READ_WRITE,
 		_scr_width * _scr_height * shadingDataStructSize,
