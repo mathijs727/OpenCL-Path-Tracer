@@ -148,7 +148,6 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 	_scr_height = height;
 
 	InitOpenCL();
-	//_red_kernel = LoadKernel("assets/cl/kernel.cl", "addRed");
 	_generate_rays_kernel = LoadKernel("assets/cl/kernel.cl", "generatePrimaryRays");
 	_intersect_shadows_kernel = LoadKernel("assets/cl/kernel.cl", "intersectShadows");
 	_intersect_shade_kernel = LoadKernel("assets/cl/kernel.cl", "intersectAndShade");
@@ -443,7 +442,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 			_intersect_shade_kernel,
 			cl::NullRange,
 			cl::NDRange(_scr_width * _scr_height),
-			cl::NullRange,
+			cl::NDRange(64, 1),
 			NULL,
 			nullptr);
 		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
@@ -463,7 +462,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 			_intersect_shadows_kernel,
 			cl::NullRange,
 			cl::NDRange(_scr_width * _scr_height),
-			cl::NullRange,
+			cl::NDRange(64, 1),
 			NULL,
 			nullptr);
 		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");

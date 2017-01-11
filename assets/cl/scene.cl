@@ -82,11 +82,13 @@ bool traceRay(
 	if (count) *count = 0;
 #endif
 	// Check mesh intersection using BVH traversal
-	unsigned int subBvhStack[64];
+	unsigned int subBvhStack[48];
 	int subBvhStackPtr = 0;
 
 	// Traverse top level BVH and add relevant sub-BVH's to the "sub BVH" stacks
-	unsigned int topLevelBvhStack[16];
+	__local unsigned int topLevelBvhStackLocal[16 * 64];
+	__local unsigned int* topLevelBvhStack = &topLevelBvhStackLocal[
+		get_local_id(0) * 16];
 	unsigned int topLevelBvhStackPtr = 0;
 	topLevelBvhStack[topLevelBvhStackPtr++] = scene->topLevelBvhRoot;
 
