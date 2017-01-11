@@ -418,32 +418,33 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		nullptr);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
-	for (int i = 0; i < 1; i++)
-	{
-		_intersect_kernel.setArg(0, _accumulation_buffer);
-		_intersect_kernel.setArg(1, _rays_buffer[1]);
-		_intersect_kernel.setArg(2, _shadow_rays_buffer);
-		_intersect_kernel.setArg(3, _rays_buffer[0]);
-		_intersect_kernel.setArg(4, _ray_kernel_data);
-		_intersect_kernel.setArg(5, _vertices[_active_buffers]);
-		_intersect_kernel.setArg(6, _triangles[_active_buffers]);
-		_intersect_kernel.setArg(7, _emissive_trangles[_active_buffers]);
-		_intersect_kernel.setArg(8, _materials[_active_buffers]);
-		_intersect_kernel.setArg(9, _material_textures);
-		_intersect_kernel.setArg(10, _sub_bvh[_active_buffers]);
-		_intersect_kernel.setArg(11, _top_bvh[_active_buffers]);
-		_intersect_kernel.setArg(12, _random_streams);
 
-		err = _queue.enqueueNDRangeKernel(
-			_intersect_kernel,
-			cl::NullRange,
-			cl::NDRange(_scr_width * _scr_height),
-			cl::NullRange,
-			NULL,
-			nullptr);
-		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
-	}
+	_intersect_kernel.setArg(0, _accumulation_buffer);
+	_intersect_kernel.setArg(1, _rays_buffer[1]);
+	_intersect_kernel.setArg(2, _shadow_rays_buffer);
+	_intersect_kernel.setArg(3, _rays_buffer[0]);
+	_intersect_kernel.setArg(4, _ray_kernel_data);
+	_intersect_kernel.setArg(5, _vertices[_active_buffers]);
+	_intersect_kernel.setArg(6, _triangles[_active_buffers]);
+	_intersect_kernel.setArg(7, _emissive_trangles[_active_buffers]);
+	_intersect_kernel.setArg(8, _materials[_active_buffers]);
+	_intersect_kernel.setArg(9, _material_textures);
+	_intersect_kernel.setArg(10, _sub_bvh[_active_buffers]);
+	_intersect_kernel.setArg(11, _top_bvh[_active_buffers]);
+	_intersect_kernel.setArg(12, _random_streams);
 
+	err = _queue.enqueueNDRangeKernel(
+		_intersect_kernel,
+		cl::NullRange,
+		cl::NDRange(_scr_width * _scr_height),
+		cl::NullRange,
+		NULL,
+		nullptr);
+	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+
+	// Wait for the queue to finish because we dont know when the recursive kernel is done
+	_queue.flush();
+	_queue.finish();
 	/*// Test kernel to get device enqueue working
 	_red_kernel.setArg(0, _accumulation_buffer);
 	_red_kernel.setArg(1, 2);

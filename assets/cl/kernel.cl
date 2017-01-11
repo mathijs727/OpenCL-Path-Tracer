@@ -2,7 +2,7 @@
 #define USE_BVH
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
 
-#define MAX_ITERATIONS 5
+#define MAX_ITERATIONS 1
 
 #include <clRNG/mrg31k3p.clh>
 #include "shapes.cl"
@@ -208,8 +208,6 @@ __kernel void intersectAndShade(
 		clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 	}
 	
-	barrier(CLK_GLOBAL_MEM_FENCE);
-
 	if (gid == 0)
 	{
 		ndrange_t ndrange = ndrange_1D(get_global_size(0));
@@ -218,7 +216,7 @@ __kernel void intersectAndShade(
 		clk_event_t shadowTraceEvent;
 		enqueue_kernel(
 			get_default_queue(),
-			CLK_ENQUEUE_FLAGS_NO_WAIT,
+			CLK_ENQUEUE_FLAGS_WAIT_KERNEL,
 			ndrange,
 			0, NULL,// Doesnt wait on anything
 			&shadowTraceEvent,// But returns an event
@@ -261,6 +259,7 @@ __kernel void intersectAndShade(
 						randomStreams);
 				});
 		}
+		release_event(shadowTraceEvent);
 	}
 }
 
