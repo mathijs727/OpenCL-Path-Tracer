@@ -184,6 +184,7 @@ __kernel void intersectAndShade(
 			outShadowShadingData.flags = SHADINGFLAGS_HASFINISHED;
 		}
 
+
 		outRays[gid] = outShadingData;
 		outShadowRays[gid] = outShadowShadingData;
 

@@ -7,5 +7,8 @@ __kernel void reorderRays(
 	__global ShadingData* outDataBuffer)
 {
 	int gid = get_global_id(0);
-	outDataBuffer[gid] = inDataBuffer[orderBuffer[gid]];
+	if (!(inDataBuffer[gid].flags & SHADINGFLAGS_HASFINISHED))
+	{
+		outDataBuffer[orderBuffer[gid]] = inDataBuffer[gid];
+	}
 }

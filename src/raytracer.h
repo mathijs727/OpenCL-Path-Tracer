@@ -50,7 +50,7 @@ private:
 		u32 numTopBvhNodes,
 		u32 numLights);
 
-	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
+	cl::Kernel LoadKernel(const char* fileName, const char* funcName, std::string options = "");
 private:
 	std::shared_ptr<Scene> _scene;
 
@@ -65,6 +65,7 @@ private:
 	cl::Kernel _prefix_sum_kernel;
 	cl::Kernel _reorder_rays_kernel;
 	cl::Buffer _prefix_sum_scratch_buffer;
+	cl::Buffer _active_ray_buffer;
 	cl::Buffer _ray_order_buffer;
 
 	cl::Kernel _generate_rays_kernel;

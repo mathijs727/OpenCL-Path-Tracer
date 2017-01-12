@@ -19,13 +19,13 @@
 #include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
-#define OPENCL_GL_INTEROP
+//#define OPENCL_GL_INTEROP
 //#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
 
-const size_t RAYS_PER_BLOCK_HORIZONTAL = 64;
-const size_t RAYS_PER_BLOCK_VERTICAL = 64;
+const size_t RAYS_PER_BLOCK_HORIZONTAL = 32;
+const size_t RAYS_PER_BLOCK_VERTICAL = 32;
 const size_t RAYS_PER_BLOCK = RAYS_PER_BLOCK_HORIZONTAL * RAYS_PER_BLOCK_VERTICAL;
 
 struct KernelData
@@ -94,8 +94,12 @@ cl_float3 glmToCl(const glm::vec3& vec);
 #endif
 
 
+// https://github.com/sschaetz/nvidia-opencl-examples/blob/master/OpenCL/src/oclScan/src/oclScan_launcher.cpp
+static uint iSnapUp(uint dividend, uint divisor) {
+	return ((dividend % divisor) == 0) ? dividend : (dividend - dividend % divisor + divisor);
+}
 
-inline static size_t toMultipleOf(size_t N, size_t base)
+inline size_t toMultipleOf(size_t N, size_t base)
 {
 	return static_cast<size_t>((ceil((double)N / (double)base) * base));
 }
@@ -495,7 +499,9 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 				checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
 
-				//activeRayCount = CompactRayBuffer(activeRayCount);
+				activeRayCount = CompactRayBuffer(activeRayCount);
+				if (!activeRayCount)
+					break;
 			}
 		}
 	}
@@ -518,6 +524,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 
 int raytracer::RayTracer::CompactRayBuffer(int rayCount)
 {
+	//return rayCount;
 	// For each ray: output either a one (active) or a zero (inactive/terminated)
 	_active_rays_kernel.setArg(0, _rays_buffer_out);
 	_active_rays_kernel.setArg(1, _ray_order_buffer);
@@ -525,61 +532,82 @@ int raytracer::RayTracer::CompactRayBuffer(int rayCount)
 	cl_int err = _queue.enqueueNDRangeKernel(
 		_active_rays_kernel,
 		cl::NullRange,
-		cl::NDRange(_scr_width * _scr_height),
+		cl::NDRange(rayCount),
 		cl::NullRange,
 		NULL,
 		nullptr);
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
-	// Perform a parallel exclusive prefix sum (scan) on the active/inactive buffer to
-	//  determine the new indices of the active rays.
-	// https://github.com/boxerab/clpp/blob/master/src/clpp/clppScan_GPU.cpp
-	int workgroupSize = 32;
-	int blockSize = rayCount / workgroupSize;
-	int B = blockSize * workgroupSize;
-	if ((rayCount % workgroupSize > 0))
-		blockSize++;
-	size_t localWorkSize = workgroupSize;
-	size_t globalWorkSize = toMultipleOf(rayCount / blockSize, workgroupSize);
 
-	_prefix_sum_kernel.setArg(0, cl::Local(workgroupSize * sizeof(cl_int)));
-	_prefix_sum_kernel.setArg(1, _ray_order_buffer);
-	_prefix_sum_kernel.setArg(2, B);
-	_prefix_sum_kernel.setArg(3, rayCount);
-	_prefix_sum_kernel.setArg(4, blockSize);
-	err = _queue.enqueueNDRangeKernel(
-		_prefix_sum_kernel,
-		cl::NullRange,
-		cl::NDRange(_scr_width * _scr_height),
-		cl::NDRange(32),
-		NULL,
-		nullptr);
-	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
-	
-	// Read back the surviving ray count
-	cl_int newRayCount;
+	std::unique_ptr<cl_int[]> activeRays = std::make_unique<cl_int[]>(rayCount);
 	_queue.enqueueReadBuffer(
 		_ray_order_buffer,
 		true,
-		(_scr_width * _scr_height - 1) * sizeof(cl_int),
-		sizeof(cl_int),
-		&newRayCount,
+		0,
+		rayCount * sizeof(cl_int),
+		activeRays.get(),
 		nullptr,
 		nullptr);
+	std::cout << "\n\n\nBefore compaction: " << std::endl;
+	for (int i = 0; i < rayCount; i++)
+	{
+		std::cout << activeRays[i] << " ";
+	}
 
-	_reorder_rays_kernel.setArg(0, _ray_order_buffer);
+	
+	int workgroupSize = 32;
+	int blockSize = rayCount / workgroupSize;
+	int B = blockSize * workgroupSize;
+	if ((rayCount % workgroupSize) > 0) { blockSize++; };
+	size_t localWorkSize = workgroupSize;
+	size_t globalWorkSize = toMultipleOf(rayCount / blockSize, workgroupSize);
+	_prefix_sum_kernel.setArg(0, cl::Local(workgroupSize * sizeof(cl_int)));
+	_prefix_sum_kernel.setArg(1, _active_ray_buffer);
+	_prefix_sum_kernel.setArg(2, B);
+	_prefix_sum_kernel.setArg(3, rayCount);
+	_prefix_sum_kernel.setArg(4, blockSize);
+
+	err = _queue.enqueueNDRangeKernel(
+		_prefix_sum_kernel,
+		0,
+		cl::NDRange(globalWorkSize),
+		cl::NDRange(workgroupSize),
+		nullptr,
+		nullptr);
+	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+
+	
+	// Read back the surviving ray count
+	cl_int newRayCount;
+	std::unique_ptr<cl_int[]> rayOrder = std::make_unique<cl_int[]>(rayCount);
+	_queue.enqueueReadBuffer(
+		_active_ray_buffer,
+		true,
+		0,
+		rayCount * sizeof(cl_int),
+		rayOrder.get(),
+		nullptr,
+		nullptr);
+	newRayCount = rayOrder[rayCount - 1];
+	std::cout << "\nAfter compaction: " << std::endl;
+	for (int i = 0; i < rayCount; i++)
+	{
+		std::cout << rayOrder[i] << " ";
+	}
+
+	/*_reorder_rays_kernel.setArg(0, _ray_order_buffer);
 	_reorder_rays_kernel.setArg(1, _rays_buffer_out);
 	_reorder_rays_kernel.setArg(2, _rays_buffer_in);
 	err = _queue.enqueueNDRangeKernel(
 		_reorder_rays_kernel,
 		cl::NullRange,
-		cl::NDRange(newRayCount),
-		cl::NDRange(32),
+		cl::NDRange(rayCount),
+		cl::NullRange,
 		NULL,
 		nullptr);
-	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");*/
 
-	return newRayCount;
+	return rayCount;
 }
 
 void raytracer::RayTracer::Accumulate()
@@ -592,13 +620,14 @@ void raytracer::RayTracer::Accumulate()
 #endif
 	_accumulate_kernel.setArg(2, _rays_per_pixel);
 	_accumulate_kernel.setArg(3, _scr_width);
-	_queue.enqueueNDRangeKernel(
+	cl_int err = _queue.enqueueNDRangeKernel(
 		_accumulate_kernel,
 		cl::NullRange,
 		cl::NDRange(_scr_width, _scr_height),
 		cl::NullRange,
 		nullptr,
 		nullptr);
+	checkClErr(err, "queue::enqueueNDRangeKernel");
 }
 
 void raytracer::RayTracer::GammaCorrection()
@@ -1100,7 +1129,13 @@ void raytracer::RayTracer::InitBuffers(
 		nullptr,
 		&err);
 	checkClErr(err, "cl::Buffer");
-
+	
+	_active_ray_buffer = cl::Buffer(_context,
+		CL_MEM_READ_WRITE,
+		RAYS_PER_BLOCK * sizeof(cl_int),
+		nullptr,
+		&err);
+	checkClErr(err, "cl::Buffer");
 	_ray_order_buffer = cl::Buffer(_context,
 		CL_MEM_READ_WRITE,
 		RAYS_PER_BLOCK * sizeof(cl_int),
@@ -1115,7 +1150,7 @@ void raytracer::RayTracer::InitBuffers(
 	checkClErr(err, "cl::Buffer");
 }
 
-cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* funcName)
+cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* funcName, std::string options)
 {
 	cl_int err;
 
@@ -1134,7 +1169,9 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 	cl::Program::Sources sources;
 	sources.push_back(std::make_pair(prog.c_str(), prog.length()));
 	cl::Program program(_context, sources);
-	err = program.build(devices, "-I assets/cl/ -I assets/cl/clRNG/");
+	std::string opts = "-I assets/cl/ -I assets/cl/clRNG/ ";
+	opts += options;
+	err = program.build(devices, opts.c_str());
 	{
 		if (err != CL_SUCCESS)
 		{
