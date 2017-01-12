@@ -96,7 +96,8 @@ private:
 	cl::Buffer _materials[2];
 	cl::Buffer _sub_bvh[2];
 	
-	cl::Image2DArray _material_textures;
+	cl::Buffer _texture_data;
+	cl::Buffer _texture_descriptors;
 
 	std::vector<TopBvhNode> _top_bvh_nodes_host;
 	cl_uint _top_bvh_root_node[2];

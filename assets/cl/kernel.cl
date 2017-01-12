@@ -6,6 +6,7 @@
 
 #include <clRNG/mrg31k3p.clh>
 #include "shapes.cl"
+#include "texture.cl"
 #include "material.cl"
 #include "scene.cl"
 #include "light.cl"
@@ -95,11 +96,14 @@ __kernel void intersectShadows(
 	if (shadowData.flags & SHADINGFLAGS_HASFINISHED)
 		return;
 
+	Textures tmp;
+
 	Scene scene;
 	loadScene(
 		vertices,
 		triangles,
 		materials,
+		tmp,
 		inputData->numEmissiveTriangles,
 		emissiveTriangles,
 		subBvh,
@@ -133,7 +137,8 @@ __kernel void intersectAndShade(
 	__global TriangleData* triangles,
 	__global EmissiveTriangle* emissiveTriangles,
 	__global Material* materials,
-	__read_only image2d_array_t textures,
+	__global char* textureData,
+	__global ImageDescriptor* textureDescriptors,
 	__global SubBvhNode* subBvh,
 	__global TopBvhNode* topLevelBvh,
 	__global clrngMrg31k3pHostStream* randomStreams)
@@ -155,6 +160,7 @@ __kernel void intersectAndShade(
 			vertices,
 			triangles,
 			materials,
+			loadTextures(textureData, textureDescriptors),
 			inputData->numEmissiveTriangles,
 			emissiveTriangles,
 			subBvh,
@@ -182,7 +188,6 @@ __kernel void intersectAndShade(
 
 		if (hit)
 		{
-			//outputPixels[gid] += (float3)(0, 0.5, 0);
 			outputPixels[gid] += neeShading(
 				&scene,
 				triangleIndex,
@@ -190,12 +195,10 @@ __kernel void intersectAndShade(
 				shadingData.ray.direction,
 				normalTransform,
 				uv,
-				textures,
 				&randomStream,
 				&shadingData,
 				&outShadingData,
 				&outShadowShadingData);
-			//outputPixels[gid] += outShadowShadingData.multiplier;
 		} else {
 			outShadingData.flags = SHADINGFLAGS_HASFINISHED;
 			outShadowShadingData.flags = SHADINGFLAGS_HASFINISHED;
@@ -253,7 +256,8 @@ __kernel void intersectAndShade(
 						triangles,
 						emissiveTriangles,
 						materials,
-						textures,
+						textureData,
+						textureDescriptors,
 						subBvh,
 						topLevelBvh,
 						randomStreams);

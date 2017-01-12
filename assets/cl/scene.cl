@@ -6,6 +6,7 @@
 #include "stack.cl"
 #include "bvh.cl"
 #include "math.cl"
+#include "texture.cl"
 
 // At least on AMD, this is not defined
 #define NULL 0
@@ -16,6 +17,7 @@ typedef struct
 	const __global VertexData* vertices;
 	const __global TriangleData* triangles;
 	const __global Material* meshMaterials;
+	Textures textures;
 
 	const __global EmissiveTriangle* emissiveTriangles;
 
@@ -36,20 +38,22 @@ void loadScene(
 	const __global VertexData* vertices,
 	const __global TriangleData* triangles,
 	const __global Material* materials,
+	Textures textures,
 	uint numEmissiveTriangles,
 	const __global EmissiveTriangle* emissiveTriangles,
 	const __global SubBvhNode* subBvh,
 	uint topLevelBvhRoot,
 	const __global TopBvhNode* topLevelBvh,
-	Scene* scene) {
+	Scene* scene)
+{
 	scene->refractiveIndex =  1.000277f;
 	
-	scene->numEmissiveTriangles = numEmissiveTriangles;
-
 	scene->vertices = vertices;
 	scene->triangles = triangles;
 	scene->meshMaterials = materials;
-	
+	scene->textures = textures;
+
+	scene->numEmissiveTriangles = numEmissiveTriangles;
 	scene->emissiveTriangles = emissiveTriangles;
 
 	scene->subBvh = subBvh;

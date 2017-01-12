@@ -1,6 +1,7 @@
 #ifndef __SHADING_CL
 #define __SHADING_CL
 #include "shading_helper.cl"
+#include "texture.cl"
 
 __constant sampler_t sampler =
 	CLK_NORMALIZED_COORDS_TRUE |
@@ -197,7 +198,7 @@ float3 diffuseColour(
 	const __global Material* material,
 	VertexData* vertices,
 	float2 uv,
-	image2d_array_t textures)
+	const Textures* textures)
 {
 	if (material->diffuse.tex_id == -1)
 	{
@@ -207,12 +208,14 @@ float3 diffuseColour(
 		float2 t1 = vertices[1].texCoord;
 		float2 t2 = vertices[2].texCoord;
 		float2 tex_coords = t0 + (t1-t0) * uv.x + (t2-t0) * uv.y;
-
-		float4 texCoords3d = (float4)(tex_coords.x, 1.0f - tex_coords.y, material->diffuse.tex_id, 0.0f);
+		
+		/*float4 texCoords3d = (float4)(tex_coords.x, 1.0f - tex_coords.y, material->diffuse.tex_id, 0.0f);
 		float4 colourWithAlpha = read_imagef(
 			textures,
 			sampler,
 			texCoords3d);
+		return colourWithAlpha.xyz;*/
+		float4 colourWithAlpha = sample2D(textures, material->diffuse.tex_id, tex_coords);
 		return colourWithAlpha.xyz;
 	}
 }
@@ -227,7 +230,6 @@ float3 neeShading(
 	float3 rayDirection,
 	const float* normalTransform,
 	float2 uv,
-	image2d_array_t textures,
 	clrngMrg31k3pStream* randomStream,
 	ShadingData* inData,
 	ShadingData* outData,
@@ -250,8 +252,6 @@ float3 neeShading(
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
 	}
-	
-	float3 BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
@@ -264,6 +264,8 @@ float3 neeShading(
 			return BLACK;
 		}
 	}
+
+	float3 BRDF = diffuseColour(material, vertices, uv, &scene->textures) * INVPI;
 
 	// Sample a random light source
 	float3 lightPos, lightNormal, lightColour; float lightArea;

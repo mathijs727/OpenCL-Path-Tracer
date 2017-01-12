@@ -36,10 +36,21 @@ struct KernelData
 	raytracer::CameraData camera;
 
 	// Scene
-	uint numEmissiveTriangles;
-	uint topLevelBvhRoot;
+	u32 numEmissiveTriangles;
+	u32 topLevelBvhRoot;
 
-	uint iteration;
+	u32 iteration;
+};
+
+struct ImageDescriptor
+{
+	u32 width;
+	u32 height;
+	u32 dataOffset;// Offset into the texture data array (in bytes)
+	enum ImageType
+	{
+		RGBA8 = 0
+	} type;
 };
 
 
@@ -257,26 +268,35 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
 	writeToBuffer(_queue, _sub_bvh[1], _sub_bvh_nodes_host);
 
 	// Copy textures to the GPU
+	size_t offset = 0;
+	std::vector<ImageDescriptor> descriptors;
 	for (uint texId = 0; texId < Texture::getNumUniqueSurfaces(); texId++)
 	{
 		Tmpl8::Surface* surface = Texture::getSurface(texId);
 
-		// Origin (o) and region (r)
-		std::array<size_t, 3> o; o[0] = 0; o[1] = 0; o[2] = texId;
-
-		cl::array<size_t, 3> r;
-		r[0] = Texture::TEXTURE_WIDTH;
-		r[1] = Texture::TEXTURE_HEIGHT;
-		r[2] = 1;// r[2] must be 1?
-		cl_int err = _queue.enqueueWriteImage(
-			_material_textures,
+		size_t textureSize = Texture::TEXTURE_WIDTH * Texture::TEXTURE_HEIGHT * sizeof(u32);
+		cl_int err = _queue.enqueueWriteBuffer(
+			_texture_data,
 			CL_TRUE,
-			o,
-			r,
-			0,
-			0,
+			offset,
+			textureSize,
 			surface->GetBuffer());
-		checkClErr(err, "CommandQueue::enqueueWriteImage");
+		checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+
+		ImageDescriptor descriptor;
+		descriptor.dataOffset = offset;
+		descriptor.width = Texture::TEXTURE_WIDTH;
+		descriptor.height = Texture::TEXTURE_HEIGHT;
+		descriptor.type = ImageDescriptor::ImageType::RGBA8;
+		descriptors.push_back(descriptor);
+
+		offset += textureSize;
+	}
+
+	if (descriptors.size() > 0)
+	{
+		// enqueueWriteBuffer on the image descriptors
+		writeToBuffer(_queue, _texture_descriptors, descriptors);
 	}
 
 	FrameTick();
@@ -428,10 +448,11 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	_intersect_kernel.setArg(6, _triangles[_active_buffers]);
 	_intersect_kernel.setArg(7, _emissive_trangles[_active_buffers]);
 	_intersect_kernel.setArg(8, _materials[_active_buffers]);
-	_intersect_kernel.setArg(9, _material_textures);
-	_intersect_kernel.setArg(10, _sub_bvh[_active_buffers]);
-	_intersect_kernel.setArg(11, _top_bvh[_active_buffers]);
-	_intersect_kernel.setArg(12, _random_streams);
+	_intersect_kernel.setArg(9, _texture_data);
+	_intersect_kernel.setArg(10, _texture_descriptors);
+	_intersect_kernel.setArg(11, _sub_bvh[_active_buffers]);
+	_intersect_kernel.setArg(12, _top_bvh[_active_buffers]);
+	_intersect_kernel.setArg(13, _random_streams);
 
 	err = _queue.enqueueNDRangeKernel(
 		_intersect_kernel,
@@ -916,7 +937,7 @@ void raytracer::RayTracer::InitBuffers(
 	checkClErr(err, "Buffer::Buffer()");
 
 	// https://www.khronos.org/registry/cl/specs/opencl-cplusplus-1.2.pdf
-	_material_textures = cl::Image2DArray(_context,
+	/*_material_textures = cl::Image2DArray(_context,
 		CL_MEM_READ_ONLY,
 		cl::ImageFormat(CL_BGRA, CL_UNORM_INT8),
 		std::max((u32)1u, (u32)Texture::getNumUniqueSurfaces()),
@@ -924,7 +945,20 @@ void raytracer::RayTracer::InitBuffers(
 		Texture::TEXTURE_HEIGHT,
 		0, 0, NULL,// Unused host_ptr
 		&err);
-	checkClErr(err, "cl::Image2DArray");
+	checkClErr(err, "cl::Image2DArray");*/
+	size_t textureCount = std::max((u32)1u, (u32)Texture::getNumUniqueSurfaces());
+	_texture_data = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		textureCount * Texture::TEXTURE_WIDTH * Texture::TEXTURE_HEIGHT * sizeof(u32),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+	_texture_descriptors = cl::Buffer(_context,
+		CL_MEM_READ_ONLY,
+		textureCount * sizeof(ImageDescriptor),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
 
 
 

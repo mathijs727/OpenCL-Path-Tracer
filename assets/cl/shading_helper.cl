@@ -1,5 +1,7 @@
 #ifndef __SHADER_HELPER_CL
 #define __SHADER_HELPER_CL
+#include <clRNG/mrg31k3p.clh>
+#include "math.cl"
 
 #define PI 3.14159265359f
 #define INVPI 0.31830988618f;

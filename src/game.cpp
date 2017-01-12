@@ -78,7 +78,10 @@ void Game::Init()
 		transform.location = glm::vec3(0, 0.5f, 0);
 		transform.orientation = glm::quat(glm::vec3(0, 1, 0));
 		auto cube = std::make_shared<Mesh>();
-		cube->loadFromFile("assets/3dmodels/cube/cube.obj");
+		cube->loadFromFile("assets/3dmodels/cube/cube.obj",
+			Material::Diffuse(
+				Texture("assets/images/glorious.png"),
+				glm::vec3(0.3, 0.7, 0.2)));
 		_cube_scene_node = &_scene->add_node(cube, transform);
 	}
 	
