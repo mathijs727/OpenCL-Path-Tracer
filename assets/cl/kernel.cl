@@ -13,6 +13,7 @@
 #include "shading.cl"
 #include "camera.cl"
 
+
 typedef struct
 {
 	// Camera
@@ -22,8 +23,18 @@ typedef struct
 	uint numEmissiveTriangles;
 	uint topLevelBvhRoot;
 
-	uint iteration;
+	// Used for ray generation
+	uint offsetX;
+	uint offsetY;
+	uint scrWidth;
+	uint scrHeight;
+
+	// Used for compaction
+	uint numRays;
+	uint numShadowRays;
 } KernelData;
+
+
 
 __kernel void generatePrimaryRays(
 	__global ShadingData* outRays,
@@ -37,10 +48,16 @@ __kernel void generatePrimaryRays(
 	clrngMrg31k3pStream randomStream;
 	clrngMrg31k3pCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
-	outRays[gid].ray = generateRayThinLens(&inputData->camera, x, y, &randomStream);
+	outRays[gid].ray = generateRayThinLens(
+		&inputData->camera,
+		x + inputData->offsetX,
+		y + inputData->offsetY,
+		(float)inputData->scrWidth,
+		(float)inputData->scrHeight,
+		&randomStream);
 	outRays[gid].multiplier = (float3)(1, 1, 1);
-	outRays[gid].flags = SHADINGFLAGS_LASTSPECULAR;
-	outRays[gid].outputPixel = gid;
+	outRays[gid].flags = 0;
+	outRays[gid].outputPixel = ((y + inputData->offsetY) * inputData->scrWidth + (x + inputData->offsetX));
 
 	// Store random streams
 	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
@@ -86,7 +103,7 @@ __kernel void intersectShadows(
 		NULL);
 	if (!hit)
 	{
-		outputPixels[gid] += shadowData.multiplier;
+		outputPixels[shadowData.outputPixel] += shadowData.multiplier;
 	}
 }
 
@@ -110,8 +127,8 @@ __kernel void intersectAndShade(
 	ShadingData shadingData = inRays[gid];
 	ShadingData outShadingData;
 	ShadingData outShadowShadingData;
-	outShadingData.outputPixel = inRays->outputPixel;
-	outShadowShadingData.outputPixel = inRays->outputPixel;
+	outShadingData.outputPixel = shadingData.outputPixel;
+	outShadowShadingData.outputPixel = shadingData.outputPixel;
 
 	if (!(shadingData.flags & SHADINGFLAGS_HASFINISHED))
 	{
@@ -150,8 +167,7 @@ __kernel void intersectAndShade(
 
 		if (hit)
 		{
-			//outputPixels[gid] += (float3)(0, 0.5, 0);
-			outputPixels[gid] += neeShading(
+			outputPixels[shadingData.outputPixel] += neeShading(
 				&scene,
 				triangleIndex,
 				intersection,
@@ -163,7 +179,6 @@ __kernel void intersectAndShade(
 				&shadingData,
 				&outShadingData,
 				&outShadowShadingData);
-			//outputPixels[gid] += outShadowShadingData.multiplier;
 		} else {
 			outShadingData.flags = SHADINGFLAGS_HASFINISHED;
 			outShadowShadingData.flags = SHADINGFLAGS_HASFINISHED;
@@ -176,6 +191,21 @@ __kernel void intersectAndShade(
 		clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 	}
 }
+
+__kernel void getActiveRays(
+	__global ShadingData* inRays,
+	__global int* outActive,
+	__global KernelData* outKernelData)
+{
+	size_t gid = get_global_id(0);
+	if (inRays[gid].flags & SHADINGFLAGS_HASFINISHED)
+	{
+		outActive[gid] = 0;
+	} else {
+		outActive[gid] = 1;
+	}
+}
+
 
 /*__kernel void traceRays(
 	__global float3* output,

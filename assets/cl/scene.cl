@@ -66,10 +66,10 @@ bool traceRay(
 	float* outT,
 	float2* outUV,
 #ifdef COUNT_TRAVERSAL
-	__global const float** outInvTransform,
+	const __global float** outInvTransform,
 	int* count)
 #else
-	__global const float** outInvTransform)
+	const __global float** outInvTransform)
 #endif
 {
 	int triangleIndex;
@@ -82,7 +82,7 @@ bool traceRay(
 	if (count) *count = 0;
 #endif
 	// Check mesh intersection using BVH traversal
-	unsigned int subBvhStack[48];
+	unsigned int subBvhStack[32];
 	int subBvhStackPtr = 0;
 
 	// Traverse top level BVH and add relevant sub-BVH's to the "sub BVH" stacks

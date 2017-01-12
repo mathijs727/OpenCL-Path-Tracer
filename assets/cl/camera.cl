@@ -16,10 +16,16 @@ typedef struct
 	float apertureRadius;
 } Camera;
 
-Ray generateRayPinhole(__global Camera* camera, int x, int y, clrngMrg31k3pStream* randomStream)
+Ray generateRayPinhole(
+	__global Camera* camera,
+	int x,
+	int y,
+	float width,
+	float height,
+	clrngMrg31k3pStream* randomStream)
 {
-	float width = get_global_size(0);
-	float height = get_global_size(1);
+	//float width = get_global_size(0);
+	//float height = get_global_size(1);
 	float3 u_step = camera->u / width;
 	float3 v_step = camera->v / height;
 	float3 screenPoint = camera->screenPoint + \
@@ -40,7 +46,13 @@ Ray generateRayPinhole(__global Camera* camera, int x, int y, clrngMrg31k3pStrea
 
 // http://http.developer.nvidia.com/GPUGems/gpugems_ch23.html
 // https://courses.cs.washington.edu/courses/cse457/99sp/projects/trace/depthoffield.doc
-Ray generateRayThinLens(__global Camera* camera, int x, int y, clrngMrg31k3pStream* randomStream)
+Ray generateRayThinLens(
+	__global Camera* camera,
+	int x,
+	int y,
+	float width,
+	float height,
+	clrngMrg31k3pStream* randomStream)
 {
 	float r1 = (float)clrngMrg31k3pRandomU01(randomStream) * 2.0f - 1.0f;
 	float r2 = (float)clrngMrg31k3pRandomU01(randomStream) * 2.0f - 1.0f;
@@ -48,7 +60,7 @@ Ray generateRayThinLens(__global Camera* camera, int x, int y, clrngMrg31k3pStre
 	float3 offsetOnLense = r1 * camera->u_normalized * camera->apertureRadius + \
 						   r2 * camera->v_normalized * camera->apertureRadius;
 
-	Ray primaryRay = generateRayPinhole(camera, x, y, randomStream);
+	Ray primaryRay = generateRayPinhole(camera, x, y, width, height, randomStream);
 	float3 focalPoint = primaryRay.origin + camera->focalDistance * primaryRay.direction;
 	float3 pointOnLens = primaryRay.origin + offsetOnLense;
 	float3 direction = focalPoint - pointOnLens;

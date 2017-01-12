@@ -1,6 +1,8 @@
 #ifndef __SHADING_CL
 #define __SHADING_CL
 #include "shading_helper.cl"
+#include <clRNG/mrg31k3p.clh>
+#include "light.cl"
 
 __constant sampler_t sampler =
 	CLK_NORMALIZED_COORDS_TRUE |
