@@ -19,13 +19,13 @@
 #include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
-//#define OPENCL_GL_INTEROP
+#define OPENCL_GL_INTEROP
 //#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
 
-const size_t RAYS_PER_BLOCK_HORIZONTAL = 64;
-const size_t RAYS_PER_BLOCK_VERTICAL = 64;
+const size_t RAYS_PER_BLOCK_HORIZONTAL = 1279;
+const size_t RAYS_PER_BLOCK_VERTICAL = 719;
 const size_t RAYS_PER_BLOCK = RAYS_PER_BLOCK_HORIZONTAL * RAYS_PER_BLOCK_VERTICAL;
 
 struct KernelData
@@ -50,7 +50,8 @@ struct KernelData
 	uint scrHeight;
 
 	// Used for ray compaction
-	uint numRays;
+	uint numInRays;
+	uint numOutRays;
 	uint numShadowRays;
 };
 
@@ -155,6 +156,19 @@ inline void timeOpenCL(cl::Event& ev, const char* operationName)
 #endif
 }
 
+// http://stackoverflow.com/questions/3407012/c-rounding-up-to-the-nearest-multiple-of-a-number
+inline int roundUp(int numToRound, int multiple)
+{
+	if (multiple == 0)
+		return numToRound;
+
+	int remainder = numToRound % multiple;
+	if (remainder == 0)
+		return numToRound;
+
+	return numToRound + multiple - remainder;
+}
+
 
 
 
@@ -165,13 +179,10 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 
 	InitOpenCL();
 
-	_active_rays_kernel = LoadKernel("assets/cl/kernel.cl", "getActiveRays");
-	_prefix_sum_kernel = LoadKernel("assets/cl/compaction.cl", "kernel__scan_block_anylength");
-	_reorder_rays_kernel = LoadKernel("assets/cl/compaction.cl", "reorderRays");
-
 	_generate_rays_kernel = LoadKernel("assets/cl/kernel.cl", "generatePrimaryRays");
 	_intersect_shadows_kernel = LoadKernel("assets/cl/kernel.cl", "intersectShadows");
 	_intersect_shade_kernel = LoadKernel("assets/cl/kernel.cl", "intersectAndShade");
+	_update_kernel_data_kernel = LoadKernel("assets/cl/kernel.cl", "updateKernelData");
 	_accumulate_kernel = LoadKernel("assets/cl/accumulate.cl", "accumulate");
 
 	_top_bvh_root_node[0] = 0;
@@ -426,6 +437,9 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 			data.offsetY = (u32)y;
 			data.scrWidth = (u32)_scr_width;
 			data.scrHeight = (u32)_scr_height;
+			data.numInRays = RAYS_PER_BLOCK;
+			data.numShadowRays = 0;
+			data.numOutRays = 0;
 
 			cl_int err = _queue.enqueueWriteBuffer(
 				_ray_kernel_data,
@@ -468,15 +482,30 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 				err = _queue.enqueueNDRangeKernel(
 					_intersect_shade_kernel,
 					cl::NullRange,
-					cl::NDRange(activeRayCount),
-					cl::NDRange(64, 1),
+					cl::NDRange(roundUp(activeRayCount, 64)),
+					cl::NDRange(64),
 					NULL,
 					nullptr);
 				checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
+
+
+				// TODO: coincide with shadow tracing? Or better: do 2 blocks at once and schedule this during
+				// the tracing of the other block
+				KernelData updatedKernelData;
+				err = _queue.enqueueReadBuffer(
+					_ray_kernel_data,
+					CL_TRUE,
+					0,
+					sizeof(KernelData),
+					&updatedKernelData);
+				activeRayCount = updatedKernelData.numInRays;
+				//std::cout << "Rays left over:" << activeRayCount << std::endl;
+
+
+
 				_intersect_shadows_kernel.setArg(0, _accumulation_buffer);
 				_intersect_shadows_kernel.setArg(1, _shadow_rays_buffer);
-
 				_intersect_shadows_kernel.setArg(2, _ray_kernel_data);
 				_intersect_shadows_kernel.setArg(3, _vertices[_active_buffers]);
 				_intersect_shadows_kernel.setArg(4, _triangles[_active_buffers]);
@@ -485,22 +514,34 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 				_intersect_shadows_kernel.setArg(7, _sub_bvh[_active_buffers]);
 				_intersect_shadows_kernel.setArg(8, _top_bvh[_active_buffers]);
 
-				// TODO: compact shadow rays too (mirrored to normal rays so just extra copy work
-				//   but no need to scan twice).
 				err = _queue.enqueueNDRangeKernel(
 					_intersect_shadows_kernel,
 					cl::NullRange,
-					cl::NDRange(activeRayCount),
-					cl::NDRange(64, 1),
-					NULL,
-					nullptr);
+					cl::NDRange(RAYS_PER_BLOCK),
+					cl::NDRange(64));
 				checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
+
+
+				// Set num input rays to num output rays and set num out rays and num shadow rays to 0
+				_update_kernel_data_kernel.setArg(0, _ray_kernel_data);
+				err = _queue.enqueueNDRangeKernel(
+					_update_kernel_data_kernel,
+					cl::NullRange,
+					cl::NDRange(1),
+					cl::NDRange(1));
+				checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+
+
+
 				// Wait for the block to finish. We dont want the next block to use the same data.
-				// TODO: just create a ton of buffers instead
+				// TODO: make blocks very large and schedule using events instead of cpu sync?
 				_queue.finish();
 
 				std::swap(inRayBuffer, outRayBuffer);
+
+				if (activeRayCount < 64)
+					break;
 			}
 		}
 	}
@@ -1036,19 +1077,6 @@ void raytracer::RayTracer::InitBuffers(
 	_shadow_rays_buffer = cl::Buffer(_context,
 		CL_MEM_READ_WRITE,
 		RAYS_PER_BLOCK * shadingDataStructSize,
-		nullptr,
-		&err);
-	checkClErr(err, "cl::Buffer");
-
-	_ray_order_buffer = cl::Buffer(_context,
-		CL_MEM_READ_WRITE,
-		RAYS_PER_BLOCK * sizeof(cl_int),
-		nullptr,
-		&err);
-	checkClErr(err, "cl::Buffer");
-	_prefix_sum_scratch_buffer = cl::Buffer(_context,
-		CL_MEM_READ_WRITE,
-		RAYS_PER_BLOCK * sizeof(cl_int),
 		nullptr,
 		&err);
 	checkClErr(err, "cl::Buffer");

@@ -30,7 +30,8 @@ typedef struct
 	uint scrHeight;
 
 	// Used for compaction
-	uint numRays;
+	uint numInRays;
+	uint numOutRays;
 	uint numShadowRays;
 } KernelData;
 
@@ -114,7 +115,7 @@ __kernel void intersectAndShade(
 	__global ShadingData* outShadowRays,
 	__global ShadingData* inRays,
 
-	__global KernelData* inputData,
+	volatile __global KernelData* inputData,
 	__global VertexData* vertices,
 	__global TriangleData* triangles,
 	__global EmissiveTriangle* emissiveTriangles,
@@ -125,6 +126,10 @@ __kernel void intersectAndShade(
 	__global clrngMrg31k3pHostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
+
+	if (gid >= inputData->numInRays)
+		return;
+
 	ShadingData shadingData = inRays[gid];
 	ShadingData outShadingData;
 	ShadingData outShadowShadingData;
@@ -181,12 +186,15 @@ __kernel void intersectAndShade(
 				&shadingData,
 				&outShadingData,
 				&outShadowShadingData);
+
+			int index = atomic_inc(&inputData->numOutRays);
+			outRays[index] = outShadingData;
 		} else {
 			outShadingData.flags = SHADINGFLAGS_HASFINISHED;
 			outShadowShadingData.flags = SHADINGFLAGS_HASFINISHED;
 		}
 
-		outRays[gid] = outShadingData;
+		//outRays[gid] = outShadingData;
 		outShadowRays[gid] = outShadowShadingData;
 
 		// Store random streams
@@ -194,20 +202,13 @@ __kernel void intersectAndShade(
 	}
 }
 
-__kernel void getActiveRays(
-	__global ShadingData* inRays,
-	__global int* outActive,
-	__global KernelData* outKernelData)
+__kernel void updateKernelData(
+	__global KernelData* data)
 {
-	size_t gid = get_global_id(0);
-	if (inRays[gid].flags & SHADINGFLAGS_HASFINISHED)
-	{
-		outActive[gid] = 0;
-	} else {
-		outActive[gid] = 1;
-	}
+	data->numInRays = data->numOutRays;
+	data->numOutRays = 0;
+	data->numShadowRays = 0;
 }
-
 
 /*__kernel void traceRays(
 	__global float3* output,

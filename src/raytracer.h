@@ -60,18 +60,13 @@ private:
 	cl::CommandQueue _queue;
 	cl::CommandQueue _copyQueue;
 
-	cl::Kernel _active_rays_kernel;
-	cl::Kernel _prefix_sum_kernel;
-	cl::Kernel _reorder_rays_kernel;
-	cl::Buffer _prefix_sum_scratch_buffer;
-	cl::Buffer _ray_order_buffer;
-
 	cl::Kernel _generate_rays_kernel;
 	cl::Kernel _intersect_shade_kernel;
 	cl::Kernel _intersect_shadows_kernel;
+	cl::Kernel _update_kernel_data_kernel;
+
 	cl::Buffer _ray_kernel_data;
 	cl::Buffer _random_streams;
-
 	cl::Buffer _rays_buffers[2];
 	cl::Buffer _shadow_rays_buffer;
 
