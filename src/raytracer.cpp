@@ -24,8 +24,8 @@
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
 
-const size_t RAYS_PER_BLOCK_HORIZONTAL = 32;
-const size_t RAYS_PER_BLOCK_VERTICAL = 32;
+const size_t RAYS_PER_BLOCK_HORIZONTAL = 180;
+const size_t RAYS_PER_BLOCK_VERTICAL = 180;
 const size_t RAYS_PER_BLOCK = RAYS_PER_BLOCK_HORIZONTAL * RAYS_PER_BLOCK_VERTICAL;
 
 struct KernelData
@@ -416,18 +416,20 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	// Copy camera (and scene) data to the device using a struct so we dont use 20 kernel arguments
 	KernelData data = {};
 	data.camera = camera.get_camera_data();
-
 	data.numEmissiveTriangles = _num_emissive_triangles[_active_buffers];
 	data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];
 
-	for (size_t x = 0; x < _scr_width - RAYS_PER_BLOCK_HORIZONTAL; x += RAYS_PER_BLOCK_HORIZONTAL)
+	for (size_t x = 0; x < _scr_width - RAYS_PER_BLOCK_HORIZONTAL+1; x += RAYS_PER_BLOCK_HORIZONTAL)
 	{
-		for (size_t y = 0; y < _scr_height - RAYS_PER_BLOCK_VERTICAL; y += RAYS_PER_BLOCK_VERTICAL)
+		for (size_t y = 0; y < _scr_height - RAYS_PER_BLOCK_VERTICAL+1; y += RAYS_PER_BLOCK_VERTICAL)
 		{
+			// TODO: batch this up so a kernel execute doesnt have to wait for this data to get uploaded
 			data.offsetX = (u32)x;
 			data.offsetY = (u32)y;
 			data.scrWidth = (u32)_scr_width;
 			data.scrHeight = (u32)_scr_height;
+			data.numRays = 0;
+			data.numShadowRays = 0;
 
 			cl_int err = _queue.enqueueWriteBuffer(
 				_ray_kernel_data,
@@ -451,8 +453,9 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 			checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
 			int activeRayCount = RAYS_PER_BLOCK;
-			for (int i = 0; i < 5; i++)// 5 bounces
+			for (int i = 0; i < 2; i++)// 5 bounces
 			{
+				cl::Event shadeEvent, shadowEvent;
 				_intersect_shade_kernel.setArg(0, _accumulation_buffer);
 				_intersect_shade_kernel.setArg(1, _rays_buffer_out);
 				_intersect_shade_kernel.setArg(2, _shadow_rays_buffer);
@@ -471,14 +474,13 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 					_intersect_shade_kernel,
 					cl::NullRange,
 					cl::NDRange(activeRayCount),
-					cl::NDRange(64, 1),
+					cl::NullRange,//cl::NDRange(std::min(64, activeRayCount)),
 					NULL,
-					nullptr);
+					&shadeEvent);
 				checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
-				_intersect_shadows_kernel.setArg(0, _accumulation_buffer);
+				/*_intersect_shadows_kernel.setArg(0, _accumulation_buffer);
 				_intersect_shadows_kernel.setArg(1, _shadow_rays_buffer);
-
 				_intersect_shadows_kernel.setArg(2, _ray_kernel_data);
 				_intersect_shadows_kernel.setArg(3, _vertices[_active_buffers]);
 				_intersect_shadows_kernel.setArg(4, _triangles[_active_buffers]);
@@ -493,15 +495,30 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 					_intersect_shadows_kernel,
 					cl::NullRange,
 					cl::NDRange(activeRayCount),
-					cl::NDRange(64, 1),
+					cl::NullRange,//cl::NDRange(std::min(64, activeRayCount)),
 					NULL,
-					nullptr);
-				checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+					&shadowEvent);
+				checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");*/
 
+				KernelData newKernelData;
+				cl_int err = _queue.enqueueReadBuffer(
+					_ray_kernel_data,
+					CL_TRUE,
+					0,
+					sizeof(KernelData),
+					&newKernelData);
+				checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+				activeRayCount = newKernelData.numRays;
+				std::cout << "New ray count: " << activeRayCount << std::endl;
 
-				activeRayCount = CompactRayBuffer(activeRayCount);
-				if (!activeRayCount)
-					break;
+				std::swap(_rays_buffer_in, _rays_buffer_out);
+
+				timeOpenCL(shadeEvent, "Ray tracing + shading");
+				timeOpenCL(shadowEvent, "Calculating shadows");
+
+				//activeRayCount = CompactRayBuffer(activeRayCount);
+				//if (!activeRayCount)
+				//	break;
 			}
 		}
 	}
@@ -539,7 +556,7 @@ int raytracer::RayTracer::CompactRayBuffer(int rayCount)
 	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
 
-	std::unique_ptr<cl_int[]> activeRays = std::make_unique<cl_int[]>(rayCount);
+	/*std::unique_ptr<cl_int[]> activeRays = std::make_unique<cl_int[]>(rayCount);
 	_queue.enqueueReadBuffer(
 		_ray_order_buffer,
 		true,
@@ -552,10 +569,10 @@ int raytracer::RayTracer::CompactRayBuffer(int rayCount)
 	for (int i = 0; i < rayCount; i++)
 	{
 		std::cout << activeRays[i] << " ";
-	}
+	}*/
 
 	
-	int workgroupSize = 32;
+	/*int workgroupSize = 32;
 	int blockSize = rayCount / workgroupSize;
 	int B = blockSize * workgroupSize;
 	if ((rayCount % workgroupSize) > 0) { blockSize++; };
@@ -574,11 +591,11 @@ int raytracer::RayTracer::CompactRayBuffer(int rayCount)
 		cl::NDRange(workgroupSize),
 		nullptr,
 		nullptr);
-	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");*/
 
 	
 	// Read back the surviving ray count
-	cl_int newRayCount;
+	/*cl_int newRayCount;
 	std::unique_ptr<cl_int[]> rayOrder = std::make_unique<cl_int[]>(rayCount);
 	_queue.enqueueReadBuffer(
 		_active_ray_buffer,
@@ -588,14 +605,14 @@ int raytracer::RayTracer::CompactRayBuffer(int rayCount)
 		rayOrder.get(),
 		nullptr,
 		nullptr);
-	newRayCount = rayOrder[rayCount - 1];
-	std::cout << "\nAfter compaction: " << std::endl;
+	newRayCount = rayOrder[rayCount - 1];*/
+	/*std::cout << "\nAfter compaction: " << std::endl;
 	for (int i = 0; i < rayCount; i++)
 	{
 		std::cout << rayOrder[i] << " ";
-	}
+	}*/
 
-	/*_reorder_rays_kernel.setArg(0, _ray_order_buffer);
+	_reorder_rays_kernel.setArg(0, _ray_order_buffer);
 	_reorder_rays_kernel.setArg(1, _rays_buffer_out);
 	_reorder_rays_kernel.setArg(2, _rays_buffer_in);
 	err = _queue.enqueueNDRangeKernel(
@@ -605,7 +622,7 @@ int raytracer::RayTracer::CompactRayBuffer(int rayCount)
 		cl::NullRange,
 		NULL,
 		nullptr);
-	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");*/
+	checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
 	return rayCount;
 }
@@ -759,7 +776,7 @@ void raytracer::RayTracer::CopyNextAnimationFrameData()
 	_top_bvh_root_node[copyBuffers] = bvhBuilder.build(_sub_bvh_nodes_host, _top_bvh_nodes_host);
 	writeToBuffer(_copyQueue, _top_bvh[copyBuffers], _top_bvh_nodes_host, 0, waitEvents);
 
-	if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices))
+	/*if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices))
 	{
 		timeOpenCL(waitEvents[0], "vertex upload");
 		timeOpenCL(waitEvents[1], "triangle upload");
@@ -771,7 +788,7 @@ void raytracer::RayTracer::CopyNextAnimationFrameData()
 	else {
 		//timeOpenCL(waitEvents[0], "emissive triangles upload");
 		//timeOpenCL(waitEvents[1], "top bvh upload");
-	}
+	}*/
 
 	// Make sure the main queue waits for the copy to finish
 	cl_int err = _queue.enqueueBarrierWithWaitList(&waitEvents);
@@ -935,7 +952,7 @@ void raytracer::RayTracer::InitOpenCL()
 		int platformIndex;
 		std::cout << "Select a platform: ";
 		//std::cin >> platformIndex;
-		platformIndex = 3;
+		platformIndex = 1;
 		platform = platforms[platformIndex];
 	}
 
@@ -953,7 +970,7 @@ void raytracer::RayTracer::InitOpenCL()
 		int deviceIndex;
 		std::cout << "Select a device: ";
 		//std::cin >> deviceIndex;
-		deviceIndex = 0;
+		deviceIndex = 1;
 		_device = devices[deviceIndex];
 	}
 
@@ -1146,6 +1163,15 @@ void raytracer::RayTracer::InitBuffers(
 		CL_MEM_READ_WRITE,
 		RAYS_PER_BLOCK * sizeof(cl_int),
 		nullptr,
+		&err);
+	checkClErr(err, "cl::Buffer");
+
+
+	cl_int zero = 0;
+	_zero_buffer = cl::Buffer(_context,
+		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+		sizeof(cl_int),
+		&zero,
 		&err);
 	checkClErr(err, "cl::Buffer");
 }

@@ -86,9 +86,10 @@ bool traceRay(
 	int subBvhStackPtr = 0;
 
 	// Traverse top level BVH and add relevant sub-BVH's to the "sub BVH" stacks
-	__local unsigned int topLevelBvhStackLocal[16 * 64];
-	__local unsigned int* topLevelBvhStack = &topLevelBvhStackLocal[
-		get_local_id(0) * 16];
+	//__local unsigned int topLevelBvhStackLocal[16 * 64];
+	//__local unsigned int* topLevelBvhStack = &topLevelBvhStackLocal[
+	//	get_local_id(0) * 16];
+	unsigned int topLevelBvhStack[16];
 	unsigned int topLevelBvhStackPtr = 0;
 	topLevelBvhStack[topLevelBvhStackPtr++] = scene->topLevelBvhRoot;
 
@@ -245,7 +246,7 @@ bool traceRay(
 			triangleIndex = i;
 			closestT = t;
 			closestUV = uv;
-			closestMatrix = &scene->topLevelBvh[scene->topLevelBvhRoot].invTransform;
+			closestMatrix = scene->topLevelBvh[scene->topLevelBvhRoot].invTransform;
 		}
 	}
 #endif// USE_BVH

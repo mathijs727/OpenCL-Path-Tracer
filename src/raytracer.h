@@ -71,6 +71,7 @@ private:
 	cl::Kernel _generate_rays_kernel;
 	cl::Kernel _intersect_shade_kernel;
 	cl::Kernel _intersect_shadows_kernel;
+	cl::Buffer _zero_buffer;
 	cl::Buffer _ray_kernel_data;
 	cl::Buffer _random_streams;
 

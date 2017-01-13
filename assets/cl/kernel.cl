@@ -113,7 +113,7 @@ __kernel void intersectAndShade(
 	__global ShadingData* outShadowRays,
 	__global ShadingData* inRays,
 
-	__global KernelData* inputData,
+	volatile __global KernelData* inputData,
 	__global VertexData* vertices,
 	__global TriangleData* triangles,
 	__global EmissiveTriangle* emissiveTriangles,
@@ -179,15 +179,16 @@ __kernel void intersectAndShade(
 				&shadingData,
 				&outShadingData,
 				&outShadowShadingData);
+
+			unsigned int newIndex = atomic_inc(&inputData->numRays);
+			outRays[newIndex] = outShadingData;
 		} else {
-			outShadingData.flags = SHADINGFLAGS_HASFINISHED;
+			//outShadingData.flags = SHADINGFLAGS_HASFINISHED;
 			outShadowShadingData.flags = SHADINGFLAGS_HASFINISHED;
 		}
-
-
-		outRays[gid] = outShadingData;
 		outShadowRays[gid] = outShadowShadingData;
 
+		
 		// Store random streams
 		clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 	}
