@@ -31,7 +31,6 @@ public:
 private:
 	void TraceRays(const Camera& camera);
 
-	int CompactRayBuffer(int rayCount);
 	void Accumulate();
 	void GammaCorrection();
 	void ClearAccumulationBuffer();
@@ -50,7 +49,7 @@ private:
 		u32 numTopBvhNodes,
 		u32 numLights);
 
-	cl::Kernel LoadKernel(const char* fileName, const char* funcName, std::string options = "");
+	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
 private:
 	std::shared_ptr<Scene> _scene;
 
@@ -65,18 +64,15 @@ private:
 	cl::Kernel _prefix_sum_kernel;
 	cl::Kernel _reorder_rays_kernel;
 	cl::Buffer _prefix_sum_scratch_buffer;
-	cl::Buffer _active_ray_buffer;
 	cl::Buffer _ray_order_buffer;
 
 	cl::Kernel _generate_rays_kernel;
 	cl::Kernel _intersect_shade_kernel;
 	cl::Kernel _intersect_shadows_kernel;
-	cl::Buffer _zero_buffer;
 	cl::Buffer _ray_kernel_data;
 	cl::Buffer _random_streams;
 
-	cl::Buffer _rays_buffer_in;
-	cl::Buffer _rays_buffer_out;
+	cl::Buffer _rays_buffers[2];
 	cl::Buffer _shadow_rays_buffer;
 
 	cl_uint _rays_per_pixel;

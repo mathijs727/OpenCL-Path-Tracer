@@ -244,17 +244,7 @@ float3 neeShading(
 	float3 realNormal = cross(edge1, edge2);
 	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
-
-	if (dot(realNormal, -rayDirection) < 0.0f)
-	{
-		// Stop if we hit the back side
-		outData->flags = SHADINGFLAGS_HASFINISHED;
-		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
-		return BLACK;
-	}
 	
-	float3 BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
-
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
 	{
@@ -266,6 +256,16 @@ float3 neeShading(
 			return BLACK;
 		}
 	}
+
+	if (dot(realNormal, -rayDirection) < 0.0f)
+	{
+		// Stop if we hit the back side
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
+		return BLACK;
+	}
+
+	float3 BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 
 	// Sample a random light source
 	float3 lightPos, lightNormal, lightColour; float lightArea;

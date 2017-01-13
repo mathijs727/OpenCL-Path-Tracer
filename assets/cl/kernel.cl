@@ -56,7 +56,7 @@ __kernel void generatePrimaryRays(
 		(float)inputData->scrHeight,
 		&randomStream);
 	outRays[gid].multiplier = (float3)(1, 1, 1);
-	outRays[gid].flags = 0;
+	outRays[gid].flags = SHADINGFLAGS_LASTSPECULAR;
 	outRays[gid].outputPixel = ((y + inputData->offsetY) * inputData->scrWidth + (x + inputData->offsetX));
 
 	// Store random streams
@@ -79,6 +79,7 @@ __kernel void intersectShadows(
 	ShadingData shadowData = inShadowRays[gid];
 	if (shadowData.flags & SHADINGFLAGS_HASFINISHED)
 		return;
+	inShadowRays[gid].flags = SHADINGFLAGS_HASFINISHED;
 
 	Scene scene;
 	loadScene(
@@ -113,7 +114,7 @@ __kernel void intersectAndShade(
 	__global ShadingData* outShadowRays,
 	__global ShadingData* inRays,
 
-	volatile __global KernelData* inputData,
+	__global KernelData* inputData,
 	__global VertexData* vertices,
 	__global TriangleData* triangles,
 	__global EmissiveTriangle* emissiveTriangles,
@@ -129,7 +130,8 @@ __kernel void intersectAndShade(
 	ShadingData outShadowShadingData;
 	outShadingData.outputPixel = shadingData.outputPixel;
 	outShadowShadingData.outputPixel = shadingData.outputPixel;
-
+	outShadingData.flags = 0;
+	outShadowShadingData.flags = 0;
 	if (!(shadingData.flags & SHADINGFLAGS_HASFINISHED))
 	{
 		clrngMrg31k3pStream randomStream;
@@ -179,16 +181,14 @@ __kernel void intersectAndShade(
 				&shadingData,
 				&outShadingData,
 				&outShadowShadingData);
-
-			unsigned int newIndex = atomic_inc(&inputData->numRays);
-			outRays[newIndex] = outShadingData;
 		} else {
-			//outShadingData.flags = SHADINGFLAGS_HASFINISHED;
+			outShadingData.flags = SHADINGFLAGS_HASFINISHED;
 			outShadowShadingData.flags = SHADINGFLAGS_HASFINISHED;
 		}
+
+		outRays[gid] = outShadingData;
 		outShadowRays[gid] = outShadowShadingData;
 
-		
 		// Store random streams
 		clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 	}
