@@ -12,7 +12,7 @@
 #include "bvh.cl"
 #include "shading.cl"
 #include "camera.cl"
-
+#include "atomic.cl"
 
 typedef struct
 {
@@ -126,19 +126,19 @@ __kernel void intersectAndShade(
 	__global clrngMrg31k3pHostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
-
-	if (gid >= inputData->numInRays)
-		return;
-
-	ShadingData shadingData = inRays[gid];
+	bool outRay = false;
 	ShadingData outShadingData;
 	ShadingData outShadowShadingData;
-	outShadingData.outputPixel = shadingData.outputPixel;
-	outShadowShadingData.outputPixel = shadingData.outputPixel;
-	outShadingData.flags = 0;
-	outShadowShadingData.flags = 0;
-	if (!(shadingData.flags & SHADINGFLAGS_HASFINISHED))
+
+	if (gid < inputData->numInRays)
 	{
+		ShadingData shadingData = inRays[gid];
+		outShadingData.outputPixel = shadingData.outputPixel;
+		outShadowShadingData.outputPixel = shadingData.outputPixel;
+		outShadingData.flags = 0;
+		outShadowShadingData.flags = 0;
+		
+
 		clrngMrg31k3pStream randomStream;
 		clrngMrg31k3pCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
@@ -186,19 +186,18 @@ __kernel void intersectAndShade(
 				&shadingData,
 				&outShadingData,
 				&outShadowShadingData);
-
-			int index = atomic_inc(&inputData->numOutRays);
-			outRays[index] = outShadingData;
-		} else {
-			outShadingData.flags = SHADINGFLAGS_HASFINISHED;
-			outShadowShadingData.flags = SHADINGFLAGS_HASFINISHED;
+			outRay = true;
 		}
-
-		//outRays[gid] = outShadingData;
-		outShadowRays[gid] = outShadowShadingData;
 
 		// Store random streams
 		clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+	}
+
+	int index = workgroup_counter_inc(&inputData->numOutRays, outRay);//atomic_inc(&inputData->numOutRays);
+	if (outRay)
+	{
+		outRays[index] = outShadingData;
+		outShadowRays[index] = outShadowShadingData;
 	}
 }
 

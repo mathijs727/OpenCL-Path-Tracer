@@ -24,8 +24,8 @@
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
 
-const size_t RAYS_PER_BLOCK_HORIZONTAL = 1279;
-const size_t RAYS_PER_BLOCK_VERTICAL = 719;
+const size_t RAYS_PER_BLOCK_HORIZONTAL = 640;
+const size_t RAYS_PER_BLOCK_VERTICAL = 360;
 const size_t RAYS_PER_BLOCK = RAYS_PER_BLOCK_HORIZONTAL * RAYS_PER_BLOCK_VERTICAL;
 
 struct KernelData
@@ -429,9 +429,9 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	int inRayBuffer = 0;
 	int outRayBuffer = 1;
 
-	for (size_t x = 0; x < _scr_width - RAYS_PER_BLOCK_HORIZONTAL; x += RAYS_PER_BLOCK_HORIZONTAL)
+	for (size_t x = 0; x <= _scr_width - RAYS_PER_BLOCK_HORIZONTAL; x += RAYS_PER_BLOCK_HORIZONTAL)
 	{
-		for (size_t y = 0; y < _scr_height - RAYS_PER_BLOCK_VERTICAL; y += RAYS_PER_BLOCK_VERTICAL)
+		for (size_t y = 0; y <= _scr_height - RAYS_PER_BLOCK_VERTICAL; y += RAYS_PER_BLOCK_VERTICAL)
 		{
 			data.offsetX = (u32)x;
 			data.offsetY = (u32)y;
@@ -500,6 +500,8 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 					sizeof(KernelData),
 					&updatedKernelData);
 				activeRayCount = updatedKernelData.numInRays;
+				if (activeRayCount == 0)
+					break;
 				//std::cout << "Rays left over:" << activeRayCount << std::endl;
 
 
@@ -514,10 +516,11 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 				_intersect_shadows_kernel.setArg(7, _sub_bvh[_active_buffers]);
 				_intersect_shadows_kernel.setArg(8, _top_bvh[_active_buffers]);
 
+				//std::cout << "Ray count: " << activeRayCount << std::endl;
 				err = _queue.enqueueNDRangeKernel(
 					_intersect_shadows_kernel,
 					cl::NullRange,
-					cl::NDRange(RAYS_PER_BLOCK),
+					cl::NDRange(roundUp(activeRayCount, 64)),
 					cl::NDRange(64));
 				checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
@@ -533,15 +536,8 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 				checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
 
-
-				// Wait for the block to finish. We dont want the next block to use the same data.
-				// TODO: make blocks very large and schedule using events instead of cpu sync?
-				_queue.finish();
-
+				// What used to be output is now the input to the pass
 				std::swap(inRayBuffer, outRayBuffer);
-
-				if (activeRayCount < 64)
-					break;
 			}
 		}
 	}
