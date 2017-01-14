@@ -7,6 +7,8 @@
 #define barrier64(type) barrier(type)
 #endif
 
+// Write to local buffer and parallel prefix sum
+// http://http.developer.nvidia.com/GPUGems3/gpugems3_ch39.html
 uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 {
 	size_t lid = get_local_id(0);
@@ -63,8 +65,8 @@ uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 }
 
 
-/*
-uint workgroup_counter_inc(__global volatile uint* counter, bool active)
+// Write to local buffer and naive prefix sum using forloop
+/*uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 {
 	size_t lid = get_local_id(0);
 	__local uint data[64];
@@ -86,11 +88,10 @@ uint workgroup_counter_inc(__global volatile uint* counter, bool active)
  	barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 
 	return globalOffset + localOffset;
-}
-*/
+}*/
 
 
-
+// Use a local atomic
 /*uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 {
 	size_t lid = get_local_id(0);
