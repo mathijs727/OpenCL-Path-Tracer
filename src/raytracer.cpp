@@ -502,7 +502,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 				activeRayCount = updatedKernelData.numInRays;
 				if (activeRayCount == 0)
 					break;
-				std::cout << "Rays left over:" << activeRayCount << std::endl;
+				//std::cout << "Rays left over:" << activeRayCount << std::endl;
 
 
 

@@ -2,7 +2,7 @@
 #define __ATOMIC_CL
 
 #ifdef __GPU__// Ifdef AMD GPU which has 64 thread wavefront so we dont need memfence assuming workgroup size is 64
-#define barrier64(type) barrier(type)
+#define barrier64(type)
 #else
 #define barrier64(type) barrier(type)
 #endif
@@ -10,15 +10,12 @@
 uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 {
 	size_t lid = get_local_id(0);
-	int offset = 1;
 	__local uint data[64];
-
-	return atomic_inc(counter);
-
+	int offset = 1;
+	
 	data[lid] = active;
-	barrier(CLK_LOCAL_MEM_FENCE);
 
-	/*for (int d = 64/2; d > 0; d /= 2)
+	for (int d = 64/2; d > 0; d /= 2)
 	{
 		barrier64(CLK_LOCAL_MEM_FENCE);
 		if (lid < d)
@@ -51,12 +48,7 @@ uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 
 	barrier64(CLK_LOCAL_MEM_FENCE);
 
-	uint localOffset = data[lid];*/
-	uint localOffset = 0;
-	for (int i = 0; i < lid; i++)
-	{
-		localOffset += data[lid];
-	}
+	uint localOffset = data[lid];
 
 	__local uint globalOffset;
 	if (lid == 63)
@@ -65,10 +57,37 @@ uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 		globalOffset = atomic_add(counter, localCount);
 	}
 
-	barrier64(CLK_GLOBAL_MEM_FENCE);
+	barrier64(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
 	return globalOffset + localOffset;
 }
+
+
+/*
+uint workgroup_counter_inc(__global volatile uint* counter, bool active)
+{
+	size_t lid = get_local_id(0);
+	__local uint data[64];
+	
+	data[lid] = active;
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	uint localOffset = 0;
+	for (int i = 0; i < lid; i++)
+		localOffset += data[i];
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	__local uint globalOffset;
+	if (lid == 63)
+		globalOffset = atomic_add(counter, localOffset + active);
+
+ 	barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+
+	return globalOffset + localOffset;
+}
+*/
 
 
 
