@@ -10,35 +10,15 @@
 uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 {
 	size_t lid = get_local_id(0);
-	__local volatile uint localCounter;
-	__local uint globalOffset;
-	
-	if (lid == 0)
-		localCounter = 0;
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	uint localOffset = 0;
-	if (active)
-		localOffset = atomic_inc(&localCounter);
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	if (lid == 0)
-		globalOffset = atomic_add(counter, localCounter);
-
- 	barrier(CLK_GLOBAL_MEM_FENCE);
-
-	return globalOffset + localOffset;
-
-
-
-	/*int offset = 1;
+	int offset = 1;
 	__local uint data[64];
-	
-	data[lid] = active;
 
-	for (int d = 64/2; d > 0; d /= 2)
+	return atomic_inc(counter);
+
+	data[lid] = active;
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	/*for (int d = 64/2; d > 0; d /= 2)
 	{
 		barrier64(CLK_LOCAL_MEM_FENCE);
 		if (lid < d)
@@ -71,9 +51,14 @@ uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 
 	barrier64(CLK_LOCAL_MEM_FENCE);
 
-	uint localOffset = data[lid];
+	uint localOffset = data[lid];*/
+	uint localOffset = 0;
+	for (int i = 0; i < lid; i++)
+	{
+		localOffset += data[lid];
+	}
 
-	uint globalOffset;
+	__local uint globalOffset;
 	if (lid == 63)
 	{
 		uint localCount = localOffset + active;
@@ -82,8 +67,10 @@ uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 
 	barrier64(CLK_GLOBAL_MEM_FENCE);
 
-	return globalOffset + localOffset;*/
+	return globalOffset + localOffset;
 }
+
+
 
 /*uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 {
@@ -94,18 +81,18 @@ uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 	if (lid == 0)
 		localCounter = 0;
 
-	barrier64(CLK_LOCAL_MEM_FENCE);
+	barrier(CLK_LOCAL_MEM_FENCE);
 
 	uint localOffset = 0;
 	if (active)
 		localOffset = atomic_inc(&localCounter);
 
-	barrier64(CLK_LOCAL_MEM_FENCE);
+	barrier(CLK_LOCAL_MEM_FENCE);
 
 	if (lid == 0)
 		globalOffset = atomic_add(counter, localCounter);
 
- 	barrier64(CLK_GLOBAL_MEM_FENCE);
+ 	barrier(CLK_GLOBAL_MEM_FENCE);
 
 	return globalOffset + localOffset;
 }*/

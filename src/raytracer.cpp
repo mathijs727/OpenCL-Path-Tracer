@@ -24,8 +24,8 @@
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
 
-const size_t RAYS_PER_BLOCK_HORIZONTAL = 640;
-const size_t RAYS_PER_BLOCK_VERTICAL = 360;
+const size_t RAYS_PER_BLOCK_HORIZONTAL = 1280;
+const size_t RAYS_PER_BLOCK_VERTICAL = 240;
 const size_t RAYS_PER_BLOCK = RAYS_PER_BLOCK_HORIZONTAL * RAYS_PER_BLOCK_VERTICAL;
 
 struct KernelData
@@ -502,7 +502,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 				activeRayCount = updatedKernelData.numInRays;
 				if (activeRayCount == 0)
 					break;
-				//std::cout << "Rays left over:" << activeRayCount << std::endl;
+				std::cout << "Rays left over:" << activeRayCount << std::endl;
 
 
 

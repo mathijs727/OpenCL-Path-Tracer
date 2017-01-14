@@ -129,10 +129,10 @@ __kernel void intersectAndShade(
 	bool outRay = false;
 	ShadingData outShadingData;
 	ShadingData outShadowShadingData;
+	ShadingData shadingData = inRays[gid];
 
-	if (gid < inputData->numInRays)
+	if (gid < inputData->numInRays && !(shadingData.flags & SHADINGFLAGS_HASFINISHED))
 	{
-		ShadingData shadingData = inRays[gid];
 		outShadingData.outputPixel = shadingData.outputPixel;
 		outShadowShadingData.outputPixel = shadingData.outputPixel;
 		outShadingData.flags = 0;
@@ -193,7 +193,7 @@ __kernel void intersectAndShade(
 		clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 	}
 
-	int index = workgroup_counter_inc(&inputData->numOutRays, outRay);//atomic_inc(&inputData->numOutRays);
+	int index = atomic_inc(&inputData->numOutRays);//workgroup_counter_inc(&inputData->numOutRays, outRay);//atomic_inc(&inputData->numOutRays);
 	if (outRay)
 	{
 		outRays[index] = outShadingData;
