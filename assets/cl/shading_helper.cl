@@ -14,6 +14,13 @@
 
 #define EPSILON 0.0001f
 
+__constant sampler_t sampler =
+	CLK_NORMALIZED_COORDS_TRUE |
+	CLK_ADDRESS_REPEAT |
+	CLK_FILTER_LINEAR;
+
+
+
 // Random int between start (inclusive) and stop (exclusive)
 int randInt(clrngMrg31k3pStream* randomStream, int start, int stop)
 {
@@ -121,5 +128,30 @@ void randomPointOnLight(
 	*outPoint = uniformSampleTriangle(lightTriangle.vertices, randomStream);
 	*outLightArea = triangleArea(lightTriangle.vertices);
 }
+
+float3 diffuseColour(
+	const __global Material* material,
+	VertexData* vertices,
+	float2 uv,
+	image2d_array_t textures)
+{
+	if (material->diffuse.tex_id == -1)
+	{
+		return material->diffuse.diffuseColour;
+	} else {
+		float2 t0 = vertices[0].texCoord;
+		float2 t1 = vertices[1].texCoord;
+		float2 t2 = vertices[2].texCoord;
+		float2 tex_coords = t0 + (t1-t0) * uv.x + (t2-t0) * uv.y;
+
+		float4 texCoords3d = (float4)(tex_coords.x, 1.0f - tex_coords.y, material->diffuse.tex_id, 0.0f);
+		float4 colourWithAlpha = read_imagef(
+			textures,
+			sampler,
+			texCoords3d);
+		return colourWithAlpha.xyz;
+	}
+}
+
 
 #endif// __SHADER_HELPER_CL

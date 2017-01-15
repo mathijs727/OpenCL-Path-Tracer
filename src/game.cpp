@@ -10,6 +10,7 @@
 #include "mesh_sequence.h"
 #include "bvh_test.h"
 #include <iostream>
+#include <glm\gtx\euler_angles.hpp>
 
 using namespace raytracer;
 using namespace Tmpl8;
@@ -25,29 +26,16 @@ void Game::Init()
 
 	Transform camera_transform;
 	_camera_euler.y = PI;
+
+	// Cornell
 	camera_transform.location = glm::vec3(0.15, 1.21, 2.5);
 	camera_transform.orientation = glm::quat(_camera_euler); // identity
+
+	// Sponza
 	//camera_transform.location = glm::vec3(2.5f, 2.0f, 0.01f);
 	//camera_transform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
-	//camera_transform.location = glm::vec3(6.425, 0.695, -3.218);
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.0f);
 
-	{
-		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(-3, 1, 0));
-		//_scene->add_light(light);
-	}
-	{
-		Light light = Light::Point(glm::vec3(0.4f, 0.4f, 0.4f), glm::vec3(5, 1,0));
-		//_scene->add_light(light);
-	}
-	{
-		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(-1, -1, -1));
-		_scene->add_light(light);
-	}
-	{
-		Light light = Light::Directional(glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3(0, -1, 0));
-		_scene->add_light(light);
-	}
 	
 	{
 		auto cornell = std::make_shared<Mesh>();
@@ -58,18 +46,18 @@ void Game::Init()
 	/*{
 		Transform transform;
 		auto groundPlane = std::make_shared<Mesh>();
-		groundPlane->loadFromFile("assets/3dmodels/plane/plane.obj", Material::Diffuse(glm::vec3(0.8f, 0.8f, 0.8f)), transform);
-		_scene->add_node(groundPlane);
+		groundPlane->loadFromFile("assets/3dmodels/plane/plane.obj", Material::Diffuse(glm::vec3(0.8f, 0.8f, 0.8f)));
+		_scene->add_node(groundPlane, transform);
 	}
 
 	{
 		Transform transform;
-		transform.location = glm::vec3(0, 5, -1);
-		transform.scale = glm::vec3(0.1f, 1, 0.1f);
+		transform.location = glm::vec3(0, 10, -0.5f);
+		transform.scale = glm::vec3(1, 1, 0.3f);
 		transform.orientation = glm::quat(glm::vec3(PI, 0, 0));// Flip upside down
 		auto lightPlane = std::make_shared<Mesh>();
-		lightPlane->loadFromFile("assets/3dmodels/plane/plane.obj", Material::Emissive(glm::vec3(0.8f, 0.8f, 0.8f) * 15.0f), transform);
-		_scene->add_node(lightPlane);
+		lightPlane->loadFromFile("assets/3dmodels/plane/plane.obj", Material::Emissive(glm::vec3(0.8f, 0.8f, 0.8f) * 15.0f));
+		_scene->add_node(lightPlane, transform);
 	}*/
 
 	{
@@ -87,7 +75,9 @@ void Game::Init()
 		transform.scale = glm::vec3(0.005f);
 		auto sponza = std::make_shared<Mesh>();
 		sponza->loadFromFile("assets/3dmodels/sponza-crytek/sponza.obj");
-		_scene->add_node(sponza, transform);
+		_scene->add_node(sponza , transform);
+		BvhTester test = BvhTester(sponza);
+		test.test();
 	}*/
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);

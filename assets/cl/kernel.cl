@@ -1,7 +1,7 @@
 #define NO_PARALLEL_RAYS// When a ray is parallel to axis, the intersection tests are really slow
 #define USE_BVH
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
-#define MAX_ITERATIONS 5
+#define MAX_ITERATIONS 3
 
 #include <clRNG/mrg31k3p.clh>
 #include "shapes.cl"
@@ -130,9 +130,7 @@ __kernel void intersectShadows(
 	if (!hit)
 	{
 		outputPixels[shadowData.outputPixel] += shadowData.multiplier;
-	}/* else {
-		outputPixels[shadowData.outputPixel] += (float3)(0.5f, 0, 0);
-	}*/
+	}
 }
 
 __kernel void intersectAndShade(
@@ -214,6 +212,7 @@ __kernel void intersectAndShade(
 				&outShadowShadingData);
 			outShadingData.numBounces = shadingData.numBounces + 1;
 			//outRay = (outShadingData.numBounces < 5);
+			//outputPixels[shadingData.outputPixel] += outShadingData.ray.direction;
 		}
 
 		// Store random streams
