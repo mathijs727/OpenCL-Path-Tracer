@@ -16,8 +16,8 @@ typedef struct {
 	int flags;// 4 bytes
 	union
 	{
-		float rayLength;// 4 bytes
-		int numBounces;
+		float rayLength;// Only shadows use this
+		int numBounces;// And shadows dont bounce
 	};
 	// Aligned to 16 bytes so struct has size of 64 bytes
 } ShadingData;

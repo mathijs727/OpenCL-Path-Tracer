@@ -3,6 +3,7 @@
 #include "scene.h"
 #include "raytracer.h"
 #include "gloutput.h"
+#include "imgui/imgui.h"
 #include "mesh_sequence.h"
 #include <memory>
 #include <unordered_map>
@@ -25,6 +26,7 @@ public:
 	void Shutdown() { /* implement if you want code to be executed upon app exit */ };
 	void HandleInput( float dt );
 	void Tick( float dt );
+	void UpdateGui();
 	void AxisEvent(int axis, float value);
 	void MouseUp( int _Button ) { /* implement if you want to detect mouse button presses */ }
 	void MouseDown( int _Button ) { /* implement if you want to detect mouse button presses */ }
@@ -45,6 +47,8 @@ private:
 
 	std::unique_ptr<raytracer::RayTracer> _ray_tracer;
 	GLOutput _out;
+
+	ImVec4 _my_special_color;
 };
 
 }; // namespace Tmpl8

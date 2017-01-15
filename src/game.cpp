@@ -85,6 +85,7 @@ void Game::Init()
 	_ray_tracer->SetScene(_scene);
 	_ray_tracer->SetTarget(_out.GetGLTexture());
 
+	_my_special_color = ImColor(114, 144, 154);
 }
 
 // -----------------------------------------------------------
@@ -125,6 +126,22 @@ void Game::Tick( float dt )
 
 	_ray_tracer->RayTrace(*_camera);
 	_out.Render();
+}
+
+void Tmpl8::Game::UpdateGui()
+{
+	// Taken from the example code
+	// 1. Show a simple window
+	// Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
+	ImGui::Begin("My First Widget");
+
+	static float f = 0.0f;
+	ImGui::Text("Hello, world!");
+	ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+	ImGui::ColorEdit3("clear color", (float*)&_my_special_color);
+	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+	ImGui::End();
 }
 
 void Tmpl8::Game::AxisEvent(int axis, float value) {

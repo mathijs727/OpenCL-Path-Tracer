@@ -14,6 +14,8 @@
 
 #include "template.h"
 #include "../game.h"
+#include "../imgui/imgui.h"
+#include "../imgui/imgui_impl_sdl_gl3.h"
 #ifdef _WIN32
 #include <io.h>
 #endif
@@ -114,10 +116,13 @@ int main( int argc, char **argv )
 	}
 	glewInit();
 
+	ImGui_ImplSdlGL3_Init(window);
+
 	int exitapp = 0;
 	auto timer = Timer();
 	game = new Game();
-	SDL_SetRelativeMouseMode(SDL_TRUE);
+	bool relativeMouse = true;
+	SDL_SetRelativeMouseMode(relativeMouse ? SDL_TRUE : SDL_FALSE);
 	while (!exitapp)
 	{
 		if (firstframe)
@@ -146,13 +151,19 @@ int main( int argc, char **argv )
 					exitapp = 1;
 					// find other keys here: http://sdl.beuc.net/sdl.wiki/SDLKey
 				}
+				else if (event.key.keysym.sym == SDLK_LALT)
+				{
+					relativeMouse = !relativeMouse;
+					SDL_SetRelativeMouseMode(relativeMouse ? SDL_TRUE : SDL_FALSE);
+				}
 				game->KeyDown(event.key.keysym.scancode);
 				break;
 			case SDL_KEYUP:
 				game->KeyUp(event.key.keysym.scancode);
 				break;
 			case SDL_MOUSEMOTION:
-				game->MouseMove(event.motion.xrel, event.motion.yrel);
+				if (relativeMouse)
+					game->MouseMove(event.motion.xrel, event.motion.yrel);
 				break;
 			case SDL_MOUSEBUTTONUP:
 				game->MouseUp(event.button.button);
@@ -165,10 +176,15 @@ int main( int argc, char **argv )
 			}
 		}
 
+		ImGui_ImplSdlGL3_NewFrame(window);
+
 		// calculate frame time and pass it to game->Tick
 		game->Tick(lastftime);
+		game->UpdateGui();
 		lastftime = timer.elapsed();
 		timer.reset();
+
+		ImGui::Render();
 
 		//std::cout << "Frame time: " << lastftime * 1000 << "ms" << std::endl;
 		SDL_GL_SwapWindow(window);
@@ -177,6 +193,9 @@ int main( int argc, char **argv )
 #endif
 	}
 	game->Shutdown();
+	ImGui_ImplSdlGL3_Shutdown();
+	SDL_GL_DeleteContext(context);
+	SDL_DestroyWindow(window);
 	SDL_Quit();
 	return 1;
 #else
