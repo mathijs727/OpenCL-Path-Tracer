@@ -19,12 +19,12 @@
 #include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
-//#define OPENCL_GL_INTEROP
+#define OPENCL_GL_INTEROP
 //#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
 
-#define MAX_ACTIVE_RAYS 512*512
+#define MAX_ACTIVE_RAYS 512*256
 
 struct KernelData
 {
@@ -411,9 +411,10 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	data.scrHeight = (u32)_scr_height;
 
 	data.numInRays = 0;
-	data.numShadowRays = 0;
 	data.numOutRays = 0;
+	data.numShadowRays = 0;
 	data.maxRays = MAX_ACTIVE_RAYS;
+	data.newRays = 0;
 
 	cl_int err = _queue.enqueueWriteBuffer(
 		_ray_kernel_data,
@@ -464,6 +465,20 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 
 
 
+		// Request the output kernel data so we know the amount of surviving rays
+		cl::Event updatedKernelDataEvent;
+		KernelData updatedKernelData;
+		err = _queue.enqueueReadBuffer(
+			_ray_kernel_data,
+			CL_FALSE,
+			0,
+			sizeof(KernelData),
+			&updatedKernelData,
+			nullptr,
+			&updatedKernelDataEvent);
+
+
+
 		_intersect_shadows_kernel.setArg(0, _accumulation_buffer);
 		_intersect_shadows_kernel.setArg(1, _shadow_rays_buffer);
 		_intersect_shadows_kernel.setArg(2, _ray_kernel_data);
@@ -480,18 +495,12 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 			cl::NDRange(MAX_ACTIVE_RAYS),
 			cl::NDRange(64));
 		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+		_queue.flush();
+		
 
 
-
-		// Know when to stop
-		// TODO: request before shadow kernel and evaluate the result after so we dont have to block
-		KernelData updatedKernelData;
-		err = _queue.enqueueReadBuffer(
-			_ray_kernel_data,
-			CL_TRUE,
-			0,
-			sizeof(KernelData),
-			&updatedKernelData);
+		// Stop if we reach 0 out rays and we processed the whole screen
+		updatedKernelDataEvent.wait();
 		uint maxRays = _scr_width * _scr_height;
 		if (updatedKernelData.numOutRays == 0 &&// We are out of rays
 		   (updatedKernelData.rayOffset + updatedKernelData.newRays >= maxRays))// And we wont generate new ones
@@ -507,6 +516,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 			cl::NDRange(1),
 			cl::NDRange(1));
 		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+
 
 
 		// What used to be output is now the input to the pass

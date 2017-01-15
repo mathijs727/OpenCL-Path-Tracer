@@ -89,7 +89,7 @@ __kernel void intersectShadows(
 	__global float3* outputPixels,
 	__global ShadingData* inShadowRays,
 
-	__global KernelData* inputData,
+	volatile __global KernelData* inputData,
 	__global VertexData* vertices,
 	__global TriangleData* triangles,
 	__global EmissiveTriangle* emissiveTriangles,
@@ -129,7 +129,9 @@ __kernel void intersectShadows(
 	if (!hit)
 	{
 		outputPixels[shadowData.outputPixel] += shadowData.multiplier;
-	}
+	}/* else {
+		outputPixels[shadowData.outputPixel] += (float3)(0.5f, 0, 0);
+	}*/
 }
 
 __kernel void intersectAndShade(
@@ -210,7 +212,7 @@ __kernel void intersectAndShade(
 				&outShadingData,
 				&outShadowShadingData);
 			outShadingData.numBounces = shadingData.numBounces + 1;
-			outRay = (outShadingData.numBounces <= 1);
+			outRay = (outShadingData.numBounces < 5);
 		}
 
 		// Store random streams
@@ -227,7 +229,7 @@ __kernel void intersectAndShade(
 }
 
 __kernel void updateKernelData(
-	__global KernelData* data)
+	volatile __global KernelData* data)
 {
 	data->numInRays = data->numOutRays;
 	data->numOutRays = 0;

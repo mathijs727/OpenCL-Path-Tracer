@@ -73,19 +73,19 @@ uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 	
 	data[lid] = active;
 
-	barrier(CLK_LOCAL_MEM_FENCE);
+	barrier64(CLK_LOCAL_MEM_FENCE);
 
 	uint localOffset = 0;
 	for (int i = 0; i < lid; i++)
 		localOffset += data[i];
 
-	barrier(CLK_LOCAL_MEM_FENCE);
+	barrier64(CLK_LOCAL_MEM_FENCE);
 
 	__local uint globalOffset;
 	if (lid == 63)
 		globalOffset = atomic_add(counter, localOffset + active);
 
- 	barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+ 	barrier64(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 
 	return globalOffset + localOffset;
 }*/
@@ -101,18 +101,18 @@ uint workgroup_counter_inc(__global volatile uint* counter, bool active)
 	if (lid == 0)
 		localCounter = 0;
 
-	barrier(CLK_LOCAL_MEM_FENCE);
+	barrier64(CLK_LOCAL_MEM_FENCE);
 
 	uint localOffset = 0;
 	if (active)
 		localOffset = atomic_inc(&localCounter);
 
-	barrier(CLK_LOCAL_MEM_FENCE);
+	barrier64(CLK_LOCAL_MEM_FENCE);
 
 	if (lid == 0)
 		globalOffset = atomic_add(counter, localCounter);
 
- 	barrier(CLK_GLOBAL_MEM_FENCE);
+ 	barrier64(CLK_GLOBAL_MEM_FENCE);
 
 	return globalOffset + localOffset;
 }*/
