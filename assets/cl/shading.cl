@@ -299,7 +299,7 @@ float3 neeShading(
 		float3 Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
 		outShadowData->multiplier = Ld * inData->multiplier;
 		outShadowData->ray = createRay(intersection + L * EPSILON, L);
-		outShadowData->rayLength = dist;
+		outShadowData->rayLength = dist - 2 * EPSILON;
 	} else {
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 	}

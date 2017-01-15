@@ -99,13 +99,13 @@ __kernel void intersectShadows(
 {
 	size_t gid = get_global_id(0);
 	ShadingData shadowData = inShadowRays[gid];
-	//inShadowRays[gid].flags = SHADINGFLAGS_HASFINISHED;
-	if (gid >= (inputData->numInRays + inputData->newRays))
+	if (gid >= inputData->numOutRays)
 		return;
-	//if (shadowData.flags & SHADINGFLAGS_HASFINISHED)
-	//	return;
+	inShadowRays[gid].flags = SHADINGFLAGS_HASFINISHED;
+	if (shadowData.flags & SHADINGFLAGS_HASFINISHED)
+		return;
 
-	/*Scene scene;
+	Scene scene;
 	loadScene(
 		vertices,
 		triangles,
@@ -121,7 +121,7 @@ __kernel void intersectShadows(
 		&scene,
 		&shadowData.ray,
 		true,
-		shadowData.rayLength,
+		shadowData.rayLength,//-0.01f,
 		NULL,
 		NULL,
 		NULL,
@@ -129,8 +129,7 @@ __kernel void intersectShadows(
 	if (!hit)
 	{
 		outputPixels[shadowData.outputPixel] += shadowData.multiplier;
-	}*/
-	//outputPixels[shadowData.outputPixel] += shadowData.ray.origin;
+	}
 }
 
 __kernel void intersectAndShade(
@@ -211,10 +210,7 @@ __kernel void intersectAndShade(
 				&outShadingData,
 				&outShadowShadingData);
 			outShadingData.numBounces = shadingData.numBounces + 1;
-			outShadowShadingData.flags = 0;
-			outRay = (outShadingData.numBounces <= 2);
-		} else {
-			//outputPixels[shadingData.outputPixel] += (float3)(1,0,0);
+			outRay = (outShadingData.numBounces <= 1);
 		}
 
 		// Store random streams
@@ -226,8 +222,7 @@ __kernel void intersectAndShade(
 	{
 		//int index = atomic_inc(&inputData->numOutRays);
 		outRays[index] = outShadingData;
-		//outShadowRays[index] = outShadowShadingData;
-		outputPixels[shadingData.outputPixel] += (float3)(0.1f,0,0);// outShadowShadingData.ray.origin;
+		outShadowRays[index] = outShadowShadingData;
 	}
 }
 

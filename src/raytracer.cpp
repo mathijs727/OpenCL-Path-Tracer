@@ -19,7 +19,7 @@
 #include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
-#define OPENCL_GL_INTEROP
+//#define OPENCL_GL_INTEROP
 //#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
@@ -426,7 +426,6 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	static_assert(MAX_ACTIVE_RAYS, "MAX_ACTIVE_RAYS must be a multiple of 64 (work group size)");
 	int inRayBuffer = 0;
 	int outRayBuffer = 1;
-	bool nextBreak = false;
 	while (true)
 	{
 		// Generate primary rays and fill the emptyness
@@ -482,8 +481,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 			cl::NDRange(64));
 		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
-		if (nextBreak)
-			break;
+
 
 		// Know when to stop
 		// TODO: request before shadow kernel and evaluate the result after so we dont have to block
@@ -495,9 +493,11 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 			sizeof(KernelData),
 			&updatedKernelData);
 		uint maxRays = _scr_width * _scr_height;
-		if (updatedKernelData.rayOffset + updatedKernelData.newRays >= maxRays)
-			nextBreak = true;
-		
+		if (updatedKernelData.numOutRays == 0 &&// We are out of rays
+		   (updatedKernelData.rayOffset + updatedKernelData.newRays >= maxRays))// And we wont generate new ones
+			break;
+
+
 
 		// Set num input rays to num output rays and set num out rays and num shadow rays to 0
 		_update_kernel_data_kernel.setArg(0, _ray_kernel_data);
