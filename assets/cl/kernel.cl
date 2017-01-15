@@ -1,6 +1,7 @@
 #define NO_PARALLEL_RAYS// When a ray is parallel to axis, the intersection tests are really slow
 #define USE_BVH
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
+#define MAX_ITERATIONS 5
 
 #include <clRNG/mrg31k3p.clh>
 #include "shapes.cl"
@@ -151,12 +152,12 @@ __kernel void intersectAndShade(
 	__global clrngMrg31k3pHostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
-	bool outRay = false;
+	bool hit = false;
 	ShadingData outShadingData;
 	ShadingData outShadowShadingData;
 	ShadingData shadingData = inRays[gid];
 
-	if (gid < (inputData->numInRays + inputData->newRays))
+	if (gid < (inputData->numInRays + inputData->newRays) && shadingData.flags != SHADINGFLAGS_HASFINISHED)
 	{
 		outShadingData.outputPixel = shadingData.outputPixel;
 		outShadowShadingData.outputPixel = shadingData.outputPixel;
@@ -184,7 +185,7 @@ __kernel void intersectAndShade(
 		float t;
 		float2 uv;
 		const __global float* invTransform;
-		bool hit = traceRay(
+		hit = traceRay(
 			&scene,
 			&shadingData.ray,
 			false,
@@ -212,17 +213,19 @@ __kernel void intersectAndShade(
 				&outShadingData,
 				&outShadowShadingData);
 			outShadingData.numBounces = shadingData.numBounces + 1;
-			outRay = (outShadingData.numBounces < 5);
+			//outRay = (outShadingData.numBounces < 5);
 		}
 
 		// Store random streams
 		clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 	} 
 
-	int index = workgroup_counter_inc(&inputData->numOutRays, outRay);//atomic_inc(&inputData->numOutRays);
-	if (outRay)
+	int index = workgroup_counter_inc(&inputData->numOutRays, hit);//atomic_inc(&inputData->numOutRays);
+	if (hit)
 	{
-		//int index = atomic_inc(&inputData->numOutRays);
+		if (outShadingData.numBounces >= MAX_ITERATIONS)
+			outShadingData.flags = SHADINGFLAGS_HASFINISHED;
+
 		outRays[index] = outShadingData;
 		outShadowRays[index] = outShadowShadingData;
 	}

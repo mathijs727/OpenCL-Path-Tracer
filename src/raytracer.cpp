@@ -427,18 +427,22 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	static_assert(MAX_ACTIVE_RAYS, "MAX_ACTIVE_RAYS must be a multiple of 64 (work group size)");
 	int inRayBuffer = 0;
 	int outRayBuffer = 1;
+	u32 survivingRays = MAX_ACTIVE_RAYS;
 	while (true)
 	{
-		// Generate primary rays and fill the emptyness
-		_generate_rays_kernel.setArg(0, _rays_buffers[inRayBuffer]);
-		_generate_rays_kernel.setArg(1, _ray_kernel_data);
-		_generate_rays_kernel.setArg(2, _random_streams);
-		err = _queue.enqueueNDRangeKernel(
-			_generate_rays_kernel,
-			cl::NullRange,
-			cl::NDRange(MAX_ACTIVE_RAYS),
-			cl::NDRange(64));
-		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+		if (survivingRays != MAX_ACTIVE_RAYS)
+		{
+			// Generate primary rays and fill the emptyness
+			_generate_rays_kernel.setArg(0, _rays_buffers[inRayBuffer]);
+			_generate_rays_kernel.setArg(1, _ray_kernel_data);
+			_generate_rays_kernel.setArg(2, _random_streams);
+			err = _queue.enqueueNDRangeKernel(
+				_generate_rays_kernel,
+				cl::NullRange,
+				cl::NDRange(roundUp(MAX_ACTIVE_RAYS - survivingRays, 32)),
+				cl::NullRange);//cl::NDRange(64));
+			checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+		}
 
 
 
@@ -470,42 +474,38 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		KernelData updatedKernelData;
 		err = _queue.enqueueReadBuffer(
 			_ray_kernel_data,
-			CL_FALSE,
+			CL_TRUE,
 			0,
 			sizeof(KernelData),
-			&updatedKernelData,
-			nullptr,
-			&updatedKernelDataEvent);
-
-
-
-		_intersect_shadows_kernel.setArg(0, _accumulation_buffer);
-		_intersect_shadows_kernel.setArg(1, _shadow_rays_buffer);
-		_intersect_shadows_kernel.setArg(2, _ray_kernel_data);
-		_intersect_shadows_kernel.setArg(3, _vertices[_active_buffers]);
-		_intersect_shadows_kernel.setArg(4, _triangles[_active_buffers]);
-		_intersect_shadows_kernel.setArg(5, _emissive_trangles[_active_buffers]);
-		_intersect_shadows_kernel.setArg(6, _materials[_active_buffers]);
-		_intersect_shadows_kernel.setArg(7, _sub_bvh[_active_buffers]);
-		_intersect_shadows_kernel.setArg(8, _top_bvh[_active_buffers]);
-
-		err = _queue.enqueueNDRangeKernel(
-			_intersect_shadows_kernel,
-			cl::NullRange,
-			cl::NDRange(MAX_ACTIVE_RAYS),
-			cl::NDRange(64));
-		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
-		_queue.flush();
-		
-
-
+			&updatedKernelData);
+		survivingRays = updatedKernelData.numOutRays;
 		// Stop if we reach 0 out rays and we processed the whole screen
-		updatedKernelDataEvent.wait();
+		//updatedKernelDataEvent.wait();
 		uint maxRays = _scr_width * _scr_height;
-		if (updatedKernelData.numOutRays == 0 &&// We are out of rays
-		   (updatedKernelData.rayOffset + updatedKernelData.newRays >= maxRays))// And we wont generate new ones
+		if (survivingRays == 0 &&// We are out of rays
+			(updatedKernelData.rayOffset + updatedKernelData.newRays >= maxRays))// And we wont generate new ones
 			break;
 
+
+		if (survivingRays != 0)
+		{
+			_intersect_shadows_kernel.setArg(0, _accumulation_buffer);
+			_intersect_shadows_kernel.setArg(1, _shadow_rays_buffer);
+			_intersect_shadows_kernel.setArg(2, _ray_kernel_data);
+			_intersect_shadows_kernel.setArg(3, _vertices[_active_buffers]);
+			_intersect_shadows_kernel.setArg(4, _triangles[_active_buffers]);
+			_intersect_shadows_kernel.setArg(5, _emissive_trangles[_active_buffers]);
+			_intersect_shadows_kernel.setArg(6, _materials[_active_buffers]);
+			_intersect_shadows_kernel.setArg(7, _sub_bvh[_active_buffers]);
+			_intersect_shadows_kernel.setArg(8, _top_bvh[_active_buffers]);
+
+			err = _queue.enqueueNDRangeKernel(
+				_intersect_shadows_kernel,
+				cl::NullRange,
+				cl::NDRange(roundUp(survivingRays, 32)),
+				cl::NullRange);//cl::NDRange(64));
+			checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+		}
 
 
 		// Set num input rays to num output rays and set num out rays and num shadow rays to 0
