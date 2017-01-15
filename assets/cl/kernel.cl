@@ -24,8 +24,7 @@ typedef struct
 	uint topLevelBvhRoot;
 
 	// Used for ray generation
-	uint offsetX;
-	uint offsetY;
+	uint rayOffset;
 	uint scrWidth;
 	uint scrHeight;
 
@@ -33,35 +32,57 @@ typedef struct
 	uint numInRays;
 	uint numOutRays;
 	uint numShadowRays;
+	uint maxRays;
+	uint newRays;
 } KernelData;
 
 
 
 __kernel void generatePrimaryRays(
 	__global ShadingData* outRays,
-	__global KernelData* inputData,
+	volatile __global KernelData* inputData,
 	__global clrngMrg31k3pHostStream* randomStreams)
 {
-	size_t x = get_global_id(0);
-	size_t y = get_global_id(1);
-	size_t gid = y * get_global_size(0) + x;
+	size_t gid = get_global_id(0);
+	uint rayIndex = inputData->rayOffset + gid;
+
+	// Stop when we've created all the rays
+	uint totalRays = inputData->scrWidth * inputData->scrHeight;
+	uint newRays = inputData->maxRays - inputData->numInRays;
+	if ((inputData->rayOffset + newRays) > totalRays)
+		newRays -= inputData->rayOffset + newRays - totalRays;
+
+	// Dont overflow / write out of bounds
+	if (gid >= newRays)
+		return;
 
 	clrngMrg31k3pStream randomStream;
 	clrngMrg31k3pCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
-	outRays[gid].ray = generateRayThinLens(
+	uint x = rayIndex % inputData->scrWidth;
+	uint y = rayIndex / inputData->scrHeight;
+
+	size_t outIndex = inputData->numInRays + gid;
+	outRays[outIndex].ray = generateRayPinhole(
 		&inputData->camera,
-		x + inputData->offsetX,
-		y + inputData->offsetY,
+		x,
+		y,
 		(float)inputData->scrWidth,
 		(float)inputData->scrHeight,
 		&randomStream);
-	outRays[gid].multiplier = (float3)(1, 1, 1);
-	outRays[gid].flags = SHADINGFLAGS_LASTSPECULAR;
-	outRays[gid].outputPixel = ((y + inputData->offsetY) * inputData->scrWidth + (x + inputData->offsetX));
+	outRays[outIndex].multiplier = (float3)(1, 1, 1);
+	outRays[outIndex].flags = SHADINGFLAGS_LASTSPECULAR;
+	outRays[outIndex].outputPixel = rayIndex;
+	outRays[outIndex].numBounces = 0;
 
 	// Store random streams
 	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+
+	if (gid == 0)
+	{
+		//inputData->rayOffset = newRays;
+		inputData->newRays = newRays;
+	}
 }
 
 __kernel void intersectShadows(
@@ -130,7 +151,7 @@ __kernel void intersectAndShade(
 	ShadingData outShadingData;
 	ShadingData outShadowShadingData;
 
-	if (gid < inputData->numInRays)
+	if (gid < (inputData->numInRays + inputData->newRays))
 	{
 		ShadingData shadingData = inRays[gid];
 		outShadingData.outputPixel = shadingData.outputPixel;
@@ -186,17 +207,18 @@ __kernel void intersectAndShade(
 				&shadingData,
 				&outShadingData,
 				&outShadowShadingData);
-			outRay = true;
+			outShadingData.numBounces = shadingData.numBounces + 1;
+			outRay = (outShadingData.numBounces < 4);
 		}
 
 		// Store random streams
 		clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
-	}
+	} 
 
-	int index = workgroup_counter_inc(&inputData->numOutRays, outRay);//atomic_inc(&inputData->numOutRays);
+	//int index = workgroup_counter_inc(&inputData->numOutRays, outRay);//atomic_inc(&inputData->numOutRays);
 	if (outRay)
 	{
-		//int index = atomic_inc(&inputData->numOutRays);
+		int index = atomic_inc(&inputData->numOutRays);
 		outRays[index] = outShadingData;
 		outShadowRays[index] = outShadowShadingData;
 	}
@@ -208,6 +230,8 @@ __kernel void updateKernelData(
 	data->numInRays = data->numOutRays;
 	data->numOutRays = 0;
 	data->numShadowRays = 0;
+	data->rayOffset += data->newRays;
+	data->newRays = 0;
 }
 
 /*__kernel void traceRays(

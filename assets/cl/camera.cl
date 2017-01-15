@@ -17,7 +17,7 @@ typedef struct
 } Camera;
 
 Ray generateRayPinhole(
-	__global Camera* camera,
+	volatile __global Camera* camera,
 	int x,
 	int y,
 	float width,
@@ -47,7 +47,7 @@ Ray generateRayPinhole(
 // http://http.developer.nvidia.com/GPUGems/gpugems_ch23.html
 // https://courses.cs.washington.edu/courses/cse457/99sp/projects/trace/depthoffield.doc
 Ray generateRayThinLens(
-	__global Camera* camera,
+	volatile __global Camera* camera,
 	int x,
 	int y,
 	float width,

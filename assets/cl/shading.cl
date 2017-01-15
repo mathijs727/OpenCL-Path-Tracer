@@ -18,9 +18,10 @@ enum {
 typedef struct {
 	Ray ray;// 2 * float3 = 32 bytes
 	float3 multiplier;// 16 bytes
-	size_t outputPixel;// 8 bytes?
+	size_t outputPixel;// 4/8 bytes?
+	float rayLength;// 4 bytes
 	int flags;// 4 bytes
-	int rayLength;// 4 bytes
+	int numBounces;
 	// Aligned to 16 bytes so struct has size of 64 bytes
 } ShadingData;
 
