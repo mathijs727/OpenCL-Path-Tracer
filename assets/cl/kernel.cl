@@ -60,10 +60,10 @@ __kernel void generatePrimaryRays(
 	clrngMrg31k3pCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
 	uint x = rayIndex % inputData->scrWidth;
-	uint y = rayIndex / inputData->scrHeight;
+	uint y = rayIndex / inputData->scrWidth;
 
 	size_t outIndex = inputData->numInRays + gid;
-	outRays[outIndex].ray = generateRayPinhole(
+	outRays[outIndex].ray = generateRayThinLens(
 		&inputData->camera,
 		x,
 		y,
@@ -99,11 +99,13 @@ __kernel void intersectShadows(
 {
 	size_t gid = get_global_id(0);
 	ShadingData shadowData = inShadowRays[gid];
-	if (shadowData.flags & SHADINGFLAGS_HASFINISHED)
+	//inShadowRays[gid].flags = SHADINGFLAGS_HASFINISHED;
+	if (gid >= (inputData->numInRays + inputData->newRays))
 		return;
-	inShadowRays[gid].flags = SHADINGFLAGS_HASFINISHED;
+	//if (shadowData.flags & SHADINGFLAGS_HASFINISHED)
+	//	return;
 
-	Scene scene;
+	/*Scene scene;
 	loadScene(
 		vertices,
 		triangles,
@@ -127,7 +129,8 @@ __kernel void intersectShadows(
 	if (!hit)
 	{
 		outputPixels[shadowData.outputPixel] += shadowData.multiplier;
-	}
+	}*/
+	//outputPixels[shadowData.outputPixel] += shadowData.ray.origin;
 }
 
 __kernel void intersectAndShade(
@@ -150,10 +153,10 @@ __kernel void intersectAndShade(
 	bool outRay = false;
 	ShadingData outShadingData;
 	ShadingData outShadowShadingData;
+	ShadingData shadingData = inRays[gid];
 
 	if (gid < (inputData->numInRays + inputData->newRays))
 	{
-		ShadingData shadingData = inRays[gid];
 		outShadingData.outputPixel = shadingData.outputPixel;
 		outShadowShadingData.outputPixel = shadingData.outputPixel;
 		outShadingData.flags = 0;
@@ -208,19 +211,23 @@ __kernel void intersectAndShade(
 				&outShadingData,
 				&outShadowShadingData);
 			outShadingData.numBounces = shadingData.numBounces + 1;
-			outRay = (outShadingData.numBounces < 4);
+			outShadowShadingData.flags = 0;
+			outRay = (outShadingData.numBounces <= 2);
+		} else {
+			//outputPixels[shadingData.outputPixel] += (float3)(1,0,0);
 		}
 
 		// Store random streams
 		clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 	} 
 
-	//int index = workgroup_counter_inc(&inputData->numOutRays, outRay);//atomic_inc(&inputData->numOutRays);
+	int index = workgroup_counter_inc(&inputData->numOutRays, outRay);//atomic_inc(&inputData->numOutRays);
 	if (outRay)
 	{
-		int index = atomic_inc(&inputData->numOutRays);
+		//int index = atomic_inc(&inputData->numOutRays);
 		outRays[index] = outShadingData;
-		outShadowRays[index] = outShadowShadingData;
+		//outShadowRays[index] = outShadowShadingData;
+		outputPixels[shadingData.outputPixel] += (float3)(0.1f,0,0);// outShadowShadingData.ray.origin;
 	}
 }
 

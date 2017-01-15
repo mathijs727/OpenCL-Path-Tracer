@@ -19,22 +19,15 @@
 #include <clRNG\mrg31k3p.h>
 
 //#define PROFILE_OPENCL
-//#define OPENCL_GL_INTEROP
+#define OPENCL_GL_INTEROP
 //#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
 
-#define MAX_ACTIVE_RAYS 256*256
+#define MAX_ACTIVE_RAYS 512*512
 
 struct KernelData
 {
-	/*// Camera
-	cl_float3 eye;// Position of the camera "eye"
-	cl_float3 screen;// Left top of screen in world space
-	cl_float3 u_step;// Horizontal distance between pixels in world space
-	cl_float3 v_step;// Vertical distance between pixels in world space
-	uint width;// Render target width
-	byte __cl_padding[12];*/
 	raytracer::CameraData camera;
 
 	// Scene
@@ -433,6 +426,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	static_assert(MAX_ACTIVE_RAYS, "MAX_ACTIVE_RAYS must be a multiple of 64 (work group size)");
 	int inRayBuffer = 0;
 	int outRayBuffer = 1;
+	bool nextBreak = false;
 	while (true)
 	{
 		// Generate primary rays and fill the emptyness
@@ -488,7 +482,8 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 			cl::NDRange(64));
 		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 
-
+		if (nextBreak)
+			break;
 
 		// Know when to stop
 		// TODO: request before shadow kernel and evaluate the result after so we dont have to block
@@ -499,12 +494,10 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 			0,
 			sizeof(KernelData),
 			&updatedKernelData);
-		//if ((updatedKernelData.numInRays + updatedKernelData.newRays) == 0)
-		//	break;
 		uint maxRays = _scr_width * _scr_height;
 		if (updatedKernelData.rayOffset + updatedKernelData.newRays >= maxRays)
-			break;
-
+			nextBreak = true;
+		
 
 		// Set num input rays to num output rays and set num out rays and num shadow rays to 0
 		_update_kernel_data_kernel.setArg(0, _ray_kernel_data);

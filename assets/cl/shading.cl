@@ -11,17 +11,19 @@ __constant sampler_t sampler =
 
 enum {
 	SHADINGFLAGS_HASFINISHED = 1,
-	SHADINGFLAGS_LASTSPECULAR = 2,
-	SHADINGFLAGS_SHADOW = 4
+	SHADINGFLAGS_LASTSPECULAR = 2
 };
 
 typedef struct {
 	Ray ray;// 2 * float3 = 32 bytes
 	float3 multiplier;// 16 bytes
 	size_t outputPixel;// 4/8 bytes?
-	float rayLength;// 4 bytes
 	int flags;// 4 bytes
-	int numBounces;
+	union
+	{
+		float rayLength;// 4 bytes
+		int numBounces;
+	};
 	// Aligned to 16 bytes so struct has size of 64 bytes
 } ShadingData;
 
@@ -295,7 +297,6 @@ float3 neeShading(
 		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
 		solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
 		float3 Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
-		outShadowData->flags = SHADINGFLAGS_SHADOW;
 		outShadowData->multiplier = Ld * inData->multiplier;
 		outShadowData->ray = createRay(intersection + L * EPSILON, L);
 		outShadowData->rayLength = dist;
