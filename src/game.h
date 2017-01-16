@@ -47,8 +47,6 @@ private:
 
 	std::unique_ptr<raytracer::RayTracer> _ray_tracer;
 	GLOutput _out;
-
-	ImVec4 _my_special_color;
 };
 
 }; // namespace Tmpl8

@@ -34,6 +34,8 @@ public:
 	float fov() const;
 	Transform& transform();
 	const Transform& transform() const;
+
+	float& get_focal_distance() { return _focalDistance; };
 public:
 	bool dirty;
 private:
