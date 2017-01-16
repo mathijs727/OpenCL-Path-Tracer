@@ -1,6 +1,6 @@
 #ifndef __SHADER_HELPER_CL
 #define __SHADER_HELPER_CL
-#include <clRNG/mrg31k3p.clh>
+#include <clRNG/lfsr113.clh>
 #include "math.cl"
 #include "shapes.cl"
 #include "scene.cl"
@@ -22,9 +22,9 @@ __constant sampler_t sampler =
 
 
 // Random int between start (inclusive) and stop (exclusive)
-int randInt(clrngMrg31k3pStream* randomStream, int start, int stop)
+int randInt(clrngLfsr113Stream* randomStream, int start, int stop)
 {
-	float u = min((float)clrngMrg31k3pRandomU01(randomStream), 1.0f - FLT_MAX);
+	float u = min((float)clrngLfsr113RandomU01(randomStream), 1.0f - FLT_MAX);
 	float range = stop - start;
 	return start + (int)(u * range);
 }
@@ -34,10 +34,10 @@ float3 diffuseReflection(
 	float3 edge1,
 	float3 edge2,
 	const float* normalTransform,
-	clrngMrg31k3pStream* randomStream)
+	clrngLfsr113Stream* randomStream)
 {
-	float u1 = clrngMrg31k3pRandomU01(randomStream);
-	float u2 = clrngMrg31k3pRandomU01(randomStream);
+	float u1 = clrngLfsr113RandomU01(randomStream);
+	float u2 = clrngLfsr113RandomU01(randomStream);
 	const float r = sqrt(1.0f - u1 * u1);
 	const float phi = 2 * PI * u2;
 	float3 sample = (float3)(cos(phi) * r, sin(phi) * r, u1);
@@ -61,12 +61,12 @@ float3 cosineWeightedDiffuseReflection(
 	float3 edge1,
 	float3 edge2,
 	const float* normalTransform,
-	clrngMrg31k3pStream* randomStream)
+	clrngLfsr113Stream* randomStream)
 {
 	// A cosine-weither random distribution is obtained by generating points on the unit
 	// disc, and projecting the disc on the unit hemisphere.
-	float r0 = clrngMrg31k3pRandomU01(randomStream);
-	float r1 = clrngMrg31k3pRandomU01(randomStream);
+	float r0 = clrngLfsr113RandomU01(randomStream);
+	float r1 = clrngLfsr113RandomU01(randomStream);
 	float r = sqrt(r0);
 	float theta = 2 * PI * r1;
 	float x = r * cos(theta);
@@ -87,13 +87,13 @@ float3 cosineWeightedDiffuseReflection(
 }
 
 // http://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
-float3 uniformSampleTriangle(const float3* vertices, clrngMrg31k3pStream* randomStream)
+float3 uniformSampleTriangle(const float3* vertices, clrngLfsr113Stream* randomStream)
 {
 	float3 A = vertices[0];
 	float3 B = vertices[1];
 	float3 C = vertices[2];
-	float u1 = clrngMrg31k3pRandomU01(randomStream);
-	float u2 = clrngMrg31k3pRandomU01(randomStream);
+	float u1 = clrngLfsr113RandomU01(randomStream);
+	float u2 = clrngLfsr113RandomU01(randomStream);
 	return (1 - sqrt(u1)) * A + (sqrt(u1) * (1 - u2)) * B + (sqrt(u1) * u2) * C;
 }
 
@@ -112,14 +112,14 @@ float triangleArea(float3* vertices)
 
 void randomPointOnLight(
 	const Scene* scene,
-	clrngMrg31k3pStream* randomStream,
+	clrngLfsr113Stream* randomStream,
 	float3* outPoint,
 	float3* outLightNormal,
 	float3* outLightColour,
 	float* outLightArea)
 {
 	// Construct vector to random point on light
-	int lightIndex = clrngMrg31k3pRandomInteger(randomStream, 0, scene->numEmissiveTriangles-1);
+	int lightIndex = clrngLfsr113RandomInteger(randomStream, 0, scene->numEmissiveTriangles-1);
 	EmissiveTriangle lightTriangle = scene->emissiveTriangles[lightIndex];
 	*outLightNormal = normalize(cross(
 		lightTriangle.vertices[1] - lightTriangle.vertices[0],

@@ -1,5 +1,6 @@
 #ifndef __CAMERA_CL
 #define __CAMERA_CL
+#include <clRNG/lfsr113.clh>
 
 typedef struct
 {
@@ -22,7 +23,7 @@ Ray generateRayPinhole(
 	int y,
 	float width,
 	float height,
-	clrngMrg31k3pStream* randomStream)
+	clrngLfsr113Stream* randomStream)
 {
 	//float width = get_global_size(0);
 	//float height = get_global_size(1);
@@ -30,8 +31,8 @@ Ray generateRayPinhole(
 	float3 v_step = camera->v / height;
 	float3 screenPoint = camera->screenPoint + \
 		u_step * x + v_step * y;	
-	screenPoint += (float)clrngMrg31k3pRandomU01(randomStream) * u_step;
-	screenPoint += (float)clrngMrg31k3pRandomU01(randomStream) * v_step;
+	screenPoint += (float)clrngLfsr113RandomU01(randomStream) * u_step;
+	screenPoint += (float)clrngLfsr113RandomU01(randomStream) * v_step;
 
 	Ray result;
 	result.origin = camera->eyePoint;
@@ -52,10 +53,10 @@ Ray generateRayThinLens(
 	int y,
 	float width,
 	float height,
-	clrngMrg31k3pStream* randomStream)
+	clrngLfsr113Stream* randomStream)
 {
-	float r1 = (float)clrngMrg31k3pRandomU01(randomStream) * 2.0f - 1.0f;
-	float r2 = (float)clrngMrg31k3pRandomU01(randomStream) * 2.0f - 1.0f;
+	float r1 = (float)clrngLfsr113RandomU01(randomStream) * 2.0f - 1.0f;
+	float r2 = (float)clrngLfsr113RandomU01(randomStream) * 2.0f - 1.0f;
 	// TODO: Round aperture
 	float3 offsetOnLense = r1 * camera->u_normalized * camera->apertureRadius + \
 						   r2 * camera->v_normalized * camera->apertureRadius;

@@ -16,7 +16,7 @@
 #include <thread>
 #include <stdlib.h>
 #include <chrono>
-#include <clRNG\mrg31k3p.h>
+#include <clRNG\lfsr113.h>
 
 //#define PROFILE_OPENCL
 #define OPENCL_GL_INTEROP
@@ -1003,16 +1003,16 @@ void raytracer::RayTracer::InitBuffers(
 	// Create random streams and copy them to the GPU
 	size_t numWorkItems = _scr_width * _scr_height;
 	size_t streamBufferSize;
-	clrngMrg31k3pStream* streams = clrngMrg31k3pCreateStreams(
+	clrngLfsr113Stream* streams = clrngLfsr113CreateStreams(
 		NULL, numWorkItems, &streamBufferSize, (clrngStatus*)&err);
-	checkClErr(err, "clrngMrg31k3pCreateStreams");
+	checkClErr(err, "clrngLfsr113CreateStreams");
 	_random_streams = cl::Buffer(_context,
 		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
 		streamBufferSize,
 		streams,
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
-	clrngMrg31k3pDestroyStreams(streams);
+	clrngLfsr113DestroyStreams(streams);
 
 
 

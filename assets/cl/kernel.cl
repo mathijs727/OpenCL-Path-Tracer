@@ -3,7 +3,7 @@
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
 #define MAX_ITERATIONS 3
 
-#include <clRNG/mrg31k3p.clh>
+#include <clRNG/lfsr113.clh>
 #include "shapes.cl"
 #include "material.cl"
 #include "scene.cl"
@@ -42,7 +42,7 @@ typedef struct
 __kernel void generatePrimaryRays(
 	__global ShadingData* outRays,
 	volatile __global KernelData* inputData,
-	__global clrngMrg31k3pHostStream* randomStreams)
+	__global clrngLfsr113HostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
 	uint rayIndex = inputData->rayOffset + gid;
@@ -57,8 +57,8 @@ __kernel void generatePrimaryRays(
 	if (gid >= newRays)
 		return;
 
-	clrngMrg31k3pStream randomStream;
-	clrngMrg31k3pCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+	clrngLfsr113Stream randomStream;
+	clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
 	uint x = rayIndex % inputData->scrWidth;
 	uint y = rayIndex / inputData->scrWidth;
@@ -77,7 +77,7 @@ __kernel void generatePrimaryRays(
 	outRays[outIndex].numBounces = 0;
 
 	// Store random streams
-	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+	clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 
 	if (gid == 0)
 	{
@@ -147,7 +147,7 @@ __kernel void intersectAndShade(
 	__read_only image2d_array_t textures,
 	__global SubBvhNode* subBvh,
 	__global TopBvhNode* topLevelBvh,
-	__global clrngMrg31k3pHostStream* randomStreams)
+	__global clrngLfsr113HostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
 	bool hit = false;
@@ -163,8 +163,8 @@ __kernel void intersectAndShade(
 		outShadowShadingData.flags = 0;
 		
 
-		clrngMrg31k3pStream randomStream;
-		clrngMrg31k3pCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+		clrngLfsr113Stream randomStream;
+		clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
 		Scene scene;
 		loadScene(
@@ -216,7 +216,7 @@ __kernel void intersectAndShade(
 		}
 
 		// Store random streams
-		clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+		clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 	} 
 
 	int index = workgroup_counter_inc(&inputData->numOutRays, hit);//atomic_inc(&inputData->numOutRays);
@@ -250,7 +250,7 @@ __kernel void updateKernelData(
 	__read_only image2d_array_t textures,
 	__global SubBvhNode* subBvh,
 	__global TopBvhNode* topLevelBvh,
-	__global clrngMrg31k3pHostStream* randomStreams) {
+	__global clrngLfsr113HostStream* randomStreams) {
 	//__read_only image2d_array_t textures) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
@@ -259,8 +259,8 @@ __kernel void updateKernelData(
 	bool leftSide = (x < width / 2);
 
 	// Read random stream
-	clrngMrg31k3pStream privateStream;
-	clrngMrg31k3pCopyOverStreamsFromGlobal(1, &privateStream, &randomStreams[gid]);
+	clrngLfsr113Stream privateStream;
+	clrngLfsr113CopyOverStreamsFromGlobal(1, &privateStream, &randomStreams[gid]);
 
 	Scene scene;
 	loadScene(
@@ -330,5 +330,5 @@ __kernel void updateKernelData(
 	output[gid] += accumulatedColour;
 
 	// Store random streams
-	clrngMrg31k3pCopyOverStreamsToGlobal(1, &randomStreams[gid], &privateStream);
+	clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &privateStream);
 }*/

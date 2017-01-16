@@ -1,7 +1,7 @@
 #ifndef __SHADING_CL
 #define __SHADING_CL
 #include "shading_helper.cl"
-#include <clRNG/mrg31k3p.clh>
+#include <clRNG/lfsr113.clh>
 #include "light.cl"
 
 enum {
@@ -33,7 +33,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	const float* normalTransform,
 	float2 uv,
 	image2d_array_t textures,
-	clrngMrg31k3pStream* randomStream,
+	clrngLfsr113Stream* randomStream,
 	ShadingData* data)
 {
 	// Gather intersection data
@@ -120,7 +120,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	const float* normalTransform,
 	float2 uv,
 	image2d_array_t textures,
-	clrngMrg31k3pStream* randomStream,
+	clrngLfsr113Stream* randomStream,
 	ShadingData* data)
 {
 	// Gather intersection data
@@ -204,7 +204,7 @@ float3 neeShading(
 	const float* normalTransform,
 	float2 uv,
 	image2d_array_t textures,
-	clrngMrg31k3pStream* randomStream,
+	clrngLfsr113Stream* randomStream,
 	ShadingData* inData,
 	ShadingData* outData,
 	ShadingData* outShadowData)
@@ -297,7 +297,7 @@ float3 naiveShading(
 	const float* normalTransform,
 	float2 uv,
 	image2d_array_t textures,
-	clrngMrg31k3pStream* randomStream,
+	clrngLfsr113Stream* randomStream,
 	ShadingData* data)
 {
 	// Gather intersection data
