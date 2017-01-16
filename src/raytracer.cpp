@@ -427,7 +427,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	static_assert(MAX_ACTIVE_RAYS, "MAX_ACTIVE_RAYS must be a multiple of 64 (work group size)");
 	int inRayBuffer = 0;
 	int outRayBuffer = 1;
-	u32 survivingRays = MAX_ACTIVE_RAYS;
+	u32 survivingRays = 0;
 	while (true)
 	{
 		if (survivingRays != MAX_ACTIVE_RAYS)
