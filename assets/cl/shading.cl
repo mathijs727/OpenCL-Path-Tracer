@@ -166,7 +166,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float3 BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 
 	// Sample a random light source
-	float3 lightPos, lightNormal, lightColour; float lightArea, totalWeight;
+	float3 lightPos, lightNormal, lightColour; float lightArea;
 	weightedRandomPointOnLight(
 		scene,
 		intersection,
@@ -174,8 +174,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		&lightPos,
 		&lightNormal,
 		&lightColour,
-		&lightArea,
-		&totalWeight);
+		&lightArea);
 
 	float3 L = lightPos - intersection;
 	float dist2 = dot(L, L);
@@ -325,8 +324,11 @@ float3 naiveShading(
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	ShadingData* data)
+	ShadingData* inData,
+	ShadingData* outData,
+	ShadingData* outShadowData)
 {
+	outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 	// Gather intersection data
 	VertexData vertices[3];
 	TriangleData triangle = scene->triangles[triangleIndex];
@@ -339,29 +341,29 @@ float3 naiveShading(
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
 	{
-		data->flags = SHADINGFLAGS_HASFINISHED;
+		outData->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
 	}
 
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
 	{
-		data->flags = SHADINGFLAGS_HASFINISHED;
-		return data->multiplier * material->emissive.emissiveColour;
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		return inData->multiplier * material->emissive.emissiveColour;
 	}
 
 	// Continue in random direction
 	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
 
 	// Update throughput
-	data->flags = 0;
+	outData->flags = 0;
 	float3 BRDF = material->diffuse.diffuseColour / PI;
 	float3 Ei = dot(realNormal , reflection);// Irradiance
 	float3 integral = PI * 2.0f * BRDF * Ei;
-	float3 oldMultiplier = data->multiplier;
-	data->ray.origin = intersection + reflection * EPSILON;
-	data->ray.direction = reflection;
-	data->multiplier = oldMultiplier * integral;
+	float3 oldMultiplier = inData->multiplier;
+	outData->ray.origin = intersection + reflection * EPSILON;
+	outData->ray.direction = reflection;
+	outData->multiplier = oldMultiplier * integral;
 	return BLACK;
 }
 
