@@ -165,14 +165,17 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float3 BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 
 	// Sample a random light source
-	float3 lightPos, lightNormal, lightColour; float lightArea;
-	randomPointOnLight(
+	float3 lightPos, lightNormal, lightColour, totalWeight; float lightArea;
+	weightedRandomPointOnLight(
 		scene,
+		intersection,
 		randomStream,
 		&lightPos,
 		&lightNormal,
 		&lightColour,
-		&lightArea);
+		&lightArea,
+		&totalWeight);
+
 	float3 L = lightPos - intersection;
 	float dist2 = dot(L, L);
 	float dist = sqrt(dist2);
@@ -182,15 +185,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	//Ray lightRay = createRay(intersection + L * EPSILON, L);
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
-		/*if (!traceRay(scene, &lightRay, true, dist - 2 * EPSILON, NULL, NULL, NULL, NULL))
-		{
-			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
-			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
-			Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
-		}*/
-		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
-		solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
-		float3 Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
+		float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * dot(realNormal, L) ;
 		outShadowData->multiplier = Ld * inData->multiplier;
 		outShadowData->ray = createRay(intersection + L * EPSILON, L);
 		//outShadowData->ray.origin += outShadowData->ray.direction * EPSILON;
