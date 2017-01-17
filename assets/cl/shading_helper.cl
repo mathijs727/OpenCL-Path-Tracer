@@ -135,7 +135,7 @@ void weightedRandomPointOnLight(
 		lightTriangle.vertices[1] - lightTriangle.vertices[0],
 		lightTriangle.vertices[2] - lightTriangle.vertices[0]));
 		float lightArea = triangleArea(lightTriangle.vertices);
-		float solidAngle = dot(lightNormal, -L) * lightArea;
+		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;		
 		solidAngle = min(2 * PI, solidAngle);
 		_lightWeights[i] = solidAngle;
 		weightTotal += _lightWeights[i];
@@ -147,12 +147,14 @@ void weightedRandomPointOnLight(
 		if (randomValue <= 0) break;
 	}
 	float probability = 1 / (_lightWeights[lightIndex] * numLights);
+
+	// lightIndex = clrngLfsr113RandomInteger(randomStream, 0, scene->numEmissiveTriangles-1);
 	// Construct vector to random point on light
 	EmissiveTriangle lightTriangle = scene->emissiveTriangles[lightIndex];
 	*outLightNormal = normalize(cross(
 		lightTriangle.vertices[1] - lightTriangle.vertices[0],
 		lightTriangle.vertices[2] - lightTriangle.vertices[0]));
-	*outLightColour = lightTriangle.material.emissive.emissiveColour * weightTotal / probability;
+	*outLightColour = lightTriangle.material.emissive.emissiveColour * weightTotal / numLights;
 	*outPoint = uniformSampleTriangle(lightTriangle.vertices, randomStream);
 	*outLightArea = triangleArea(lightTriangle.vertices);
 	*outTotalWeight = weightTotal;

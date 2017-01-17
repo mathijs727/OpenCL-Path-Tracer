@@ -186,7 +186,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	//Ray lightRay = createRay(intersection + L * EPSILON, L);
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
-		float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * dot(realNormal, L) ;
+		float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * dot(realNormal, L);
 		outShadowData->multiplier = Ld * inData->multiplier;
 		outShadowData->ray = createRay(intersection + L * EPSILON, L);
 		//outShadowData->ray.origin += outShadowData->ray.direction * EPSILON;
