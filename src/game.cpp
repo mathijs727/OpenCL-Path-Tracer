@@ -52,10 +52,10 @@ void Game::Init()
 #if TRUE
 		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply",
 			Material::PBR(
-				glm::vec3(0.4, 0.3, 0.7),
+				glm::vec3(0.1, 0.1, 0.1),
 				glm::vec3(0.955f, 0.638f, 0.538f), // Copper
-				0.2f,
-				0.0f));
+				0.75f,
+				0.95f));
 #else
 		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
 #endif

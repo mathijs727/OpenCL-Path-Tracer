@@ -22,7 +22,7 @@ struct CameraData
 	
 	char thinLensEnabled;
 
-	byte __cl_padding[4];
+	byte __cl_padding[7];
 };
 
 class Camera

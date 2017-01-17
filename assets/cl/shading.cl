@@ -219,7 +219,7 @@ float3 neeShading(
 	float3 realNormal = cross(edge1, edge2);
 	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
 	float3 shadingNormal = interpolateNormal(vertices, uv);
-	realNormal = shadingNormal;
+	//realNormal = shadingNormal;
 	
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
@@ -257,28 +257,22 @@ float3 neeShading(
 	float dist = sqrt(dist2);
 	L /= dist;
 
+	
 
-	//float3 Ld = BLACK;
-	//Ray lightRay = createRay(intersection + L * EPSILON, L);
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
-		/*if (!traceRay(scene, &lightRay, true, dist - 2 * EPSILON, NULL, NULL, NULL, NULL))
-		{
-			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
-			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
-			Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
-		}*/
-		// BRDF for the direct light sampling ray
 		float3 BRDF;
 		if (material->type == Diffuse) {
 			BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 		} else if (material->type == PBR) {
+
 			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material);
 		}
 
 		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
 		solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
 		float3 Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
+		outShadowData->flags = 0;
 		outShadowData->multiplier = Ld * inData->multiplier;
 		outShadowData->ray = createRay(intersection + L * EPSILON, L);
 		//outShadowData->ray.origin += outShadowData->ray.direction * EPSILON;
@@ -289,15 +283,15 @@ float3 neeShading(
 
 	// Continue random walk
 	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
-
-	// BRDF for the reflection ray
+	
 	float3 BRDF;
 	if (material->type == Diffuse) {
 		BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 	} else if (material->type == PBR) {
+
 		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material);
 	}
-	
+
 	outData->flags = 0;
 	float3 Ei = dot(realNormal, reflection);
 	float3 integral = PI * 2.0f * BRDF * Ei;
