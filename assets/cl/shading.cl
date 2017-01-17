@@ -121,7 +121,9 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	ShadingData* data)
+	ShadingData* inData,
+	ShadingData* outData,
+	ShadingData* outShadowData)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -135,22 +137,32 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
 	{
-		data->flags = SHADINGFLAGS_HASFINISHED;
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
 	}
-
-	float3 BRDF = material->diffuse.diffuseColour * INVPI;
 
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
 	{
-		data->flags |= SHADINGFLAGS_HASFINISHED;
-		if (data->flags & SHADINGFLAGS_LASTSPECULAR) {
-			return data->multiplier * material->emissive.emissiveColour;
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
+		if (inData->flags & SHADINGFLAGS_LASTSPECULAR) {
+			return inData->multiplier * material->emissive.emissiveColour;
 		} else {
 			return BLACK;
 		}
 	}
+
+	if (dot(realNormal, -rayDirection) < 0.0f)
+	{
+		// Stop if we hit the back side
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
+		return BLACK;
+	}
+
+	float3 BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 
 	// Sample a random light source
 	float3 lightPos, lightNormal, lightColour; float lightArea;
@@ -166,30 +178,36 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float dist = sqrt(dist2);
 	L /= dist;
 
-	float3 Ld = BLACK;
-	Ray lightRay = createRay(intersection + L * EPSILON, L);
+	//float3 Ld = BLACK;
+	//Ray lightRay = createRay(intersection + L * EPSILON, L);
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
-		if (!traceRay(scene, &lightRay, true, dist - 2 * EPSILON, NULL, NULL, NULL, NULL))
+		/*if (!traceRay(scene, &lightRay, true, dist - 2 * EPSILON, NULL, NULL, NULL, NULL))
 		{
 			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
 			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
 			Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
-		}
+		}*/
+		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
+		solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
+		float3 Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
+		outShadowData->multiplier = Ld * inData->multiplier;
+		outShadowData->ray = createRay(intersection + L * EPSILON, L);
+		//outShadowData->ray.origin += outShadowData->ray.direction * EPSILON;
+		outShadowData->rayLength = dist - 2 * EPSILON;
+	} else {
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 	}
 
 	// Continue random walk
-	data->flags = 0;
 	float3 reflection = cosineWeightedDiffuseReflection(edge1, edge2, normalTransform, randomStream);
-	//float PDF = dot(realNormal, reflection) / PI;
-	//float3 Ei = dot(realNormal, reflection) / PDF;
+	outData->flags = 0;
 	float3 Ei = PI;
 	float3 integral = BRDF * Ei;
-	float3 oldMultiplier = data->multiplier;
-	data->ray.origin = intersection + reflection * EPSILON;
-	data->ray.direction = reflection;
-	data->multiplier = oldMultiplier * integral;
-	return oldMultiplier * Ld;
+	outData->ray.origin = intersection + reflection * EPSILON;
+	outData->ray.direction = reflection;
+	outData->multiplier = inData->multiplier * integral;
+	return BLACK;
 }
 
 

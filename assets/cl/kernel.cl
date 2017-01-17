@@ -198,7 +198,7 @@ __kernel void intersectAndShade(
 
 		if (hit)
 		{
-			outputPixels[shadingData.outputPixel] += neeShading(
+			outputPixels[shadingData.outputPixel] += neeIsShading(
 				&scene,
 				triangleIndex,
 				intersection,
