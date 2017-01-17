@@ -41,5 +41,14 @@ void matrixTransposeLocal(const float* matrix, float* matrixOut)
 	}
 }
 
+float lerp(float x, float y, float a)
+{
+	return mix(x, y, a);
+}
+
+float saturate(float a)
+{
+	return min(1.0f, max(0.0f, a));
+}
 
 #endif// __math_cl

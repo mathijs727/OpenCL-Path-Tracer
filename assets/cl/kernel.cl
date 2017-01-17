@@ -8,7 +8,6 @@
 #include "material.cl"
 #include "scene.cl"
 #include "light.cl"
-#include "stack.cl"
 #include "gamma.cl"
 #include "bvh.cl"
 #include "shading.cl"

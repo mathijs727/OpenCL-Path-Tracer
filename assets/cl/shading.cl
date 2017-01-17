@@ -3,6 +3,7 @@
 #include "shading_helper.cl"
 #include <clRNG/lfsr113.clh>
 #include "light.cl"
+#include "pbr_brdf.cl"
 
 enum {
 	SHADINGFLAGS_HASFINISHED = 1,
@@ -239,8 +240,6 @@ float3 neeShading(
 		return BLACK;
 	}
 
-	float3 BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
-
 	// Sample a random light source
 	float3 lightPos, lightNormal, lightColour; float lightArea;
 	randomPointOnLight(
@@ -254,6 +253,13 @@ float3 neeShading(
 	float dist2 = dot(L, L);
 	float dist = sqrt(dist2);
 	L /= dist;
+
+	float3 BRDF;
+	if (material->type == Diffuse) {
+		BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
+	} else if (material->type == PBR) {
+		BRDF = pbrBrdf(-rayDirection, L, realNormal, material);
+	}
 
 	//float3 Ld = BLACK;
 	//Ray lightRay = createRay(intersection + L * EPSILON, L);

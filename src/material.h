@@ -26,13 +26,14 @@ struct Material
 	enum class Type : cl_int
 	{
 		Diffuse,
+		PBR,
 		Emissive
 	};
 
 	Material() { }
 	Material(const Material& m) { memcpy(this, &m, sizeof(Material)); }
 	Material& operator=(const Material& m) { memcpy(this, &m, sizeof(Material)); return *this; }
-	
+
 	union
 	{
 		struct
@@ -40,6 +41,13 @@ struct Material
 			CL_VEC3(diffuseColour);
 			cl_int tex_id; byte __padding[12];
 		} diffuse;
+		struct
+		{
+			CL_VEC3(baseColour);
+			CL_VEC3(reflectance);
+			float roughness;
+			float metallic; byte __padding[8];
+		} pbr;
 		struct
 		{
 			CL_VEC3(emissiveColour);
@@ -61,6 +69,17 @@ struct Material
 		result.type = Type::Diffuse;
 		result.diffuse.diffuseColour = colour;
 		result.diffuse.tex_id = diffuse.getId();
+		return result;
+	}
+
+	static Material PBR(const glm::vec3 baseColour, const glm::vec3 reflectance, float roughness, float metallic)
+	{
+		Material result;
+		result.type = Type::PBR;
+		result.pbr.baseColour = baseColour;
+		result.pbr.reflectance = reflectance;
+		result.pbr.roughness = roughness;
+		result.pbr.metallic = metallic;
 		return result;
 	}
 

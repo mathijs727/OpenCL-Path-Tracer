@@ -3,7 +3,6 @@
 #include "shapes.cl"
 #include "ray.cl"
 #include "light.cl"
-#include "stack.cl"
 #include "bvh.cl"
 #include "math.cl"
 
