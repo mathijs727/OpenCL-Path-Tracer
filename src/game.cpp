@@ -147,6 +147,13 @@ void Game::Tick( float dt )
 		_camera->dirty = true;
 	}
 
+	static bool prevThinLenseEnabled = _camera->is_thin_lense();
+	if (_camera->is_thin_lense() != prevThinLenseEnabled)
+	{
+		prevThinLenseEnabled = _camera->is_thin_lense();
+		_camera->dirty = true;
+	}
+
 	_ray_tracer->RayTrace(*_camera);
 	_out.Render();
 }
@@ -159,7 +166,9 @@ void Tmpl8::Game::UpdateGui()
 	ImGui::Begin("Camera Widget");
 
 	//ImGui::Text("Hello, world!");
-	ImGui::SliderFloat("Focal distance", &_camera->get_focal_distance(), 0.1f, 5.0f);
+	ImGui::Checkbox("Thin lens", &_camera->is_thin_lense());
+	if (_camera->is_thin_lense())
+		ImGui::SliderFloat("Focal distance", &_camera->get_focal_distance(), 0.1f, 5.0f);
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 	ImGui::End();

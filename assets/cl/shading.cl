@@ -257,13 +257,6 @@ float3 neeShading(
 	float dist = sqrt(dist2);
 	L /= dist;
 
-	float3 BRDF;
-	if (material->type == Diffuse) {
-		BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
-	} else if (material->type == PBR) {
-
-		BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material);
-	}
 
 	//float3 Ld = BLACK;
 	//Ray lightRay = createRay(intersection + L * EPSILON, L);
@@ -275,6 +268,14 @@ float3 neeShading(
 			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
 			Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
 		}*/
+		// BRDF for the direct light sampling ray
+		float3 BRDF;
+		if (material->type == Diffuse) {
+			BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
+		} else if (material->type == PBR) {
+			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material);
+		}
+
 		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
 		solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
 		float3 Ld = scene->numEmissiveTriangles * lightColour * solidAngle * BRDF * dot(realNormal, L);
@@ -288,6 +289,15 @@ float3 neeShading(
 
 	// Continue random walk
 	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
+
+	// BRDF for the reflection ray
+	float3 BRDF;
+	if (material->type == Diffuse) {
+		BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
+	} else if (material->type == PBR) {
+		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material);
+	}
+	
 	outData->flags = 0;
 	float3 Ei = dot(realNormal, reflection);
 	float3 integral = PI * 2.0f * BRDF * Ei;

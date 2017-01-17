@@ -20,7 +20,9 @@ struct CameraData
 	float focalDistance;
 	float apertureRadius;
 	
-	byte __cl_padding[8];
+	char thinLensEnabled;
+
+	byte __cl_padding[4];
 };
 
 class Camera
@@ -36,6 +38,7 @@ public:
 	const Transform& transform() const;
 
 	float& get_focal_distance() { return _focalDistance; };
+	bool& is_thin_lense() { return _thinLens; }
 public:
 	bool dirty;
 private:
@@ -45,6 +48,8 @@ private:
 	float _aspectRatio;
 	float _focalDistance;
 	float _fov;// Horizontal Field Of View
+
+	bool _thinLens;
 };
 
 }

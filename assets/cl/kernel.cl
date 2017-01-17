@@ -1,7 +1,7 @@
 #define NO_PARALLEL_RAYS// When a ray is parallel to axis, the intersection tests are really slow
 #define USE_BVH
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
-#define MAX_ITERATIONS 3
+#define MAX_ITERATIONS 4
 
 #include <clRNG/lfsr113.clh>
 #include "shapes.cl"
@@ -63,13 +63,24 @@ __kernel void generatePrimaryRays(
 	uint y = rayIndex / inputData->scrWidth;
 
 	size_t outIndex = inputData->numInRays + gid;
-	outRays[outIndex].ray = generateRayThinLens(
-		&inputData->camera,
-		x,
-		y,
-		(float)inputData->scrWidth,
-		(float)inputData->scrHeight,
-		&randomStream);
+	if (inputData->camera.thinLenseEnabled)
+	{
+		outRays[outIndex].ray = generateRayThinLens(
+			&inputData->camera,
+			x,
+			y,
+			(float)inputData->scrWidth,
+			(float)inputData->scrHeight,
+			&randomStream);
+	} else {
+		outRays[outIndex].ray = generateRayPinhole(
+			&inputData->camera,
+			x,
+			y,
+			(float)inputData->scrWidth,
+			(float)inputData->scrHeight,
+			&randomStream);
+	}
 	outRays[outIndex].multiplier = (float3)(1, 1, 1);
 	outRays[outIndex].flags = SHADINGFLAGS_LASTSPECULAR;
 	outRays[outIndex].outputPixel = rayIndex;

@@ -9,6 +9,7 @@ raytracer::Camera::Camera(const Transform& transform, float fov, float aspectRat
 	_aspectRatio = aspectRatio;
 	_fov = fov;
 	_focalDistance = focalDistance;
+	_thinLens = true;
 }
 
 CameraData raytracer::Camera::get_camera_data() const
@@ -45,6 +46,8 @@ CameraData raytracer::Camera::get_camera_data() const
 	result.v = glm::mat3_cast(_transform.orientation) * glm::vec3(0, -height, 0);
 	result.screenPoint = glm::vec3(transform_matrix * glm::vec4(-halfWidth, halfHeight, projectedDistance, 1));
 	
+	result.thinLensEnabled = _thinLens;
+
 	return result;
 }
 

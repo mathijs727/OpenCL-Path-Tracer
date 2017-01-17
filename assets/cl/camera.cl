@@ -15,6 +15,8 @@ typedef struct
 	float3 v_normalized;
 	float focalDistance;
 	float apertureRadius;
+
+	char thinLenseEnabled;
 } Camera;
 
 Ray generateRayPinhole(
