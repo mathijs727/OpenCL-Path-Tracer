@@ -201,7 +201,7 @@ __kernel void intersectAndShade(
 				&scene,
 				triangleIndex,
 				intersection,
-				shadingData.ray.direction,
+				normalize(shadingData.ray.direction),
 				normalTransform,
 				uv,
 				textures,

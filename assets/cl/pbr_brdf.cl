@@ -64,7 +64,9 @@ float3 pbrBrdf(float3 V, float3 L, float3 N, const __global Material* material)
 {
 	float3 f0 = material->pbr.reflectance;
 	float f90 = 1.0f;
-	float roughness = material->pbr.roughness;
+	float linearRoughness = 1.0f - material->pbr.smoothness;
+	float roughness = linearRoughness * linearRoughness;
+
 
 	// This code is an example of call of previous functions
 	float NdotV = fabs(dot(N, V)) + 1e-5f; // avoid artifact
@@ -80,9 +82,9 @@ float3 pbrBrdf(float3 V, float3 L, float3 N, const __global Material* material)
 	float3 Fr = D * F * Vis / PI;
 
 	// Diffuse BRDF
-	float Fd = Fr_DisneyDiffuse (NdotV, NdotL, LdotH, roughness) / PI;
+	float Fd = Fr_DisneyDiffuse (NdotV, NdotL, LdotH, linearRoughness) / PI;
 
-	return material->pbr.baseColour * (material->pbr.metallic * Fr + (1.0f - material->pbr.metallic) * Fd);
+	return Fr + Fd * material->pbr.baseColour;
 }
 
 #endif // __PBR_BRDF_CL

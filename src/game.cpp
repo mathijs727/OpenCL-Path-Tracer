@@ -43,13 +43,50 @@ void Game::Init()
 		_scene->add_node(cornell);
 	}
 
-	/*{
+	{
 		Transform transform;
-		auto groundPlane = std::make_shared<Mesh>();
-		groundPlane->loadFromFile("assets/3dmodels/plane/plane.obj", Material::Diffuse(glm::vec3(0.8f, 0.8f, 0.8f)));
-		_scene->add_node(groundPlane, transform);
+		transform.scale = glm::vec3(4.0f);
+		//transform.location = glm::vec3(0, 0.5f, 0);
+		//transform.orientation = glm::quat(glm::vec3(0, 1, 0));
+		auto bunny = std::make_shared<Mesh>();
+#if TRUE
+		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply",
+			Material::PBR(
+				glm::vec3(0.4, 0.3, 0.7),
+				glm::vec3(0.955f, 0.638f, 0.538f), // Copper
+				0.2f,
+				0.0f));
+#else
+		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
+#endif
+		_scene->add_node(bunny, transform);
 	}
 
+	/*{
+		Transform transform;
+		transform.scale = glm::vec3(0.5f);
+		transform.location = glm::vec3(0, 0.5f, 0);
+		transform.orientation = glm::quat(glm::vec3(0, 1, 0));
+		auto cube = std::make_shared<Mesh>();
+#if TRUE
+		cube->loadFromFile("assets/3dmodels/cube/cube.obj",
+			Material::PBR(
+				glm::vec3(0, 0, 0),
+				glm::vec3(0.955f, 0.638f, 0.538f), // Copper
+				0.3f,
+				1.0f));
+#else
+		cube->loadFromFile("assets/3dmodels/cube/cube.obj");
+#endif
+		_cube_scene_node = &_scene->add_node(cube, transform);
+	}*/
+	
+
+
+
+
+	/*
+	// Sponza
 	{
 		Transform transform;
 		transform.location = glm::vec3(0, 10, -0.5f);
@@ -58,19 +95,8 @@ void Game::Init()
 		auto lightPlane = std::make_shared<Mesh>();
 		lightPlane->loadFromFile("assets/3dmodels/plane/plane.obj", Material::Emissive(glm::vec3(0.8f, 0.8f, 0.8f) * 15.0f));
 		_scene->add_node(lightPlane, transform);
-	}*/
-
-	{
-		Transform transform;
-		transform.scale = glm::vec3(0.5f);
-		transform.location = glm::vec3(0, 0.5f, 0);
-		transform.orientation = glm::quat(glm::vec3(0, 1, 0));
-		auto cube = std::make_shared<Mesh>();
-		cube->loadFromFile("assets/3dmodels/cube/cube.obj");
-		_cube_scene_node = &_scene->add_node(cube, transform);
 	}
-	
-	/*{
+	{
 		Transform transform;
 		transform.scale = glm::vec3(0.005f);
 		auto sponza = std::make_shared<Mesh>();

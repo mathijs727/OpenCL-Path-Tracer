@@ -218,8 +218,11 @@ float3 neeShading(
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = cross(edge1, edge2);
 	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
-	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
+	float3 shadingNormal = interpolateNormal(vertices, uv);
+	realNormal = shadingNormal;
 	
+	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
+
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
 	{
@@ -258,7 +261,8 @@ float3 neeShading(
 	if (material->type == Diffuse) {
 		BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 	} else if (material->type == PBR) {
-		BRDF = pbrBrdf(-rayDirection, L, realNormal, material);
+
+		BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material);
 	}
 
 	//float3 Ld = BLACK;

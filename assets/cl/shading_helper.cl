@@ -153,5 +153,12 @@ float3 diffuseColour(
 	}
 }
 
+float3 interpolateNormal(const VertexData* vertices, float2 uv)
+{
+	float3 n0 = vertices[0].normal;
+	float3 n1 = vertices[1].normal;
+	float3 n2 = vertices[2].normal;
+	return normalize(n0 + (n1-n0) * uv.x + (n2-n0) * uv.y);
+}
 
 #endif// __SHADER_HELPER_CL

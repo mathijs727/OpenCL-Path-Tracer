@@ -45,7 +45,7 @@ struct Material
 		{
 			CL_VEC3(baseColour);
 			CL_VEC3(reflectance);
-			float roughness;
+			float smoothness;
 			float metallic; byte __padding[8];
 		} pbr;
 		struct
@@ -72,13 +72,13 @@ struct Material
 		return result;
 	}
 
-	static Material PBR(const glm::vec3 baseColour, const glm::vec3 reflectance, float roughness, float metallic)
+	static Material PBR(const glm::vec3 baseColour, const glm::vec3 reflectance, float smoothness, float metallic)
 	{
 		Material result;
 		result.type = Type::PBR;
 		result.pbr.baseColour = baseColour;
 		result.pbr.reflectance = reflectance;
-		result.pbr.roughness = roughness;
+		result.pbr.smoothness = smoothness;
 		result.pbr.metallic = metallic;
 		return result;
 	}

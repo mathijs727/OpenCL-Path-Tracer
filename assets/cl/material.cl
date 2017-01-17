@@ -19,7 +19,7 @@ typedef struct
 		{
 			float3 baseColour;
 			float3 reflectance;
-			float roughness;
+			float smoothness;
 			float metallic;
 		} pbr;
 		struct
