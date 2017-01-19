@@ -60,6 +60,13 @@ float Fr_DisneyDiffuse (float NdotV, float NdotL, float LdotH, float linearRough
 }
 
 
+// Moving frostbite to PBR:
+// http://www.frostbite.com/wp-content/uploads/2014/11/course_notes_moving_frostbite_to_pbr.pdf
+//
+// Explains how to combine Specular + Diffuse (and why) (Siggraph Shading Course 2013):
+// http://blog.selfshadow.com/publications/s2013-shading-course/hoffman/s2013_pbs_physics_math_slides.pdf
+//
+// 
 float3 pbrBrdf(
 	float3 V,
 	float3 L,
@@ -67,10 +74,15 @@ float3 pbrBrdf(
 	const __global Material* material,
 	clrngLfsr113Stream* randomStream)
 {
-	float3 f0 = material->pbr.reflectance;
+	float3 f0;
+	if (material->pbr.metallic) {
+		f0 = material->pbr.reflectance;
+	} else {
+		f0 = 0.04f;
+	}
 	float f90 = 1.0f;
 	float roughness = 1.0f - material->pbr.smoothness;
-	float linearRoughness = roughness * roughness;
+	float linearRoughness = sqrt(roughness);
 
 
 	// This code is an example of call of previous functions
@@ -89,15 +101,17 @@ float3 pbrBrdf(
 	// Diffuse BRDF
 	float Fd = Fr_DisneyDiffuse (NdotV, NdotL, LdotH, linearRoughness) / PI;
 
-	float choiceValue = (float)clrngLfsr113RandomU01(randomStream);
-	if (choiceValue < material->pbr.metallic)
+	float3 diffuseColour;
+	if (material->pbr.metallic)
 	{
-		// Metalic
-		return Fr;// * material->pbr.metallic;
+		diffuseColour = (float3)(0.0f, 0.0f, 0.0f);
 	} else {
-		// Diffuse
-		return Fd * material->pbr.baseColour;// * (1.0f - material->pbr.metallic);
+		diffuseColour = material->pbr.baseColour;
 	}
+	float3 reflected = Fr;
+	float3 diffuse = (1.0f - reflected) * Fd * diffuseColour;
+
+	return reflected + diffuse;
 }
 
 #endif // __PBR_BRDF_CL

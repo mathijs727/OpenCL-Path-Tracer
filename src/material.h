@@ -43,10 +43,17 @@ struct Material
 		} diffuse;
 		struct
 		{
-			CL_VEC3(baseColour);
-			CL_VEC3(reflectance);
+			// Metallic is a boolean flag
+			// Applied as "Hodgman" suggests (not well documented in any PBR papers from Unreal or Dice):
+			// https://www.gamedev.net/topic/672836-pbr-metalness-equation/
+			union
+			{
+				CL_VEC3(baseColour);// Non metal
+				CL_VEC3(reflectance);// Metal (f0 for Schlick approximation of Fresnel)
+			};
 			float smoothness;
-			float metallic; byte __padding[8];
+			float f0NonMetal;
+			bool metallic; byte __padding[4];
 		} pbr;
 		struct
 		{
@@ -72,14 +79,24 @@ struct Material
 		return result;
 	}
 
-	static Material PBR(const glm::vec3 baseColour, const glm::vec3 reflectance, float smoothness, float metallic)
+	static Material PBRMetal(const glm::vec3 reflectance, float smoothness)
+	{
+		Material result;
+		result.type = Type::PBR;
+		result.pbr.reflectance = reflectance;
+		result.pbr.smoothness = smoothness;
+		result.pbr.metallic = true;
+		return result;
+	}
+
+	static Material PBRDielectric(const glm::vec3 baseColour, float smoothness)
 	{
 		Material result;
 		result.type = Type::PBR;
 		result.pbr.baseColour = baseColour;
-		result.pbr.reflectance = reflectance;
 		result.pbr.smoothness = smoothness;
-		result.pbr.metallic = metallic;
+		result.pbr.f0NonMetal = 0.04f;
+		result.pbr.metallic = false;
 		return result;
 	}
 

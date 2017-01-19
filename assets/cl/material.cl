@@ -17,10 +17,17 @@ typedef struct
 		} diffuse;
 		struct
 		{
-			float3 baseColour;
-			float3 reflectance;
+			// Metallic is a boolean flag
+			// Applied as "Hodgman" suggests (not well documented in any PBR papers from Unreal or Dice):
+			// https://www.gamedev.net/topic/672836-pbr-metalness-equation/
+			union
+			{
+				float3 baseColour;// Non metal
+				float3 reflectance;// Metal (f0 for Schlick approximation of Fresnel)
+			};
 			float smoothness;
-			float metallic;
+			float f0NonMetal;
+			bool metallic;
 		} pbr;
 		struct
 		{
