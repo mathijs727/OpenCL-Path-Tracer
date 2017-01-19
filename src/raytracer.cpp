@@ -502,8 +502,8 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 			err = _queue.enqueueNDRangeKernel(
 				_intersect_shadows_kernel,
 				cl::NullRange,
-				cl::NDRange(roundUp(survivingRays, 32)),
-				cl::NullRange);//cl::NDRange(64));
+				cl::NDRange(roundUp(survivingRays, 64)),
+				cl::NDRange(64));
 			checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
 		}
 
