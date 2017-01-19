@@ -110,6 +110,51 @@ float triangleArea(float3* vertices)
 	return sqrt(s * (s - lenA) * (s - lenB) * (s - lenC));
 }
 
+void weightedRandomPointOnLight(
+	const Scene* scene,
+	float3 intersection,
+	clrngLfsr113Stream* randomStream,
+	float3* outPoint,
+	float3* outLightNormal,
+	float3* outLightColour,
+	float* outLightArea)
+{
+	int numLights = scene->numEmissiveTriangles;
+	float weightTotal = 0;
+	float _lightWeights[255];
+	for (int i = 0; i < numLights; ++i) {
+		EmissiveTriangle lightTriangle = scene->emissiveTriangles[i];
+		float3 lightPos = (lightTriangle.vertices[2] + lightTriangle.vertices[1] + lightTriangle.vertices[0]) / 3;
+		float3 L = lightPos - intersection;
+		float dist2 = dot(L, L);
+		float dist = sqrt(dist2);
+		L /= dist;
+
+		float3 lightNormal = normalize(cross(
+		lightTriangle.vertices[1] - lightTriangle.vertices[0],
+		lightTriangle.vertices[2] - lightTriangle.vertices[0]));
+		float lightArea = triangleArea(lightTriangle.vertices);
+		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;		
+		solidAngle = min(2 * PI, solidAngle);
+		_lightWeights[i] = solidAngle;
+		weightTotal += _lightWeights[i];
+	}
+	float randomValue = clrngLfsr113RandomU01(randomStream) * weightTotal;
+	int lightIndex;
+	for (lightIndex = 0; lightIndex < numLights; ++lightIndex) {
+		randomValue -= _lightWeights[lightIndex];
+		if (randomValue <= 0) break;
+	}
+	// Construct vector to random point on light
+	EmissiveTriangle lightTriangle = scene->emissiveTriangles[lightIndex];
+	*outLightNormal = normalize(cross(
+		lightTriangle.vertices[1] - lightTriangle.vertices[0],
+		lightTriangle.vertices[2] - lightTriangle.vertices[0]));
+	*outLightColour = lightTriangle.material.emissive.emissiveColour * weightTotal / numLights;
+	*outPoint = uniformSampleTriangle(lightTriangle.vertices, randomStream);
+	*outLightArea = triangleArea(lightTriangle.vertices);
+}
+
 void randomPointOnLight(
 	const Scene* scene,
 	clrngLfsr113Stream* randomStream,

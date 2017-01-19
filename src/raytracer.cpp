@@ -849,8 +849,8 @@ void raytracer::RayTracer::InitOpenCL()
 	{
 		int platformIndex;
 		std::cout << "Select a platform: ";
-		//std::cin >> platformIndex;
-		platformIndex = 0;
+		std::cin >> platformIndex;
+		//platformIndex = 0;
 		platform = platforms[platformIndex];
 	}
 
@@ -867,8 +867,8 @@ void raytracer::RayTracer::InitOpenCL()
 	{
 		int deviceIndex;
 		std::cout << "Select a device: ";
-		//std::cin >> deviceIndex;
-		deviceIndex = 0;
+		std::cin >> deviceIndex;
+		//deviceIndex = 0;
 		_device = devices[deviceIndex];
 	}
 
