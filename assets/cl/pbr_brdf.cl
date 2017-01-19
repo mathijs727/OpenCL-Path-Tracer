@@ -60,7 +60,12 @@ float Fr_DisneyDiffuse (float NdotV, float NdotL, float LdotH, float linearRough
 }
 
 
-float3 pbrBrdf(float3 V, float3 L, float3 N, const __global Material* material)
+float3 pbrBrdf(
+	float3 V,
+	float3 L,
+	float3 N,
+	const __global Material* material,
+	clrngLfsr113Stream* randomStream)
 {
 	float3 f0 = material->pbr.reflectance;
 	float f90 = 1.0f;
@@ -84,7 +89,15 @@ float3 pbrBrdf(float3 V, float3 L, float3 N, const __global Material* material)
 	// Diffuse BRDF
 	float Fd = Fr_DisneyDiffuse (NdotV, NdotL, LdotH, linearRoughness) / PI;
 
-	return Fr + Fd * material->pbr.baseColour;
+	float choiceValue = (float)clrngLfsr113RandomU01(randomStream);
+	if (choiceValue < material->pbr.metallic)
+	{
+		// Metalic
+		return Fr;// * material->pbr.metallic;
+	} else {
+		// Diffuse
+		return Fd * material->pbr.baseColour;// * (1.0f - material->pbr.metallic);
+	}
 }
 
 #endif // __PBR_BRDF_CL

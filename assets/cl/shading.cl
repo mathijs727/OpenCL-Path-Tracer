@@ -266,7 +266,7 @@ float3 neeShading(
 			BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 		} else if (material->type == PBR) {
 
-			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material);
+			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream);
 		}
 
 		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
@@ -289,7 +289,7 @@ float3 neeShading(
 		BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 	} else if (material->type == PBR) {
 
-		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material);
+		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
 	}
 
 	outData->flags = 0;
