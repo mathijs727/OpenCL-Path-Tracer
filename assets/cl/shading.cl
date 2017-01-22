@@ -122,7 +122,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	RayData* inData,
+	const __global RayData* inData,
 	RayData* outData,
 	RayData* outShadowData)
 {
@@ -218,7 +218,7 @@ float3 neeShading(
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	RayData* inData,
+	const __global RayData* inData,
 	RayData* outData,
 	RayData* outShadowData)
 {

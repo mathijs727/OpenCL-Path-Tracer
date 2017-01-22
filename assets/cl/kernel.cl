@@ -278,27 +278,22 @@ __kernel void shade(
 	size_t gid = get_global_id(0);
 	RayData outRayData;
 	RayData outShadowRayData;
-	RayData rayData = inRays[gid];// TODO: use pointer to safe registers
-	ShadingData shadingData = inShadingData[gid];// TODO: use pointer to safe registers
+	const __global RayData* rayData = &inRays[gid];// TODO: use pointer to safe registers
+	const __global ShadingData* shadingData = &inShadingData[gid];// TODO: use pointer to safe registers
 	bool active = false;
 
 
 	if (gid < (inputData->numInRays + inputData->newRays) &&
-		rayData.flags != SHADINGFLAGS_HASFINISHED &&
-		shadingData.hit)
-	{
-		//outputPixels[rayData.outputPixel] += (float3)(1,0,0);
-		
-		outRayData.outputPixel = rayData.outputPixel;
-		outShadowRayData.outputPixel = rayData.outputPixel;
+		rayData->flags != SHADINGFLAGS_HASFINISHED &&
+		shadingData->hit)
+	{		
+		outRayData.outputPixel = rayData->outputPixel;
+		outShadowRayData.outputPixel = rayData->outputPixel;
 		outRayData.flags = 0;
 		outShadowRayData.flags = 0;
-		outRayData.numBounces = rayData.numBounces + 1;
+		outRayData.numBounces = rayData->numBounces + 1;
 
-		float3 intersection = rayData.ray.origin + shadingData.t * rayData.ray.direction;
-		// TODO: use global memory and make a special transpose multiply function
-		//float normalTransform[16];
-		//matrixTranspose(shadingData.invTransform, normalTransform);
+		float3 intersection = rayData->ray.origin + shadingData->t * rayData->ray.direction;
 
 		// Load scene
 		Scene scene;
@@ -317,16 +312,16 @@ __kernel void shade(
 		clrngLfsr113Stream randomStream;
 		clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
-		outputPixels[rayData.outputPixel] += neeShading(
+		outputPixels[rayData->outputPixel] += neeShading(
 			&scene,
-			shadingData.triangleIndex,
+			shadingData->triangleIndex,
 			intersection,
-			normalize(rayData.ray.direction),
-			shadingData.invTransform,
-			shadingData.uv,
+			normalize(rayData->ray.direction),
+			shadingData->invTransform,
+			shadingData->uv,
 			textures,
 			&randomStream,
-			&rayData,
+			rayData,
 			&outRayData,
 			&outShadowRayData);
 
