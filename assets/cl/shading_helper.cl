@@ -33,7 +33,7 @@ int randInt(clrngLfsr113Stream* randomStream, int start, int stop)
 float3 diffuseReflection(
 	float3 edge1,
 	float3 edge2,
-	const float* normalTransform,
+	const __global float* invTransform,
 	clrngLfsr113Stream* randomStream)
 {
 	float u1 = clrngLfsr113RandomU01(randomStream);
@@ -51,7 +51,7 @@ float3 diffuseReflection(
 	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
 	
 	// Apply the normal transform (top level BVH)
-	orientedSample = normalize(matrixMultiplyLocal(normalTransform, (float4)(orientedSample, 0.0f)).xyz);
+	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
 	return normalize(orientedSample);
 }
 
@@ -60,7 +60,7 @@ float3 diffuseReflection(
 float3 cosineWeightedDiffuseReflection(
 	float3 edge1,
 	float3 edge2,
-	const float* normalTransform,
+	const __global float* invTransform,
 	clrngLfsr113Stream* randomStream)
 {
 	// A cosine-weither random distribution is obtained by generating points on the unit
@@ -82,7 +82,7 @@ float3 cosineWeightedDiffuseReflection(
 	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
 	
 	// Apply the normal transform (top level BVH)
-	orientedSample = normalize(matrixMultiplyLocal(normalTransform, (float4)(orientedSample, 0.0f)).xyz);
+	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
 	return normalize(orientedSample);
 }
 

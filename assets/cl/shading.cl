@@ -31,7 +31,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
-	const float* normalTransform,
+	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
@@ -44,7 +44,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	float3 edge1 = vertices[1].vertex - vertices[0].vertex;
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = cross(edge1, edge2);
-	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
+	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
@@ -97,7 +97,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 
 	// Continue random walk
 	data->flags = 0;
-	float3 reflection = cosineWeightedDiffuseReflection(edge1, edge2, normalTransform, randomStream);
+	float3 reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 	//float lightPdf = dot(realNormal, reflection) / PI;
 	//float3 integral = (dot(realNormal, reflection) / lightPdf) * BRDF;
 	float3 integral = PI * BRDF;
@@ -118,7 +118,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
-	const float* normalTransform,
+	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
@@ -133,7 +133,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float3 edge1 = vertices[1].vertex - vertices[0].vertex;
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = cross(edge1, edge2);
-	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
+	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
@@ -195,7 +195,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	}
 
 	// Continue random walk
-	float3 reflection = cosineWeightedDiffuseReflection(edge1, edge2, normalTransform, randomStream);
+	float3 reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 	outData->flags = 0;
 	float3 Ei = PI;
 	float3 integral = BRDF * Ei;
@@ -214,7 +214,7 @@ float3 neeShading(
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
-	const float* normalTransform,
+	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
@@ -229,7 +229,7 @@ float3 neeShading(
 	float3 edge1 = vertices[1].vertex - vertices[0].vertex;
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = cross(edge1, edge2);
-	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
+	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
 	float3 shadingNormal = interpolateNormal(vertices, uv);
 	//realNormal = shadingNormal;
 	
@@ -294,7 +294,7 @@ float3 neeShading(
 	}
 
 	// Continue random walk
-	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
+	float3 reflection = diffuseReflection(edge1, edge2, invTransform, randomStream);
 	
 	float3 BRDF;
 	if (material->type == Diffuse) {
@@ -320,7 +320,7 @@ float3 naiveShading(
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
-	const float* normalTransform,
+	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
@@ -336,7 +336,7 @@ float3 naiveShading(
 	float3 edge1 = vertices[1].vertex - vertices[0].vertex;
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = normalize(cross(edge1, edge2));
-	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
+	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
@@ -353,7 +353,7 @@ float3 naiveShading(
 	}
 
 	// Continue in random direction
-	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
+	float3 reflection = diffuseReflection(edge1, edge2, invTransform, randomStream);
 
 	// Update throughput
 	outData->flags = 0;
