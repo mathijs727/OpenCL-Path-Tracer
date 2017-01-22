@@ -66,7 +66,11 @@ float Fr_DisneyDiffuse (float NdotV, float NdotL, float LdotH, float linearRough
 // Explains how to combine Specular + Diffuse (and why) (Siggraph Shading Course 2013):
 // http://blog.selfshadow.com/publications/s2013-shading-course/hoffman/s2013_pbs_physics_math_slides.pdf
 //
-// 
+// Tells us f0=0.04f is a good approximation for dielectrics (set in cpp code):
+// https://de45xmedrsdbp.cloudfront.net/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf
+//
+// Tells us linear roughness is sqrt of roughness (and not square):
+// https://seblagarde.wordpress.com/2014/04/14/dontnod-physically-based-rendering-chart-for-unreal-engine-4/
 float3 pbrBrdf(
 	float3 V,
 	float3 L,
@@ -78,7 +82,7 @@ float3 pbrBrdf(
 	if (material->pbr.metallic) {
 		f0 = material->pbr.reflectance;
 	} else {
-		f0 = 0.04f;
+		f0 = material->pbr.f0NonMetal;
 	}
 	float f90 = 1.0f;
 	float roughness = 1.0f - material->pbr.smoothness;
@@ -101,6 +105,7 @@ float3 pbrBrdf(
 	// Diffuse BRDF
 	float Fd = Fr_DisneyDiffuse (NdotV, NdotL, LdotH, linearRoughness) / PI;
 
+	
 	float3 diffuseColour;
 	if (material->pbr.metallic)
 	{

@@ -36,10 +36,18 @@ typedef struct
 	uint newRays;
 } KernelData;
 
+typedef struct
+{
+	float2 uv;
+	const __global float* invTransform;
+	int triangleIndex;
+	float t;
+	bool hit;
+} ShadingData;
 
 
 __kernel void generatePrimaryRays(
-	__global ShadingData* outRays,
+	__global RayData* outRays,
 	volatile __global KernelData* inputData,
 	__global clrngLfsr113HostStream* randomStreams)
 {
@@ -98,7 +106,7 @@ __kernel void generatePrimaryRays(
 
 __kernel void intersectShadows(
 	__global float3* outputPixels,
-	__global ShadingData* inShadowRays,
+	__global RayData* inShadowRays,
 
 	volatile __global KernelData* inputData,
 	__global VertexData* vertices,
@@ -109,7 +117,7 @@ __kernel void intersectShadows(
 	__global TopBvhNode* topLevelBvh)
 {
 	size_t gid = get_global_id(0);
-	ShadingData shadowData = inShadowRays[gid];
+	RayData shadowData = inShadowRays[gid];
 	if (gid >= inputData->numOutRays)
 		return;
 	inShadowRays[gid].flags = SHADINGFLAGS_HASFINISHED;
@@ -143,67 +151,76 @@ __kernel void intersectShadows(
 	}
 }
 
-__kernel void intersectAndShade(
-	__global float3* outputPixels,
-	__global ShadingData* outRays,
-	__global ShadingData* outShadowRays,
-	__global ShadingData* inRays,
+__kernel void intersectWalk(
+	//__global RayData* outRays,
+	//__global RayData* outShadowRays,
+	__global ShadingData* outShadingData,
 
+	__global RayData* inRays,
 	volatile __global KernelData* inputData,
 	__global VertexData* vertices,
 	__global TriangleData* triangles,
-	__global EmissiveTriangle* emissiveTriangles,
-	__global Material* materials,
-	__read_only image2d_array_t textures,
+	//__global EmissiveTriangle* emissiveTriangles,
+	//__global Material* materials,
+	//__read_only image2d_array_t textures,
 	__global SubBvhNode* subBvh,
 	__global TopBvhNode* topLevelBvh,
-	__global clrngLfsr113HostStream* randomStreams)
+	__global float3* outputPixels)
+	//__global clrngLfsr113HostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
-	bool hit = false;
-	ShadingData outShadingData;
-	ShadingData outShadowShadingData;
-	ShadingData shadingData = inRays[gid];
+	//RayData outRayData;
+	//RayData outShadowRayData;
+	RayData rayData = inRays[gid];
 
-	if (gid < (inputData->numInRays + inputData->newRays) && shadingData.flags != SHADINGFLAGS_HASFINISHED)
+	ShadingData shadingData;
+	shadingData.hit = false;
+
+	if (gid < (inputData->numInRays + inputData->newRays) && rayData.flags != SHADINGFLAGS_HASFINISHED)
 	{
-		outShadingData.outputPixel = shadingData.outputPixel;
-		outShadowShadingData.outputPixel = shadingData.outputPixel;
-		outShadingData.flags = 0;
-		outShadowShadingData.flags = 0;
-		
+		//outRayData.outputPixel = rayData.outputPixel;
+		//outShadowRayData.outputPixel = rayData.outputPixel;
+		//outRayData.flags = 0;
+		//outShadowRayData.flags = 0;
 
-		clrngLfsr113Stream randomStream;
-		clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+		//clrngLfsr113Stream randomStream;
+		//clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
 		Scene scene;
 		loadScene(
 			vertices,
 			triangles,
-			materials,
+			NULL,// Dont need materials for intersection
 			inputData->numEmissiveTriangles,
-			emissiveTriangles,
+			NULL,// Dont need emissive triangles for intersection
 			subBvh,
 			inputData->topLevelBvhRoot,
 			topLevelBvh,
 			&scene);
 
 		// Trace rays
-		int triangleIndex;
-		float t;
-		float2 uv;
-		const __global float* invTransform;
-		hit = traceRay(
+		//float2 uv;
+		//const __global float* invTransform;
+		//int triangleIndex;
+		//float t;
+		shadingData.hit = traceRay(
 			&scene,
-			&shadingData.ray,
+			&rayData.ray,
 			false,
 			INFINITY,
-			&triangleIndex,
-			&t,
-			&uv,
-			&invTransform);
-		float3 intersection = shadingData.ray.origin + shadingData.ray.direction * t;
-		float normalTransform[16];
+			&shadingData.triangleIndex,
+			&shadingData.t,
+			&shadingData.uv,
+			&shadingData.invTransform);
+
+		/*shadingData.intersection = rayData.ray.origin + rayData.ray.direction * t;
+		shadingData.direction = rayData.ray.direction;
+		shadingData.uv = uv;
+		shadingdata.invTransform = invTransform;
+		shadingData.triangleIndex = triangleIndex;
+		shadingData.hit = hit;*/
+
+		/*float normalTransform[16];
 		matrixTranspose(invTransform, normalTransform);
 
 		if (hit)
@@ -218,25 +235,114 @@ __kernel void intersectAndShade(
 				textures,
 				&randomStream,
 				&shadingData,
-				&outShadingData,
-				&outShadowShadingData);
-			outShadingData.numBounces = shadingData.numBounces + 1;
-			//outRay = (outShadingData.numBounces < 5);
-			//outputPixels[shadingData.outputPixel] += outShadingData.ray.direction;
-		}
+				&outRayData,
+				&outShadowRayData);
+			outRayData.numBounces = shadingData.numBounces + 1;
+			//outRay = (outRayData.numBounces < 5);
+			//outputPixels[shadingData.outputPixel] += outRayData.ray.direction;
+		}*/
+
+		// Store random streams
+		//clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+	} 
+
+	outShadingData[gid] = shadingData;
+
+	/*int index = workgroup_counter_inc(&inputData->numOutRays, shadingData.hit);//atomic_inc(&inputData->numOutRays);
+	if (shadingData.hit)
+	{
+		if (outRayData.numBounces >= MAX_ITERATIONS)
+			outRayData.flags = SHADINGFLAGS_HASFINISHED;
+
+		outRays[index] = outRayData;
+		outShadowRays[index] = outShadowRayData;
+	}*/
+}
+
+__kernel void shade(
+	__global float3* outputPixels,
+	__global RayData* outRays,
+	__global RayData* outShadowRays,
+
+	__global RayData* inRays,
+	__global ShadingData* inShadingData,
+	volatile __global KernelData* inputData,
+
+	__global VertexData* vertices,
+	__global TriangleData* triangles,
+	__global EmissiveTriangle* emissiveTriangles,
+	__global Material* materials,
+	__read_only image2d_array_t textures,
+	__global clrngLfsr113HostStream* randomStreams)
+{
+	size_t gid = get_global_id(0);
+	RayData outRayData;
+	RayData outShadowRayData;
+	RayData rayData = inRays[gid];// TODO: use pointer to safe registers
+	ShadingData shadingData = inShadingData[gid];// TODO: use pointer to safe registers
+	bool active = false;
+
+
+	if (gid < (inputData->numInRays + inputData->newRays) &&
+		rayData.flags != SHADINGFLAGS_HASFINISHED &&
+		shadingData.hit)
+	{
+		//outputPixels[rayData.outputPixel] += (float3)(1,0,0);
+		
+		outRayData.outputPixel = rayData.outputPixel;
+		outShadowRayData.outputPixel = rayData.outputPixel;
+		outRayData.flags = 0;
+		outShadowRayData.flags = 0;
+		outRayData.numBounces = rayData.numBounces + 1;
+
+		float3 intersection = rayData.ray.origin + shadingData.t * rayData.ray.direction;
+		// TODO: use global memory and make a special transpose multiply function
+		float normalTransform[16];
+		matrixTranspose(shadingData.invTransform, normalTransform);
+
+		// Load scene
+		Scene scene;
+		loadScene(
+			vertices,
+			triangles,
+			materials,// Dont need materials for intersection
+			inputData->numEmissiveTriangles,
+			emissiveTriangles,// Dont need emissive triangles for intersection
+			NULL,
+			inputData->topLevelBvhRoot,
+			NULL,
+			&scene);
+
+		// Load random streams
+		clrngLfsr113Stream randomStream;
+		clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+
+		outputPixels[rayData.outputPixel] += neeShading(
+			&scene,
+			shadingData.triangleIndex,
+			intersection,
+			normalize(rayData.ray.direction),
+			normalTransform,
+			shadingData.uv,
+			textures,
+			&randomStream,
+			&rayData,
+			&outRayData,
+			&outShadowRayData);
 
 		// Store random streams
 		clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
-	} 
+		active = true;
+	}
 
-	int index = workgroup_counter_inc(&inputData->numOutRays, hit);//atomic_inc(&inputData->numOutRays);
-	if (hit)
+	int index = workgroup_counter_inc(&inputData->numOutRays, active);
+	if (active)
 	{
-		if (outShadingData.numBounces >= MAX_ITERATIONS)
-			outShadingData.flags = SHADINGFLAGS_HASFINISHED;
+		if (outRayData.numBounces >= MAX_ITERATIONS)
+			outRayData.flags = SHADINGFLAGS_HASFINISHED;
 
-		outRays[index] = outShadingData;
-		outShadowRays[index] = outShadowShadingData;
+		outRays[index] = outRayData;
+		outShadowRays[index] = outShadowRayData;
 	}
 }
 
@@ -284,7 +390,7 @@ __kernel void updateKernelData(
 		topLevelBvh,
 		&scene);
 
-	ShadingData shadingData;
+	RayData shadingData;
 
 	float3 accumulatedColour = (float3)(0, 0, 0);
 	for (int i = 0; i < inputData->raysPerPass; i++)

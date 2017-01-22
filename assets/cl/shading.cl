@@ -15,13 +15,13 @@ typedef struct {
 	float3 multiplier;// 16 bytes
 	size_t outputPixel;// 4/8 bytes?
 	int flags;// 4 bytes
-	union
+	union// 4 bytes
 	{
 		float rayLength;// Only shadows use this
 		int numBounces;// And shadows dont bounce
 	};
 	// Aligned to 16 bytes so struct has size of 64 bytes
-} ShadingData;
+} RayData;
 
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
@@ -35,7 +35,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	ShadingData* data)
+	RayData* data)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -122,9 +122,9 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	ShadingData* inData,
-	ShadingData* outData,
-	ShadingData* outShadowData)
+	RayData* inData,
+	RayData* outData,
+	RayData* outShadowData)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -218,9 +218,9 @@ float3 neeShading(
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	ShadingData* inData,
-	ShadingData* outData,
-	ShadingData* outShadowData)
+	RayData* inData,
+	RayData* outData,
+	RayData* outShadowData)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -324,9 +324,9 @@ float3 naiveShading(
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	ShadingData* inData,
-	ShadingData* outData,
-	ShadingData* outShadowData)
+	RayData* inData,
+	RayData* outData,
+	RayData* outShadowData)
 {
 	outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 	// Gather intersection data
