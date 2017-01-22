@@ -24,7 +24,7 @@
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
 
-#define MAX_ACTIVE_RAYS 512*256
+#define MAX_ACTIVE_RAYS 1280*720// Number of rays per pass (top performance = all pixels in 1 pass but very large buffer sizes at 4K?)
 
 struct KernelData
 {
@@ -508,6 +508,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		if (survivingRays == 0 &&// We are out of rays
 			(updatedKernelData.rayOffset + updatedKernelData.newRays >= maxRays))// And we wont generate new ones
 			break;
+		//survivingRays = MAX_ACTIVE_RAYS;
 
 
 		if (survivingRays != 0)
