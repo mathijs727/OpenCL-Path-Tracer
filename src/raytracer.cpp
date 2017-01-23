@@ -342,11 +342,13 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 	_queue.enqueueAcquireGLObjects(&images);
 #endif
 
-	if (camera.dirty)
+	// Easier than setting dirty flag all the time, bit more work intensive but not a big deal
+	static CameraData prevFrameCamData = { };
+	if (memcmp(&camera.get_camera_data(), &prevFrameCamData, sizeof(CameraData)) != 0)
 	{
+		prevFrameCamData = camera.get_camera_data();
 		ClearAccumulationBuffer();
 		_rays_per_pixel = 0;
-		camera.dirty = false;
 	}
 
 	if (_rays_per_pixel >= MAX_RAYS_PER_PIXEL)
@@ -354,11 +356,10 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 
 	// Non blocking CPU
 	TraceRays(camera);
-	Accumulate();
+	Accumulate(camera);
 #ifdef OUTPUT_AVERAGE_GRAYSCALE
 	CalculateAverageGrayscale();
 #endif
-	GammaCorrection();
 	
 	_queue.finish();
 
@@ -550,16 +551,17 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	_rays_per_pixel += 1;
 }
 
-void raytracer::RayTracer::Accumulate()
+void raytracer::RayTracer::Accumulate(const Camera& camera)
 {
-	_accumulate_kernel.setArg(0, _accumulation_buffer);
 #ifdef OPENCL_GL_INTEROP
-	_accumulate_kernel.setArg(1, _output_image);
+	_accumulate_kernel.setArg(0, _output_image);
 #else
-	_accumulate_kernel.setArg(1, _output_image_cl);
+	_accumulate_kernel.setArg(0, _output_image_cl);
 #endif
-	_accumulate_kernel.setArg(2, _rays_per_pixel);
-	_accumulate_kernel.setArg(3, _scr_width);
+	_accumulate_kernel.setArg(1, _accumulation_buffer);
+	_accumulate_kernel.setArg(2, _ray_kernel_data);
+	_accumulate_kernel.setArg(3, _rays_per_pixel);
+	_accumulate_kernel.setArg(4, _scr_width);
 	_queue.enqueueNDRangeKernel(
 		_accumulate_kernel,
 		cl::NullRange,
@@ -567,10 +569,6 @@ void raytracer::RayTracer::Accumulate()
 		cl::NullRange,
 		nullptr,
 		nullptr);
-}
-
-void raytracer::RayTracer::GammaCorrection()
-{
 }
 
 void raytracer::RayTracer::ClearAccumulationBuffer()
@@ -736,6 +734,7 @@ void raytracer::RayTracer::CollectTransformedLights(const SceneNode* node, const
 			result.vertices[1] = newTransform * vertices[triangle.indices[1]].vertex;
 			result.vertices[2] = newTransform * vertices[triangle.indices[2]].vertex;
 			result.material = materials[triangle.material_index];
+			result.material.emissive.emissiveColour;
 			_emissive_triangles_host.push_back(result);
 		}
 	}

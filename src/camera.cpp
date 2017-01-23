@@ -4,12 +4,16 @@
 using namespace raytracer;
 
 raytracer::Camera::Camera(const Transform& transform, float fov, float aspectRatio, float focalDistance) {
-	dirty = true;
 	_transform = transform;
 	_aspectRatio = aspectRatio;
 	_fov = fov;
-	_focalDistance = focalDistance;
+	_focal_distance = focalDistance;
 	_thinLens = true;
+
+	_focal_length_mm = 50.0f;
+	_aperture = 8.0f;
+	_shutter_time = 1 / 32.0f;
+	_iso = 1200;
 }
 
 CameraData raytracer::Camera::get_camera_data() const
@@ -22,10 +26,9 @@ CameraData raytracer::Camera::get_camera_data() const
 	CameraData result;
 
 	// Physically based camera
-	float aperture = 8.0f;// f/8 (fstops: https://en.wikipedia.org/wiki/F-number)
-	float focalLength = 50 / 1000.0f;// 50mm
-	float apertureDiameter = focalLength / aperture;
-	float focalDistance = _focalDistance;
+	float focalLength = _focal_length_mm / 1000.0f;// 50mm
+	float apertureDiameter = focalLength / _aperture;
+	float focalDistance = _focal_distance;
 	float projectedDistance = 1.0f / (1.0f / focalLength - 1 / focalDistance);
 
 	result.u_normalized = orientation_matrix * glm::vec3(1, 0, 0);
@@ -33,6 +36,9 @@ CameraData raytracer::Camera::get_camera_data() const
 	result.apertureRadius = apertureDiameter / 2.0f;
 	result.focalDistance = focalDistance;
 
+	result.relativeAperture = _aperture;
+	result.shutterTime = _shutter_time;
+	result.ISO = _iso;
 
 	// Pinhole camera
 	//float halfWidth = _worldspaceHalfWidth;
@@ -70,7 +76,6 @@ float raytracer::Camera::fov() const {
 
 Transform& raytracer::Camera::transform()
 {
-	dirty = true;
 	return _transform;
 }
 

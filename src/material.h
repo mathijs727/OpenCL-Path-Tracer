@@ -101,9 +101,10 @@ struct Material
 	}
 
 	static Material Emissive(const glm::vec3& colour) {
+		// Cornell box is not defined in physical units so multiply by 5 to make it brighter
 		Material result;
 		result.type = Type::Emissive;
-		result.emissive.emissiveColour = colour;
+		result.emissive.emissiveColour = colour * 2.0f;
 		return result;
 	}
 

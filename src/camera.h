@@ -19,10 +19,14 @@ struct CameraData
 	CL_VEC3(v_normalized);
 	float focalDistance;
 	float apertureRadius;
+
+	float relativeAperture;
+	float shutterTime;
+	float ISO;
 	
 	char thinLensEnabled;
 
-	byte __cl_padding[7];
+	byte __cl_padding[11];
 };
 
 class Camera
@@ -37,17 +41,24 @@ public:
 	Transform& transform();
 	const Transform& transform() const;
 
-	float& get_focal_distance() { return _focalDistance; };
+	float& get_focal_distance() { return _focal_distance; };
+	float& get_focal_length_mm() { return _focal_length_mm; }
+	float& get_aperture_fstops() { return _aperture; };
+	float& get_shutter_time() { return _shutter_time; };
+	float& get_iso() { return _iso; };
 	bool& is_thin_lense() { return _thinLens; }
-public:
-	bool dirty;
 private:
 	Transform _transform;
 
 	// y divided by x
 	float _aspectRatio;
-	float _focalDistance;
+	float _focal_distance;
 	float _fov;// Horizontal Field Of View
+
+	float _focal_length_mm;
+	float _aperture;
+	float _shutter_time;
+	float _iso;
 
 	bool _thinLens;
 };

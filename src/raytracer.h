@@ -31,8 +31,7 @@ public:
 private:
 	void TraceRays(const Camera& camera);
 
-	void Accumulate();
-	void GammaCorrection();
+	void Accumulate(const Camera& camera);
 	void ClearAccumulationBuffer();
 	void CalculateAverageGrayscale();
 

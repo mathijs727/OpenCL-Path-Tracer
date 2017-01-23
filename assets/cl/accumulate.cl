@@ -1,8 +1,13 @@
 #include "gamma.cl"
+#include "exposure.cl"
+#include "tonemapping.cl"
+#include "kernel_data.cl"
 
 __kernel void accumulate(
-	__global float3* input,
 	__write_only image2d_t output,
+	__global float3* input,
+
+	__global const KernelData* inputData,
 	uint n,
 	uint scr_width)
 {
@@ -13,7 +18,13 @@ __kernel void accumulate(
 
 	// Read the sum of the rays and divide by number of rays
 	float3 raySum = input[y * scr_width + x];
-	float3 colour = raySum / nf;
+	float3 luminance = raySum / nf;
+
+	// Adjust for exposure
+	luminance = calcExposedLuminance(&inputData->camera, luminance);
+
+	// Apply tone mapping
+	float3 colour = tonemapUncharted2(luminance);
 
 	// Gamma correct the colour
 	colour = accurateLinearToSRGB(colour);
