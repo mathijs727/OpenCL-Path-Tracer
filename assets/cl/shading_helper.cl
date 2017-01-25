@@ -87,30 +87,32 @@ float3 cosineWeightedDiffuseReflection(
 	return normalize(orientedSample);
 }
 
-float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2,
+float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 incidenceVector,
 	const __global float* invTransform,
 	float a,
 	clrngLfsr113Stream* randomStream,
 	float* outScalingFactor) {
 	
-	float r0 = clrngLfsr113RandomU01(randomStream);
-	
-	
+	float r0 = clrngLfsr113RandomU01(randomStream);	
 	float phi = 2.0f * PI * r0;
 	float theta;
-	float r1;
-	r1 = clrngLfsr113RandomU01(randomStream);
+	float r1 = clrngLfsr113RandomU01(randomStream);
 	theta = acos(sqrt((1.0f - r1) / ((a*a - 1.0f) * r1 + 1.0f)));
 
 	float r = sqrt(r1);
 	float cosTheta = cos(theta);
 	float sinTheta = sin(theta);
-	float x = r * cos(phi);
-	float y = r * sin(phi);
-	float z = r * sinTheta;
-
+	float x = r * cos(phi) * cos(PI/2 - theta);
+	float y = r * sin(phi) * cos(PI/2 - theta);
+	float z = sin(PI/2 - theta);
+	/*
+	float t = pow(r0, 2 / (a + 1));
+	x = cos(2 * PI*r1)*sqrt(1 - t);
+	y = sin(2 * PI*r1)*sqrt(1 - t);
+	z = sqrt(t);
+	*/
 	float3 sample = (float3)(x,y,z);
-
+	
 	float3 normal = normalize(cross(edge1, edge2));
 	float3 tangent = normalize(cross(normal, edge1));
 	float3 bitangent = cross(normal, tangent);
@@ -121,10 +123,13 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2,
 	
 	// Apply the normal transform (top level BVH)
 	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
-	return normalize(orientedSample);
-
-	float denom = cosTheta*cosTheta*(a*a-1) + 1;
-	*outScalingFactor = a*a / (PI*denom*denom) * cosTheta * sinTheta;
+	
+	float3 L = -incidenceVector;
+	float dotProduct = dot(orientedSample, normal);
+	float denom = dotProduct*dotProduct*(a*a-1) + 1;
+	//*outScalingFactor = (a + 2) / (2 * PI)*dot(normal,orientedSample); 
+	*outScalingFactor = a*a / (PI*denom*denom);
+	return normalize(2*dot(orientedSample, L)*orientedSample - L);
 }
 
 // http://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java

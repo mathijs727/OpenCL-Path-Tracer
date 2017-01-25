@@ -35,7 +35,9 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	RayData* data)
+	const __global RayData* inData,
+	RayData* outData,
+	RayData* outShadowData)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -45,31 +47,37 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = cross(edge1, edge2);
 	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
+	float3 shadingNormal = interpolateNormal(vertices, uv);
+	//realNormal = shadingNormal;
+
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
-
-	if (dot(realNormal, -rayDirection) < 0.0f)
-	{
-		data->flags = SHADINGFLAGS_HASFINISHED;
-		return BLACK;
-	}
-
-	float3 BRDF = material->diffuse.diffuseColour * INVPI;
 
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
 	{
-		data->flags |= SHADINGFLAGS_HASFINISHED;
-		if (data->flags & SHADINGFLAGS_LASTSPECULAR) {
-			return data->multiplier * material->emissive.emissiveColour;
-		} else {
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
+		if (inData->flags & SHADINGFLAGS_LASTSPECULAR) {
+			return inData->multiplier * material->emissive.emissiveColour;
+		}
+		else {
 			return BLACK;
 		}
 	}
 
+	if (dot(realNormal, -rayDirection) < 0.0f)
+	{
+		// Stop if we hit the back side
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
+		return BLACK;
+	}
+
 	// Sample a random light source
 	float3 lightPos, lightNormal, lightColour; float lightArea;
-	randomPointOnLight(
+	weightedRandomPointOnLight(
 		scene,
+		intersection,
 		randomStream,
 		&lightPos,
 		&lightNormal,
@@ -80,32 +88,59 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	float dist = sqrt(dist2);
 	L /= dist;
 
-	float3 Ld = BLACK;
-	Ray lightRay = createRay(intersection + L * EPSILON, L);
+	float3 BRDF = 0.0f;
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
-		if (!traceRay(scene, &lightRay, true, dist - 2 * EPSILON, NULL, NULL, NULL, NULL))
-		{
-			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
-			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
-			float lightPDF = 1 / solidAngle;
-			float brdfPDF = dot(realNormal, L) / PI;//(1 / (2 * PI));
-			float misPDF = lightPDF + brdfPDF;
-			Ld = scene->numEmissiveTriangles * (dot(realNormal, L) / misPDF) * BRDF * lightColour;
+		if (material->type == PBR) {
+			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream);
 		}
+		else if (material->type == Diffuse)
+		{
+			BRDF = diffuseColour(material, vertices, uv, textures) / PI;
+		}
+
+		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
+		solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
+		float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * dot(realNormal, L);
+		outShadowData->flags = 0;
+		outShadowData->multiplier = Ld * inData->multiplier;
+		outShadowData->ray = createRay(intersection + L * EPSILON, L);
+		outShadowData->rayLength = dist - 2 * EPSILON;
+	}
+	else {
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
+	}
+
+
+	float PDF;
+	float3 reflection;
+	if (material->type == PBR) {
+		//reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+		//PDF = dot(realNormal, reflection) / PI;
+		reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
+		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
+	}
+	else if (material->type == Diffuse) {
+		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+		PDF = dot(realNormal, reflection) / PI;
+		BRDF = diffuseColour(material, vertices, uv, textures) / PI;
+	}
+
+	if (dot(realNormal, reflection) < 0.0f)
+	{
+		// Stop if we have a ray going inside
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
+		return BLACK;
 	}
 
 	// Continue random walk
-	data->flags = 0;
-	float3 reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
-	//float lightPdf = dot(realNormal, reflection) / PI;
-	//float3 integral = (dot(realNormal, reflection) / lightPdf) * BRDF;
-	float3 integral = PI * BRDF;
-	float3 oldMultiplier = data->multiplier;
-	data->ray.origin = intersection + reflection * EPSILON;
-	data->ray.direction = reflection;
-	data->multiplier = oldMultiplier * integral;
-	return oldMultiplier * Ld;
+	outData->flags = 0;
+	float3 integral = BRDF * dot(realNormal, reflection) / PDF;
+	outData->ray.origin = intersection + reflection * EPSILON;
+	outData->ray.direction = reflection;
+	outData->multiplier = inData->multiplier * integral;
+	return BLACK;
 }
 
 
@@ -201,9 +236,10 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float PDF;
 	float3 reflection;
 	if (material->type == PBR) {
+		float choiceValue = clrngLfsr113RandomU01(randomStream);
+		reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
 		//reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 		//PDF = dot(realNormal, reflection) / PI;
-		reflection = ggxWeightedImportanceDirection(edge1, edge2, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
 		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
 	}
 	else if (material->type == Diffuse) {

@@ -220,7 +220,7 @@ __kernel void shade(
 		clrngLfsr113Stream randomStream;
 		clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
-		outputPixels[rayData->outputPixel] += neeShading(
+		outputPixels[rayData->outputPixel] += neeIsShading(
 			&scene,
 			shadingData->triangleIndex,
 			intersection,
