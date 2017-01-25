@@ -63,6 +63,7 @@ float3 cosineWeightedDiffuseReflection(
 	const __global float* invTransform,
 	clrngLfsr113Stream* randomStream)
 {
+
 	// A cosine-weither random distribution is obtained by generating points on the unit
 	// disc, and projecting the disc on the unit hemisphere.
 	float r0 = clrngLfsr113RandomU01(randomStream);
@@ -87,7 +88,7 @@ float3 cosineWeightedDiffuseReflection(
 }
 
 float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2,
-	const __global float* inverseTransform,
+	const __global float* invTransform,
 	float a,
 	clrngLfsr113Stream* randomStream,
 	float* outScalingFactor) {
@@ -116,7 +117,7 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2,
 	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
 	
 	// Apply the normal transform (top level BVH)
-	orientedSample = normalize(matrixMultiplyTranspose(inverseTransform, orientedSample));
+	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
 	return normalize(orientedSample);
 
 	float denom = cosTheta*cosTheta*(a*a-1) + 1;

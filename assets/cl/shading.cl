@@ -136,15 +136,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
 	float3 shadingNormal = interpolateNormal(vertices, uv);
 	//realNormal = shadingNormal;
-	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
-	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
-	if (dot(realNormal, -rayDirection) < 0.0f)
-	{
-		outData->flags = SHADINGFLAGS_HASFINISHED;
-		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
-		return BLACK;
-	}
+	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
@@ -153,7 +146,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 		if (inData->flags & SHADINGFLAGS_LASTSPECULAR) {
 			return inData->multiplier * material->emissive.emissiveColour;
-		} else {
+		}
+		else {
 			return BLACK;
 		}
 	}
@@ -176,7 +170,6 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		&lightNormal,
 		&lightColour,
 		&lightArea);
-
 	float3 L = lightPos - intersection;
 	float dist2 = dot(L, L);
 	float dist = sqrt(dist2);
@@ -187,19 +180,21 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 	}
 
-	//float3 Ld = BLACK;
-	//Ray lightRay = createRay(intersection + L * EPSILON, L);
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
 		if (material->type == PBR) {
 			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream);
 		}
+
+		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
+		solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
 		float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * dot(realNormal, L);
+		outShadowData->flags = 0;
 		outShadowData->multiplier = Ld * inData->multiplier;
 		outShadowData->ray = createRay(intersection + L * EPSILON, L);
-		//outShadowData->ray.origin += outShadowData->ray.direction * EPSILON;
 		outShadowData->rayLength = dist - 2 * EPSILON;
-	} else {
+	}
+	else {
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 	}
 
@@ -207,10 +202,10 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float Ei;
 	if (material->type == PBR) {
 		float pdf;
-		reflection = ggxWeightedImportanceDirection(edge1, edge2, invTransform, 1 - material->pbr.smoothness, randomStream, &pdf);
-		//BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
-		//Ei = dot(realNormal, reflection) / pdf;
+		//reflection = ggxWeightedImportanceDirection(edge1, edge2, invTransform, 1 - material->pbr.smoothness, randomStream, &pdf);
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
+		//Ei = dot(realNormal, reflection) / pdf;
 		Ei = PI;
 	}
 	else {
@@ -299,7 +294,6 @@ float3 neeShading(
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
 		if (material->type == PBR) {
-
 			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream);
 		}
 
