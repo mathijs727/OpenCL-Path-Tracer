@@ -204,20 +204,22 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	}
 
 	float3 reflection;
-	
-	if (material->type == Diffuse) {
-		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
-	}
-
+	float Ei;
 	if (material->type == PBR) {
-		float scalingFactor; // our PDF value
-		reflection = ggxWeightedImportanceDirection(edge1, edge2, invTransform, 1 - material->pbr.smoothness, randomStream, &scalingFactor);
-		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream) / scalingFactor;
+		float pdf;
+		reflection = ggxWeightedImportanceDirection(edge1, edge2, invTransform, 1 - material->pbr.smoothness, randomStream, &pdf);
+		//BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
+		//Ei = dot(realNormal, reflection) / pdf;
+		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+		Ei = PI;
+	}
+	else {
+		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+		Ei = PI;
 	}
 
 	// Continue random walk
 	outData->flags = 0;
-	float3 Ei = PI;
 	float3 integral = BRDF * Ei;
 	outData->ray.origin = intersection + reflection * EPSILON;
 	outData->ray.direction = reflection;
@@ -320,8 +322,8 @@ float3 neeShading(
 	}
 
 	outData->flags = 0;
-	float3 Ei = dot(realNormal, reflection);
-	float3 integral = PI * 2.0f * BRDF * Ei;
+	float3 Ei = PI * 2.0f * dot(realNormal, reflection);
+	float3 integral = BRDF * Ei;
 	outData->ray.origin = intersection + reflection * EPSILON;
 	outData->ray.direction = reflection;
 	outData->multiplier = inData->multiplier * integral;

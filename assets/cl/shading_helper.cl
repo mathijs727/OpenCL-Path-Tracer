@@ -119,7 +119,7 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2,
 	orientedSample = normalize(matrixMultiplyTranspose(inverseTransform, orientedSample));
 	return normalize(orientedSample);
 
-	float denom = cosTheta*cosTheta*(a*a-1) -1;
+	float denom = cosTheta*cosTheta*(a*a-1) + 1;
 	*outScalingFactor = a*a / (PI*denom*denom) * cosTheta * sinTheta;
 }
 
