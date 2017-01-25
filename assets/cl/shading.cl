@@ -92,7 +92,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
 		if (material->type == PBR) {
-			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream);
+			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material);
 		}
 		else if (material->type == Diffuse)
 		{
@@ -118,7 +118,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 		//reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 		//PDF = dot(realNormal, reflection) / PI;
 		reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
-		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
+		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material);
 	}
 	else if (material->type == Diffuse) {
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
@@ -214,7 +214,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
 		if (material->type == PBR) {
-			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream);
+			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material);
 		} else if (material->type == Diffuse)
 		{
 			BRDF = diffuseColour(material, vertices, uv, textures) / PI;
@@ -236,22 +236,31 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float PDF;
 	float3 reflection;
 	if (material->type == PBR) {
-		float choiceValue = clrngLfsr113RandomU01(randomStream);
-		float3 f0;
-		if (material->pbr.metallic) {
-			f0 = material->pbr.reflectance;
+		if (material->pbr.metallic)
+		{
+			reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
+			BRDF = brdfOnly(normalize(-rayDirection), reflection, shadingNormal, material);
 		} else {
-			f0 = material->pbr.f0NonMetal;
+			float rand01 = clrngLfsr113RandomU01(randomStream);
+			float NdotL = dot(normalize(-rayDirection), realNormal);
+			if (rand01 < (0.2f + 0.6f * NdotL))
+			{
+				reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+				PDF = INVPI;
+			} else {
+				reflection = reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
+			}
+			BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material);
 		}
-		float f90 = 1.0f;
-		reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
+
+		/*reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
 		float LdotH = saturate(dot(-rayDirection, realNormal));
 		float3 F = F_Schlick(f0, f90, LdotH);
 		if (!material->pbr.metallic && choiceValue > F.x) {
 			reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 			PDF = dot(realNormal, reflection) / PI;
 		}
-		BRDF = pbrBrdfChoice(normalize(-rayDirection), reflection, shadingNormal, material, choiceValue);
+		BRDF = pbrBrdfChoice(normalize(-rayDirection), reflection, shadingNormal, material, choiceValue);*/
 	}
 	else if (material->type == Diffuse) {
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
@@ -348,7 +357,7 @@ float3 neeShading(
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
 		if (material->type == PBR) {
-			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream);
+			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material);
 		}
 
 		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
@@ -366,7 +375,7 @@ float3 neeShading(
 	float3 reflection = diffuseReflection(edge1, edge2, invTransform, randomStream);
 	
 	if (material->type == PBR) {
-		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
+		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material);
 	}
 
 	outData->flags = 0;
@@ -425,7 +434,7 @@ float3 naiveShading(
 	//float3 BRDF = material->diffuse.diffuseColour / PI;
 	float3 BRDF;
 	if (material->type == PBR) {
-		BRDF = pbrBrdf(normalize(-rayDirection), reflection, realNormal, material, randomStream);
+		BRDF = pbrBrdf(normalize(-rayDirection), reflection, realNormal, material);
 	} else if (material->type == Diffuse)
 	{
 		BRDF = diffuseColour(material, vertices, uv, textures) / PI;

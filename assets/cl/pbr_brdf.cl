@@ -92,8 +92,7 @@ float3 pbrBrdf(
 	float3 V,
 	float3 L,
 	float3 N,
-	const __global Material* material,
-	clrngLfsr113Stream* randomStream)
+	const __global Material* material)
 {
 	float3 f0;
 	if (material->pbr.metallic) {
@@ -145,23 +144,20 @@ float3 pbrBrdf(
 }
 
 
-float3 pbrBrdfChoice(
+float3 brdfOnly(
 	float3 V,
 	float3 L,
 	float3 N,
-	const __global Material* material,
-	float choiceValue)
+	const __global Material* material)
 {
 	float3 f0;
 	if (material->pbr.metallic) {
 		f0 = material->pbr.reflectance;
-	}
-	else {
+	} else {
 		f0 = material->pbr.f0NonMetal;
 	}
 	float f90 = 1.0f;
 	float roughness = 1.0f - material->pbr.smoothness;
-	float linearRoughness = sqrt(roughness);
 
 
 	float NdotV = fabs(dot(N, V)) + 1e-5f; // avoid artifact
@@ -170,42 +166,57 @@ float3 pbrBrdfChoice(
 	float NdotH = saturate(dot(N, H));
 	float NdotL = saturate(dot(N, L));
 
-
-	float3 F = F_Schlick(f0, f90, LdotH);
-	float choiceThreshold = F.x;
-	if (material->pbr.metallic || choiceValue < choiceThreshold) {
 	// Specular BRDF
-		float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
-		float D = D_GGX(NdotH, roughness);
-		// The G function might return 0.0f because of the heavyside function.
-		// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
-		//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
-		float3 Fr;
-		if (G != 0.0f)
-		{
-			Fr = D * G / (4.0f * NdotL * NdotV);
-		}
-		else {
-			Fr = 0.0f;
-		}
-		if (material->pbr.metallic) Fr *= F;
-		return Fr;
+	float3 F = F_Schlick(f0, f90, LdotH);
+	float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
+	float D = D_GGX(NdotH, roughness);
+	// The G function might return 0.0f because of the heavyside function.
+	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
+	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
+	float3 Fr;
+	if (G != 0.0f)
+	{
+		return F * D * G / (4.0f * NdotL * NdotV);
 	}
 	else {
-		// Diffuse BRDF (called BRDF because it assumes light enters and exists at the same point,
-		//  but it tries to approximate diffuse scatering so maybe this should be called BTDF and
-		//  call the whole function BSDF (which is BRDF + BTDF))
+		return BLACK;
+	}
+}
+
+float3 diffuseOnly(
+	float3 V,
+	float3 L,
+	float3 N,
+	const __global Material* material)
+{
+	float3 f0;
+	if (material->pbr.metallic) {
+		f0 = material->pbr.reflectance;
+	} else {
+		f0 = material->pbr.f0NonMetal;
+	}
+	float f90 = 1.0f;
+	float roughness = 1.0f - material->pbr.smoothness;
+	float linearRoughness = sqrt(roughness);
+
+	float NdotV = fabs(dot(N, V)) + 1e-5f; // avoid artifact
+	float3 H = normalize(V + L);
+	float LdotH = saturate(dot(L, H));
+	float NdotH = saturate(dot(N, H));
+	float NdotL = saturate(dot(N, L));
+
+	float3 F = F_Schlick(f0, f90, LdotH);
+
+	// Diffuse BRDF (called BRDF because it assumes light enters and exists at the same point,
+	//  but it tries to approximate diffuse scatering so maybe this should be called BTDF and
+	//  call the whole function BSDF (which is BRDF + BTDF))
+	if (material->pbr.metallic)
+	{
+		return BLACK;
+	}
+	else {
 		float Fd = Fr_DisneyDiffuse(NdotV, NdotL, LdotH, linearRoughness) / PI;
-		float3 diffuseColour;
-		if (material->pbr.metallic)
-		{
-			diffuseColour = (float3)(0.0f, 0.0f, 0.0f);
-		}
-		else {
-			diffuseColour = material->pbr.baseColour;
-		}
-		float3 diffuse = Fd * diffuseColour;
-		return diffuse;
+		return Fd * material->pbr.baseColour;
 	}
 }
 

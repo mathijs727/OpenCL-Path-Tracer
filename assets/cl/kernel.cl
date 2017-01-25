@@ -3,7 +3,7 @@
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
 #define MAX_ITERATIONS 4
 
-//#define COMPARE_SHADING
+#define COMPARE_SHADING
 
 #include <clRNG/lfsr113.clh>
 #include "shapes.cl"
