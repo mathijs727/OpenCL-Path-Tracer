@@ -24,7 +24,7 @@ __kernel void accumulate(
 	luminance = calcExposedLuminance(&inputData->camera, luminance);
 
 	// Apply tone mapping
-	float3 colour = tonemapUncharted2(luminance);
+	float3 colour = tonemapReinhard(luminance);
 
 	// Gamma correct the colour
 	colour = accurateLinearToSRGB(colour);
