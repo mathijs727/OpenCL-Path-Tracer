@@ -4,7 +4,7 @@
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2007%20-%20path%20tracing.pdf
 float3 slide17Shading(
-	const Scene* scene,
+	const __local Scene* scene,
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
@@ -62,7 +62,7 @@ float3 slide17Shading(
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2007%20-%20path%20tracing.pdf
 float3 slide16Shading(
-	const Scene* scene,
+	const __local Scene* scene,
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,

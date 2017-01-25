@@ -92,24 +92,29 @@ __kernel void intersectShadows(
 	__global TopBvhNode* topLevelBvh)
 {
 	size_t gid = get_global_id(0);
+
+	__local Scene scene;
+	if (get_local_id(0) == 0)
+	{
+		loadScene(
+			vertices,
+			triangles,
+			NULL,
+			0,
+			NULL,
+			subBvh,
+			inputData->topLevelBvhRoot,
+			topLevelBvh,
+			&scene);
+	}
+	barrier(CLK_LOCAL_MEM_FENCE);
+
 	RayData shadowData = inShadowRays[gid];
 	if (gid >= inputData->numOutRays)
 		return;
 	inShadowRays[gid].flags = SHADINGFLAGS_HASFINISHED;
 	if (shadowData.flags & SHADINGFLAGS_HASFINISHED)
 		return;
-
-	Scene scene;
-	loadScene(
-		vertices,
-		triangles,
-		NULL,
-		0,
-		NULL,
-		subBvh,
-		inputData->topLevelBvhRoot,
-		topLevelBvh,
-		&scene);
 
 	bool hit = traceRay(
 		inTraversalStack,
@@ -140,25 +145,29 @@ __kernel void intersectWalk(
 	__global float3* outputPixels)
 {
 	size_t gid = get_global_id(0);
-	RayData rayData = inRays[gid];
 
-	ShadingData shadingData;
-	shadingData.hit = false;
-
-	if (gid < (inputData->numInRays + inputData->newRays) && rayData.flags != SHADINGFLAGS_HASFINISHED)
+	__local Scene scene;
+	if (get_local_id(0) == 0)
 	{
-		Scene scene;
 		loadScene(
 			vertices,
 			triangles,
 			NULL,// Dont need materials for intersection
-			inputData->numEmissiveTriangles,
+			0,
 			NULL,// Dont need emissive triangles for intersection
 			subBvh,
 			inputData->topLevelBvhRoot,
 			topLevelBvh,
 			&scene);
+	}
+	barrier(CLK_LOCAL_MEM_FENCE);
 
+	RayData rayData = inRays[gid];
+	ShadingData shadingData;
+	shadingData.hit = false;
+
+	if (gid < (inputData->numInRays + inputData->newRays) && rayData.flags != SHADINGFLAGS_HASFINISHED)
+	{
 		// Trace rays
 		shadingData.hit = traceRay(
 			inTraversalStack,
@@ -198,6 +207,21 @@ __kernel void shade(
 	const __global ShadingData* shadingData = &inShadingData[gid];// TODO: use pointer to safe registers
 	bool active = false;
 
+	__local Scene scene;
+	if (get_local_id(0) == 0)
+	{
+		loadScene(
+			vertices,
+			triangles,
+			materials,// Dont need materials for intersection
+			inputData->numEmissiveTriangles,
+			emissiveTriangles,// Dont need emissive triangles for intersection
+			NULL,
+			0,
+			NULL,
+			&scene);
+	}
+	barrier(CLK_LOCAL_MEM_FENCE);
 
 	if (gid < (inputData->numInRays + inputData->newRays) &&
 		rayData->flags != SHADINGFLAGS_HASFINISHED &&
@@ -210,19 +234,6 @@ __kernel void shade(
 		outRayData.numBounces = rayData->numBounces + 1;
 
 		float3 intersection = rayData->ray.origin + shadingData->t * rayData->ray.direction;
-
-		// Load scene
-		Scene scene;
-		loadScene(
-			vertices,
-			triangles,
-			materials,// Dont need materials for intersection
-			inputData->numEmissiveTriangles,
-			emissiveTriangles,// Dont need emissive triangles for intersection
-			NULL,
-			inputData->topLevelBvhRoot,
-			NULL,
-			&scene);
 
 		// Load random streams
 		clrngLfsr113Stream randomStream;

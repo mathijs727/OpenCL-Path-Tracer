@@ -27,7 +27,7 @@ typedef struct {
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
 // Slide 49/51
 float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
-	const Scene* scene,
+	const __local Scene* scene,
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
@@ -149,7 +149,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
 // Slide 42
 float3 neeIsShading(// Next Event Estimation + Importance Sampling
-	const Scene* scene,
+	const __local Scene* scene,
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
@@ -281,7 +281,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
 // Slide 26
 float3 neeShading(
-	const Scene* scene,
+	const __local Scene* scene,
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
@@ -381,7 +381,7 @@ float3 neeShading(
 
 
 float3 naiveShading(
-	const Scene* scene,
+	const __local Scene* scene,
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,

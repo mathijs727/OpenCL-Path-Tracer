@@ -25,7 +25,7 @@ typedef struct
 	float refractiveIndex;
 } Scene;
 
-void getVertices(VertexData* out_vertices, uint* indices, const Scene* scene) {
+void getVertices(VertexData* out_vertices, uint* indices, const __local Scene* scene) {
 	out_vertices[0] = scene->vertices[indices[0]];
 	out_vertices[1] = scene->vertices[indices[1]];
 	out_vertices[2] = scene->vertices[indices[2]];
@@ -40,7 +40,7 @@ void loadScene(
 	const __global SubBvhNode* subBvh,
 	uint topLevelBvhRoot,
 	const __global TopBvhNode* topLevelBvh,
-	Scene* scene) {
+	__local Scene* scene) {
 	scene->refractiveIndex =  1.000277f;
 	
 	scene->numEmissiveTriangles = numEmissiveTriangles;
@@ -58,7 +58,7 @@ void loadScene(
 
 bool traceRay(
 	__global uint* inTraversalStack,
-	const Scene* scene,
+	const __local Scene* scene,
 	const Ray* ray,
 	bool hitAny,
 	float maxT,

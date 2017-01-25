@@ -157,7 +157,7 @@ float triangleArea(float3* vertices)
 }
 
 void weightedRandomPointOnLight(
-	const Scene* scene,
+	const __local Scene* scene,
 	float3 intersection,
 	clrngLfsr113Stream* randomStream,
 	float3* outPoint,
@@ -202,7 +202,7 @@ void weightedRandomPointOnLight(
 }
 
 void randomPointOnLight(
-	const Scene* scene,
+	const __local Scene* scene,
 	clrngLfsr113Stream* randomStream,
 	float3* outPoint,
 	float3* outLightNormal,

@@ -16,7 +16,7 @@ float3 diffuseShade(
 	float3 rayDirection,
 	float3 intersection,
 	float3 normal,
-	const Scene* scene,
+	const __local Scene* scene,
 	float3 diffuseColour)
 {
 	float3 result = (float3)(0.0f, 0.0f, 0.0f);
@@ -87,7 +87,7 @@ bool calcRefractiveRay(
 }
 
 float3 whittedShading(
-	const Scene* scene,
+	const __local Scene* scene,
 	int triangleIndex,
 	float3 intersection,
 	const __global float* invTransform,

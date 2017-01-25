@@ -19,7 +19,7 @@
 #include <clRNG\lfsr113.h>
 
 //#define PROFILE_OPENCL
-//#define OPENCL_GL_INTEROP
+#define OPENCL_GL_INTEROP
 //#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
