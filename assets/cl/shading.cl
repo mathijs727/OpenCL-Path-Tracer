@@ -175,15 +175,14 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float dist = sqrt(dist2);
 	L /= dist;
 
-	float3 BRDF = 0;
-	if (material->type == Diffuse) {
-		BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
-	}
-
+	float3 BRDF = 0.0f;
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
 		if (material->type == PBR) {
 			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream);
+		} else if (material->type == Diffuse)
+		{
+			BRDF = diffuseColour(material, vertices, uv, textures) / PI;
 		}
 
 		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
@@ -198,19 +197,19 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 	}
 
+
+	float PDF;
 	float3 reflection;
-	float Ei;
 	if (material->type == PBR) {
-		float pdf;
-		reflection = ggxWeightedImportanceDirection(edge1, edge2, invTransform, 1 - material->pbr.smoothness, randomStream, &pdf);
 		//reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+		//PDF = dot(realNormal, reflection) / PI;
+		reflection = ggxWeightedImportanceDirection(edge1, edge2, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
 		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
-		Ei = dot(realNormal, reflection) / pdf;
-		//Ei = PI;
 	}
-	else {
+	else if (material->type == Diffuse) {
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
-		Ei = PI;
+		PDF = dot(realNormal, reflection) / PI;
+		BRDF = diffuseColour(material, vertices, uv, textures) / PI;
 	}
 
 	if (dot(realNormal, reflection) < 0.0f)
@@ -223,7 +222,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 
 	// Continue random walk
 	outData->flags = 0;
-	float3 integral = BRDF * Ei;
+	float3 integral = BRDF * dot(realNormal, reflection) / PDF;
 	outData->ray.origin = intersection + reflection * EPSILON;
 	outData->ray.direction = reflection;
 	outData->multiplier = inData->multiplier * integral;
