@@ -94,17 +94,20 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2,
 	float* outScalingFactor) {
 	
 	float r0 = clrngLfsr113RandomU01(randomStream);
-	float r1 = clrngLfsr113RandomU01(randomStream);
-	float r = sqrt(r1);
+	
 	
 	float phi = 2.0f * PI * r0;
-	float theta = acos(sqrt((1.0f - r1)/ ((a*a - 1.0f) * r1 + 1.0f) ));
+	float theta;
+	float r1;
+	r1 = clrngLfsr113RandomU01(randomStream);
+	theta = acos(sqrt((1.0f - r1) / ((a*a - 1.0f) * r1 + 1.0f)));
 
+	float r = sqrt(r1);
 	float cosTheta = cos(theta);
 	float sinTheta = sin(theta);
-	float x = r * cosTheta;
-	float y = r * sinTheta;
-	float z = r * sin(phi);
+	float x = r * cos(phi);
+	float y = r * sin(phi);
+	float z = r * sinTheta;
 
 	float3 sample = (float3)(x,y,z);
 

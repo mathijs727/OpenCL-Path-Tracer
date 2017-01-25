@@ -202,15 +202,23 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float Ei;
 	if (material->type == PBR) {
 		float pdf;
-		//reflection = ggxWeightedImportanceDirection(edge1, edge2, invTransform, 1 - material->pbr.smoothness, randomStream, &pdf);
-		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+		reflection = ggxWeightedImportanceDirection(edge1, edge2, invTransform, 1 - material->pbr.smoothness, randomStream, &pdf);
+		//reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
-		//Ei = dot(realNormal, reflection) / pdf;
-		Ei = PI;
+		Ei = dot(realNormal, reflection) / pdf;
+		//Ei = PI;
 	}
 	else {
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 		Ei = PI;
+	}
+
+	if (dot(realNormal, reflection) < 0.0f)
+	{
+		// Stop if we have a ray going inside
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
+		return BLACK;
 	}
 
 	// Continue random walk
