@@ -73,12 +73,13 @@ void Game::Init()
 		auto bunny = std::make_shared<Mesh>();
 #if TRUE
 		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply",
-			Material::PBRMetal(
-				glm::vec3(0.955f, 0.638f, 0.538f), // Copper
-				0.8f));
-		//	Material::PBRDielectric(
-		//		glm::vec3(1.0f, 0.1f, 0.1f),
+		//	Material::PBRMetal(
+		//		glm::vec3(0.955f, 0.638f, 0.538f), // Copper
 		//		0.8f));
+			Material::PBRDielectric(
+				glm::vec3(1.0f, 0.1f, 0.1f),
+				0.8f,
+				0.08f));
 #else
 		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
 #endif

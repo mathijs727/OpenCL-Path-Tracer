@@ -127,7 +127,9 @@ float3 pbrBrdf(
 		Fr = 0.0f;
 	}
 
-	// Diffuse BRDF
+	// Diffuse BRDF (called BRDF because it assumes light enters and exists at the same point,
+	//  but it tries to approximate diffuse scatering so maybe this should be called BTDF and
+	//  call the whole function BSDF (which is BRDF + BTDF))
 	float Fd = Fr_DisneyDiffuse (NdotV, NdotL, LdotH, linearRoughness) / PI;
 	
 	float3 diffuseColour;

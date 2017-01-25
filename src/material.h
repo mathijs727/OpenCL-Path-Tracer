@@ -89,13 +89,13 @@ struct Material
 		return result;
 	}
 
-	static Material PBRDielectric(const glm::vec3 baseColour, float smoothness)
+	static Material PBRDielectric(const glm::vec3 baseColour, float smoothness, float f0 = 0.04f)
 	{
 		Material result;
 		result.type = Type::PBR;
 		result.pbr.baseColour = baseColour;
 		result.pbr.smoothness = smoothness;
-		result.pbr.f0NonMetal = 0.04f;
+		result.pbr.f0NonMetal = f0;
 		result.pbr.metallic = false;
 		return result;
 	}

@@ -287,7 +287,6 @@ float3 neeShading(
 		outShadowData->flags = 0;
 		outShadowData->multiplier = Ld * inData->multiplier;
 		outShadowData->ray = createRay(intersection + L * EPSILON, L);
-		//outShadowData->ray.origin += outShadowData->ray.direction * EPSILON;
 		outShadowData->rayLength = dist - 2 * EPSILON;
 	} else {
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
