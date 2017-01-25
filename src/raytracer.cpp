@@ -19,8 +19,8 @@
 #include <clRNG\lfsr113.h>
 
 //#define PROFILE_OPENCL
-#define OPENCL_GL_INTEROP
-#define OUTPUT_AVERAGE_GRAYSCALE
+//#define OPENCL_GL_INTEROP
+//#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
 
@@ -452,12 +452,13 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		_intersect_walk_kernel.setArg(0, _shading_buffer);
 		// Input data
 		_intersect_walk_kernel.setArg(1, _rays_buffers[inRayBuffer]);
-		_intersect_walk_kernel.setArg(2, _ray_kernel_data);
-		_intersect_walk_kernel.setArg(3, _vertices[_active_buffers]);
-		_intersect_walk_kernel.setArg(4, _triangles[_active_buffers]);
-		_intersect_walk_kernel.setArg(5, _sub_bvh[_active_buffers]);
-		_intersect_walk_kernel.setArg(6, _top_bvh[_active_buffers]);
-		_intersect_walk_kernel.setArg(7, _accumulation_buffer);
+		_intersect_walk_kernel.setArg(2, _ray_traversal_buffer);
+		_intersect_walk_kernel.setArg(3, _ray_kernel_data);
+		_intersect_walk_kernel.setArg(4, _vertices[_active_buffers]);
+		_intersect_walk_kernel.setArg(5, _triangles[_active_buffers]);
+		_intersect_walk_kernel.setArg(6, _sub_bvh[_active_buffers]);
+		_intersect_walk_kernel.setArg(7, _top_bvh[_active_buffers]);
+		_intersect_walk_kernel.setArg(8, _accumulation_buffer);
 
 		err = _queue.enqueueNDRangeKernel(
 			_intersect_walk_kernel,
@@ -516,13 +517,12 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		{
 			_intersect_shadows_kernel.setArg(0, _accumulation_buffer);
 			_intersect_shadows_kernel.setArg(1, _shadow_rays_buffer);
-			_intersect_shadows_kernel.setArg(2, _ray_kernel_data);
-			_intersect_shadows_kernel.setArg(3, _vertices[_active_buffers]);
-			_intersect_shadows_kernel.setArg(4, _triangles[_active_buffers]);
-			_intersect_shadows_kernel.setArg(5, _emissive_trangles[_active_buffers]);
-			_intersect_shadows_kernel.setArg(6, _materials[_active_buffers]);
-			_intersect_shadows_kernel.setArg(7, _sub_bvh[_active_buffers]);
-			_intersect_shadows_kernel.setArg(8, _top_bvh[_active_buffers]);
+			_intersect_shadows_kernel.setArg(2, _ray_traversal_buffer);
+			_intersect_shadows_kernel.setArg(3, _ray_kernel_data);
+			_intersect_shadows_kernel.setArg(4, _vertices[_active_buffers]);
+			_intersect_shadows_kernel.setArg(5, _triangles[_active_buffers]);
+			_intersect_shadows_kernel.setArg(6, _sub_bvh[_active_buffers]);
+			_intersect_shadows_kernel.setArg(7, _top_bvh[_active_buffers]);
 
 			err = _queue.enqueueNDRangeKernel(
 				_intersect_shadows_kernel,
@@ -1014,6 +1014,12 @@ void raytracer::RayTracer::InitBuffers(
 	checkClErr(err, "cl::Image2DArray");
 
 
+	_ray_traversal_buffer = cl::Buffer(_context,
+		CL_MEM_READ_WRITE,
+		MAX_ACTIVE_RAYS * 32 * sizeof(u32),
+		NULL,
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
 
 
 	_ray_kernel_data = cl::Buffer(_context,

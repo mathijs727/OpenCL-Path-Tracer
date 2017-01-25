@@ -65,6 +65,7 @@ private:
 	cl::Kernel _intersect_shadows_kernel;
 	cl::Kernel _update_kernel_data_kernel;
 
+	cl::Buffer _ray_traversal_buffer;
 	cl::Buffer _ray_kernel_data;
 	cl::Buffer _random_streams;
 	cl::Buffer _rays_buffers[2];

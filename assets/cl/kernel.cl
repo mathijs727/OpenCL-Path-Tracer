@@ -3,7 +3,7 @@
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
 #define MAX_ITERATIONS 4
 
-#define COMPARE_SHADING
+//#define COMPARE_SHADING
 
 #include <clRNG/lfsr113.clh>
 #include "shapes.cl"
@@ -82,13 +82,12 @@ __kernel void generatePrimaryRays(
 
 __kernel void intersectShadows(
 	__global float3* outputPixels,
-	__global RayData* inShadowRays,
 
+	__global RayData* inShadowRays,
+	__global uint* inTraversalStack,
 	volatile __global KernelData* inputData,
 	__global VertexData* vertices,
 	__global TriangleData* triangles,
-	__global EmissiveTriangle* emissiveTriangles,
-	__global Material* materials,
 	__global SubBvhNode* subBvh,
 	__global TopBvhNode* topLevelBvh)
 {
@@ -104,15 +103,16 @@ __kernel void intersectShadows(
 	loadScene(
 		vertices,
 		triangles,
-		materials,
-		inputData->numEmissiveTriangles,
-		emissiveTriangles,
+		NULL,
+		0,
+		NULL,
 		subBvh,
 		inputData->topLevelBvhRoot,
 		topLevelBvh,
 		&scene);
 
 	bool hit = traceRay(
+		inTraversalStack,
 		&scene,
 		&shadowData.ray,
 		true,
@@ -131,6 +131,7 @@ __kernel void intersectWalk(
 	__global ShadingData* outShadingData,
 
 	__global RayData* inRays,
+	__global uint* inTraversalStack,
 	volatile __global KernelData* inputData,
 	__global VertexData* vertices,
 	__global TriangleData* triangles,
@@ -160,6 +161,7 @@ __kernel void intersectWalk(
 
 		// Trace rays
 		shadingData.hit = traceRay(
+			inTraversalStack,
 			&scene,
 			&rayData.ray,
 			false,

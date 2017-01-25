@@ -57,6 +57,7 @@ void loadScene(
 }
 
 bool traceRay(
+	__global uint* inTraversalStack,
 	const Scene* scene,
 	const Ray* ray,
 	bool hitAny,
@@ -81,13 +82,14 @@ bool traceRay(
 	if (count) *count = 0;
 #endif
 	// Check mesh intersection using BVH traversal
-	unsigned int subBvhStack[32];
+	//unsigned int subBvhStack[32];
+	__global uint* subBvhStack = &inTraversalStack[get_global_id(0) * 32];
 	int subBvhStackPtr = 0;
 
 	// Traverse top level BVH and add relevant sub-BVH's to the "sub BVH" stacks
-	__local unsigned int topLevelBvhStackLocal[16 * 64];
+	__local unsigned int topLevelBvhStackLocal[10 * 64];
 	__local unsigned int* topLevelBvhStack = &topLevelBvhStackLocal[
-		get_local_id(0) * 16];
+		get_local_id(0) * 10];
 	//unsigned int topLevelBvhStack[16];
 	unsigned int topLevelBvhStackPtr = 0;
 	topLevelBvhStack[topLevelBvhStackPtr++] = scene->topLevelBvhRoot;
