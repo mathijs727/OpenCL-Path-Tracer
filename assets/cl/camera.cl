@@ -1,6 +1,8 @@
 #ifndef __CAMERA_CL
 #define __CAMERA_CL
 #include <clRNG/lfsr113.clh>
+#include "ray.cl"
+
 
 typedef struct
 {
@@ -15,6 +17,10 @@ typedef struct
 	float3 v_normalized;
 	float focalDistance;
 	float apertureRadius;
+
+	float relativeAperture;// In f-stops
+	float shutterTime;
+	float ISO;
 
 	char thinLenseEnabled;
 } Camera;
@@ -42,10 +48,6 @@ Ray generateRayPinhole(
 	return result;
 }
 
-/*float length(float3 vec)
-{
-	return sqrt(dot(vec, vec));
-}*/
 
 // http://http.developer.nvidia.com/GPUGems/gpugems_ch23.html
 // https://courses.cs.washington.edu/courses/cse457/99sp/projects/trace/depthoffield.doc

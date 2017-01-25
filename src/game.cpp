@@ -43,6 +43,28 @@ void Game::Init()
 		_scene->add_node(cornell);
 	}
 
+	/*// Mitsuba Test Object:
+	// http://graphics.cs.williams.edu/data/meshes.xml
+	{
+		Transform transform;
+		transform.scale = glm::vec3(0.1f);
+		//transform.location = glm::vec3(0, 0.5f, 0);
+		//transform.orientation = glm::quat(glm::vec3(0, 1, 0));
+		auto testObject = std::make_shared<Mesh>();
+#if TRUE
+		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba.obj",
+			Material::PBRMetal(
+				glm::vec3(0.955f, 0.638f, 0.538f), // Copper
+				0.8f));
+		//	Material::PBRDielectric(
+		//		glm::vec3(1.0f/123.0f, 1.0f/129.0f, 1.0f/83.0f), // Copper
+		//		0.5f));
+#else
+		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba.obj");
+#endif
+		_scene->add_node(testObject, transform);
+	}*/
+
 	{
 		Transform transform;
 		transform.scale = glm::vec3(4.0f);
@@ -51,11 +73,13 @@ void Game::Init()
 		auto bunny = std::make_shared<Mesh>();
 #if TRUE
 		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply",
-			Material::PBR(
-				glm::vec3(0.0f, 0.0f, 0.0f),
-				glm::vec3(0.955f, 0.638f, 0.538f), // Copper
+		//	Material::PBRMetal(
+		//		glm::vec3(0.955f, 0.638f, 0.538f), // Copper
+		//		0.8f));
+			Material::PBRDielectric(
+				glm::vec3(1.0f, 0.1f, 0.1f),
 				0.8f,
-				0.95f));
+				0.08f));
 #else
 		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
 #endif
@@ -85,8 +109,8 @@ void Game::Init()
 
 
 
-	/*
-	// Sponza
+	
+	/*// Sponza
 	{
 		Transform transform;
 		transform.location = glm::vec3(0, 10, -0.5f);
@@ -140,20 +164,6 @@ void Game::Tick( float dt )
 	if (t > 2 * PI)
 		t -= 2 * PI;
 
-	static float prevFocalDistance = _camera->get_focal_distance();
-	if (_camera->get_focal_distance() != prevFocalDistance)
-	{
-		prevFocalDistance = _camera->get_focal_distance();
-		_camera->dirty = true;
-	}
-
-	static bool prevThinLenseEnabled = _camera->is_thin_lense();
-	if (_camera->is_thin_lense() != prevThinLenseEnabled)
-	{
-		prevThinLenseEnabled = _camera->is_thin_lense();
-		_camera->dirty = true;
-	}
-
 	_ray_tracer->RayTrace(*_camera);
 	_out.Render();
 }
@@ -168,7 +178,14 @@ void Tmpl8::Game::UpdateGui()
 	//ImGui::Text("Hello, world!");
 	ImGui::Checkbox("Thin lens", &_camera->is_thin_lense());
 	if (_camera->is_thin_lense())
-		ImGui::SliderFloat("Focal distance", &_camera->get_focal_distance(), 0.1f, 5.0f);
+	{
+		ImGui::SliderFloat("Focal distance (m)", &_camera->get_focal_distance(), 0.1f, 5.0f);
+		ImGui::SliderFloat("Focal length (mm)", &_camera->get_focal_length_mm(), 10.0f, 100.0f);
+	}
+	ImGui::SliderFloat("Aperture (f-stops)", &_camera->get_aperture_fstops(), 1.0f, 10.0f);
+	ImGui::SliderFloat("Shutter time (s)", &_camera->get_shutter_time(), 1.0f / 500.0f, 1.0f / 32.0f);
+	ImGui::SliderFloat("Sensitivity (ISO)", &_camera->get_iso(), 100.0f, 3200.0f);
+
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 	ImGui::End();

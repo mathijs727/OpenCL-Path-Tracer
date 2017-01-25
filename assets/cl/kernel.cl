@@ -13,33 +13,11 @@
 #include "shading.cl"
 #include "camera.cl"
 #include "atomic.cl"
-
-typedef struct
-{
-	// Camera
-	Camera camera;
-
-	// Scene
-	uint numEmissiveTriangles;
-	uint topLevelBvhRoot;
-
-	// Used for ray generation
-	uint rayOffset;
-	uint scrWidth;
-	uint scrHeight;
-
-	// Used for compaction
-	uint numInRays;
-	uint numOutRays;
-	uint numShadowRays;
-	uint maxRays;
-	uint newRays;
-} KernelData;
-
+#include "kernel_data.cl"
 
 
 __kernel void generatePrimaryRays(
-	__global ShadingData* outRays,
+	__global RayData* outRays,
 	volatile __global KernelData* inputData,
 	__global clrngLfsr113HostStream* randomStreams)
 {
@@ -98,7 +76,7 @@ __kernel void generatePrimaryRays(
 
 __kernel void intersectShadows(
 	__global float3* outputPixels,
-	__global ShadingData* inShadowRays,
+	__global RayData* inShadowRays,
 
 	volatile __global KernelData* inputData,
 	__global VertexData* vertices,
@@ -109,7 +87,7 @@ __kernel void intersectShadows(
 	__global TopBvhNode* topLevelBvh)
 {
 	size_t gid = get_global_id(0);
-	ShadingData shadowData = inShadowRays[gid];
+	RayData shadowData = inShadowRays[gid];
 	if (gid >= inputData->numOutRays)
 		return;
 	inShadowRays[gid].flags = SHADINGFLAGS_HASFINISHED;
@@ -143,67 +121,76 @@ __kernel void intersectShadows(
 	}
 }
 
-__kernel void intersectAndShade(
-	__global float3* outputPixels,
-	__global ShadingData* outRays,
-	__global ShadingData* outShadowRays,
-	__global ShadingData* inRays,
+__kernel void intersectWalk(
+	//__global RayData* outRays,
+	//__global RayData* outShadowRays,
+	__global ShadingData* outShadingData,
 
+	__global RayData* inRays,
 	volatile __global KernelData* inputData,
 	__global VertexData* vertices,
 	__global TriangleData* triangles,
-	__global EmissiveTriangle* emissiveTriangles,
-	__global Material* materials,
-	__read_only image2d_array_t textures,
+	//__global EmissiveTriangle* emissiveTriangles,
+	//__global Material* materials,
+	//__read_only image2d_array_t textures,
 	__global SubBvhNode* subBvh,
 	__global TopBvhNode* topLevelBvh,
-	__global clrngLfsr113HostStream* randomStreams)
+	__global float3* outputPixels)
+	//__global clrngLfsr113HostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
-	bool hit = false;
-	ShadingData outShadingData;
-	ShadingData outShadowShadingData;
-	ShadingData shadingData = inRays[gid];
+	//RayData outRayData;
+	//RayData outShadowRayData;
+	RayData rayData = inRays[gid];
 
-	if (gid < (inputData->numInRays + inputData->newRays) && shadingData.flags != SHADINGFLAGS_HASFINISHED)
+	ShadingData shadingData;
+	shadingData.hit = false;
+
+	if (gid < (inputData->numInRays + inputData->newRays) && rayData.flags != SHADINGFLAGS_HASFINISHED)
 	{
-		outShadingData.outputPixel = shadingData.outputPixel;
-		outShadowShadingData.outputPixel = shadingData.outputPixel;
-		outShadingData.flags = 0;
-		outShadowShadingData.flags = 0;
-		
+		//outRayData.outputPixel = rayData.outputPixel;
+		//outShadowRayData.outputPixel = rayData.outputPixel;
+		//outRayData.flags = 0;
+		//outShadowRayData.flags = 0;
 
-		clrngLfsr113Stream randomStream;
-		clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+		//clrngLfsr113Stream randomStream;
+		//clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
 		Scene scene;
 		loadScene(
 			vertices,
 			triangles,
-			materials,
+			NULL,// Dont need materials for intersection
 			inputData->numEmissiveTriangles,
-			emissiveTriangles,
+			NULL,// Dont need emissive triangles for intersection
 			subBvh,
 			inputData->topLevelBvhRoot,
 			topLevelBvh,
 			&scene);
 
 		// Trace rays
-		int triangleIndex;
-		float t;
-		float2 uv;
-		const __global float* invTransform;
-		hit = traceRay(
+		//float2 uv;
+		//const __global float* invTransform;
+		//int triangleIndex;
+		//float t;
+		shadingData.hit = traceRay(
 			&scene,
-			&shadingData.ray,
+			&rayData.ray,
 			false,
 			INFINITY,
-			&triangleIndex,
-			&t,
-			&uv,
-			&invTransform);
-		float3 intersection = shadingData.ray.origin + shadingData.ray.direction * t;
-		float normalTransform[16];
+			&shadingData.triangleIndex,
+			&shadingData.t,
+			&shadingData.uv,
+			&shadingData.invTransform);
+
+		/*shadingData.intersection = rayData.ray.origin + rayData.ray.direction * t;
+		shadingData.direction = rayData.ray.direction;
+		shadingData.uv = uv;
+		shadingdata.invTransform = invTransform;
+		shadingData.triangleIndex = triangleIndex;
+		shadingData.hit = hit;*/
+
+		/*float normalTransform[16];
 		matrixTranspose(invTransform, normalTransform);
 
 		if (hit)
@@ -218,25 +205,109 @@ __kernel void intersectAndShade(
 				textures,
 				&randomStream,
 				&shadingData,
-				&outShadingData,
-				&outShadowShadingData);
-			outShadingData.numBounces = shadingData.numBounces + 1;
-			//outRay = (outShadingData.numBounces < 5);
-			//outputPixels[shadingData.outputPixel] += outShadingData.ray.direction;
-		}
+				&outRayData,
+				&outShadowRayData);
+			outRayData.numBounces = shadingData.numBounces + 1;
+			//outRay = (outRayData.numBounces < 5);
+			//outputPixels[shadingData.outputPixel] += outRayData.ray.direction;
+		}*/
+
+		// Store random streams
+		//clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+	} 
+
+	outShadingData[gid] = shadingData;
+
+	/*int index = workgroup_counter_inc(&inputData->numOutRays, shadingData.hit);//atomic_inc(&inputData->numOutRays);
+	if (shadingData.hit)
+	{
+		if (outRayData.numBounces >= MAX_ITERATIONS)
+			outRayData.flags = SHADINGFLAGS_HASFINISHED;
+
+		outRays[index] = outRayData;
+		outShadowRays[index] = outShadowRayData;
+	}*/
+}
+
+__kernel void shade(
+	__global float3* outputPixels,
+	__global RayData* outRays,
+	__global RayData* outShadowRays,
+
+	__global RayData* inRays,
+	__global ShadingData* inShadingData,
+	volatile __global KernelData* inputData,
+
+	__global VertexData* vertices,
+	__global TriangleData* triangles,
+	__global EmissiveTriangle* emissiveTriangles,
+	__global Material* materials,
+	__read_only image2d_array_t textures,
+	__global clrngLfsr113HostStream* randomStreams)
+{
+	size_t gid = get_global_id(0);
+	RayData outRayData;
+	RayData outShadowRayData;
+	const __global RayData* rayData = &inRays[gid];// TODO: use pointer to safe registers
+	const __global ShadingData* shadingData = &inShadingData[gid];// TODO: use pointer to safe registers
+	bool active = false;
+
+
+	if (gid < (inputData->numInRays + inputData->newRays) &&
+		rayData->flags != SHADINGFLAGS_HASFINISHED &&
+		shadingData->hit)
+	{		
+		outRayData.outputPixel = rayData->outputPixel;
+		outShadowRayData.outputPixel = rayData->outputPixel;
+		outRayData.flags = 0;
+		outShadowRayData.flags = 0;
+		outRayData.numBounces = rayData->numBounces + 1;
+
+		float3 intersection = rayData->ray.origin + shadingData->t * rayData->ray.direction;
+
+		// Load scene
+		Scene scene;
+		loadScene(
+			vertices,
+			triangles,
+			materials,// Dont need materials for intersection
+			inputData->numEmissiveTriangles,
+			emissiveTriangles,// Dont need emissive triangles for intersection
+			NULL,
+			inputData->topLevelBvhRoot,
+			NULL,
+			&scene);
+
+		// Load random streams
+		clrngLfsr113Stream randomStream;
+		clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+
+		outputPixels[rayData->outputPixel] += neeIsShading(
+			&scene,
+			shadingData->triangleIndex,
+			intersection,
+			normalize(rayData->ray.direction),
+			shadingData->invTransform,
+			shadingData->uv,
+			textures,
+			&randomStream,
+			rayData,
+			&outRayData,
+			&outShadowRayData);
 
 		// Store random streams
 		clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
-	} 
+		active = true;
+	}
 
-	int index = workgroup_counter_inc(&inputData->numOutRays, hit);//atomic_inc(&inputData->numOutRays);
-	if (hit)
+	int index = workgroup_counter_inc(&inputData->numOutRays, active);
+	if (active)
 	{
-		if (outShadingData.numBounces >= MAX_ITERATIONS)
-			outShadingData.flags = SHADINGFLAGS_HASFINISHED;
+		if (outRayData.numBounces >= MAX_ITERATIONS)
+			outRayData.flags = SHADINGFLAGS_HASFINISHED;
 
-		outRays[index] = outShadingData;
-		outShadowRays[index] = outShadowShadingData;
+		outRays[index] = outRayData;
+		outShadowRays[index] = outShadowRayData;
 	}
 }
 
@@ -249,96 +320,3 @@ __kernel void updateKernelData(
 	data->rayOffset += data->newRays;
 	data->newRays = 0;
 }
-
-/*__kernel void traceRays(
-	__global float3* output,
-	__global KernelData* inputData,
-	__global VertexData* vertices,
-	__global TriangleData* triangles,
-	__global EmissiveTriangle* emissiveTriangles,
-	__global Material* materials,
-	__read_only image2d_array_t textures,
-	__global SubBvhNode* subBvh,
-	__global TopBvhNode* topLevelBvh,
-	__global clrngLfsr113HostStream* randomStreams) {
-	//__read_only image2d_array_t textures) {
-	int x = get_global_id(0);
-	int y = get_global_id(1);
-	int width = get_global_size(0);
-	int gid = y * width + x;
-	bool leftSide = (x < width / 2);
-
-	// Read random stream
-	clrngLfsr113Stream privateStream;
-	clrngLfsr113CopyOverStreamsFromGlobal(1, &privateStream, &randomStreams[gid]);
-
-	Scene scene;
-	loadScene(
-		vertices,
-		triangles,
-		materials,
-		inputData->numEmissiveTriangles,
-		emissiveTriangles,
-		subBvh,
-		inputData->topLevelBvhRoot,
-		topLevelBvh,
-		&scene);
-
-	ShadingData shadingData;
-
-	float3 accumulatedColour = (float3)(0, 0, 0);
-	for (int i = 0; i < inputData->raysPerPass; i++)
-	{
-		float corX = (leftSide ? x : x - width / 2);
-		Ray cameraRay = generateRayThinLens(&inputData->camera, corX, y, &privateStream);
-		
-		shadingData.ray = cameraRay;
-		shadingData.multiplier = (float3)(1, 1, 1);
-		shadingData.flags = SHADINGFLAGS_LASTSPECULAR;
-
-		bool shouldFinish = false;
-		for (int iteration = 0; iteration < MAX_ITERATIONS && !shouldFinish; ++iteration)
-		{
-			int triangleIndex;
-			float t;
-			float2 uv;
-			const __global float* invTransform;
-			bool hit = traceRay(&scene, &shadingData.ray, false, INFINITY, &triangleIndex, &t, &uv, &invTransform);
-			if (hit)
-			{
-				float3 intersection = t * shadingData.ray.direction + shadingData.ray.origin;
-				float normalTransform[16];
-				matrixTranspose(invTransform, normalTransform);
-				if (leftSide)
-				{
-					accumulatedColour += naiveShading(
-						&scene,
-						triangleIndex,
-						intersection,
-						shadingData.ray.direction,
-						normalTransform,
-						uv,
-						textures,
-						&privateStream,
-						&shadingData);
-				} else {
-					accumulatedColour += neeIsShading(
-						&scene,
-						triangleIndex,
-						intersection,
-						shadingData.ray.direction,
-						normalTransform,
-						uv,
-						textures,
-						&privateStream,
-						&shadingData);
-				}
-			}
-			shouldFinish = !hit || (shadingData.flags & SHADINGFLAGS_HASFINISHED);
-		}
-	}
-	output[gid] += accumulatedColour;
-
-	// Store random streams
-	clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &privateStream);
-}*/

@@ -31,8 +31,7 @@ public:
 private:
 	void TraceRays(const Camera& camera);
 
-	void Accumulate();
-	void GammaCorrection();
+	void Accumulate(const Camera& camera);
 	void ClearAccumulationBuffer();
 	void CalculateAverageGrayscale();
 
@@ -61,13 +60,15 @@ private:
 	cl::CommandQueue _copyQueue;
 
 	cl::Kernel _generate_rays_kernel;
-	cl::Kernel _intersect_shade_kernel;
+	cl::Kernel _intersect_walk_kernel;
+	cl::Kernel _shading_kernel;
 	cl::Kernel _intersect_shadows_kernel;
 	cl::Kernel _update_kernel_data_kernel;
 
 	cl::Buffer _ray_kernel_data;
 	cl::Buffer _random_streams;
 	cl::Buffer _rays_buffers[2];
+	cl::Buffer _shading_buffer;
 	cl::Buffer _shadow_rays_buffer;
 
 	cl_uint _rays_per_pixel;

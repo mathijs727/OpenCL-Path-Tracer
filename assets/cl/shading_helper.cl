@@ -33,7 +33,7 @@ int randInt(clrngLfsr113Stream* randomStream, int start, int stop)
 float3 diffuseReflection(
 	float3 edge1,
 	float3 edge2,
-	const float* normalTransform,
+	const __global float* invTransform,
 	clrngLfsr113Stream* randomStream)
 {
 	float u1 = clrngLfsr113RandomU01(randomStream);
@@ -51,7 +51,7 @@ float3 diffuseReflection(
 	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
 	
 	// Apply the normal transform (top level BVH)
-	orientedSample = normalize(matrixMultiplyLocal(normalTransform, (float4)(orientedSample, 0.0f)).xyz);
+	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
 	return normalize(orientedSample);
 }
 
@@ -60,7 +60,7 @@ float3 diffuseReflection(
 float3 cosineWeightedDiffuseReflection(
 	float3 edge1,
 	float3 edge2,
-	const float* normalTransform,
+	const __global float* invTransform,
 	clrngLfsr113Stream* randomStream)
 {
 	// A cosine-weither random distribution is obtained by generating points on the unit
@@ -82,15 +82,15 @@ float3 cosineWeightedDiffuseReflection(
 	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
 	
 	// Apply the normal transform (top level BVH)
-	orientedSample = normalize(matrixMultiplyLocal(normalTransform, (float4)(orientedSample, 0.0f)).xyz);
+	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
 	return normalize(orientedSample);
 }
 
-float3 ggxWeightedImportanceDirection(float3 edge1,
-	float3 edge2,
-	const float* normalTransform,
+float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2,
+	const __global float* inverseTransform,
 	float a,
-	clrngLfsr113Stream* randomStream) {
+	clrngLfsr113Stream* randomStream,
+	float* outScalingFactor) {
 	
 	float r0 = clrngLfsr113RandomU01(randomStream);
 	float r1 = clrngLfsr113RandomU01(randomStream);
@@ -99,8 +99,10 @@ float3 ggxWeightedImportanceDirection(float3 edge1,
 	float phi = 2.0f * PI * r0;
 	float theta = acos(sqrt((1.0f - r1)/ ((a*a - 1.0f) * r1 + 1.0f) ));
 
-	float x = r * cos(theta);
-	float y = r * sin(theta);
+	float cosTheta = cos(theta);
+	float sinTheta = sin(theta);
+	float x = r * cosTheta;
+	float y = r * sinTheta;
 	float z = r * sin(phi);
 
 	float3 sample = (float3)(x,y,z);
@@ -114,8 +116,11 @@ float3 ggxWeightedImportanceDirection(float3 edge1,
 	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
 	
 	// Apply the normal transform (top level BVH)
-	orientedSample = normalize(matrixMultiplyLocal(normalTransform, (float4)(orientedSample, 0.0f)).xyz);
+	orientedSample = normalize(matrixMultiplyTranspose(inverseTransform, orientedSample));
 	return normalize(orientedSample);
+
+	float denom = cosTheta*cosTheta*(a*a-1) -1;
+	*outScalingFactor = a*a / (PI*denom*denom) * cosTheta * sinTheta;
 }
 
 // http://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java

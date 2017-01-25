@@ -15,13 +15,13 @@ typedef struct {
 	float3 multiplier;// 16 bytes
 	size_t outputPixel;// 4/8 bytes?
 	int flags;// 4 bytes
-	union
+	union// 4 bytes
 	{
 		float rayLength;// Only shadows use this
 		int numBounces;// And shadows dont bounce
 	};
 	// Aligned to 16 bytes so struct has size of 64 bytes
-} ShadingData;
+} RayData;
 
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
@@ -31,11 +31,11 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
-	const float* normalTransform,
+	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	ShadingData* data)
+	RayData* data)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -44,7 +44,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	float3 edge1 = vertices[1].vertex - vertices[0].vertex;
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = cross(edge1, edge2);
-	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
+	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
@@ -97,7 +97,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 
 	// Continue random walk
 	data->flags = 0;
-	float3 reflection = cosineWeightedDiffuseReflection(edge1, edge2, normalTransform, randomStream);
+	float3 reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 	//float lightPdf = dot(realNormal, reflection) / PI;
 	//float3 integral = (dot(realNormal, reflection) / lightPdf) * BRDF;
 	float3 integral = PI * BRDF;
@@ -118,13 +118,13 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
-	const float* normalTransform,
+	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	ShadingData* inData,
-	ShadingData* outData,
-	ShadingData* outShadowData)
+	const __global RayData* inData,
+	RayData* outData,
+	RayData* outShadowData)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -133,9 +133,10 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float3 edge1 = vertices[1].vertex - vertices[0].vertex;
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = cross(edge1, edge2);
-	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
+	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
 	float3 shadingNormal = interpolateNormal(vertices, uv);
 	//realNormal = shadingNormal;
+	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
@@ -191,7 +192,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
 		if (material->type == PBR) {
-			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream, NULL);
+			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream);
 		}
 		float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * dot(realNormal, L);
 		outShadowData->multiplier = Ld * inData->multiplier;
@@ -205,18 +206,13 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float3 reflection;
 	
 	if (material->type == Diffuse) {
-		reflection = cosineWeightedDiffuseReflection(edge1, edge2, normalTransform, randomStream);
+		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 	}
 
 	if (material->type == PBR) {
-		bool isMetallic;
-		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream, &isMetallic);
-		if (isMetallic) {
-			
-		}
-		else {
-			reflection = cosineWeightedDiffuseReflection(edge1, edge2, normalTransform, randomStream);
-		}
+		float scalingFactor; // our PDF value
+		reflection = ggxWeightedImportanceDirection(edge1, edge2, invTransform, 1 - material->pbr.smoothness, randomStream, &scalingFactor);
+		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream) / scalingFactor;
 	}
 
 	// Continue random walk
@@ -238,13 +234,13 @@ float3 neeShading(
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
-	const float* normalTransform,
+	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	ShadingData* inData,
-	ShadingData* outData,
-	ShadingData* outShadowData)
+	const __global RayData* inData,
+	RayData* outData,
+	RayData* outShadowData)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -253,7 +249,7 @@ float3 neeShading(
 	float3 edge1 = vertices[1].vertex - vertices[0].vertex;
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = cross(edge1, edge2);
-	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
+	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
 	float3 shadingNormal = interpolateNormal(vertices, uv);
 	//realNormal = shadingNormal;
 	
@@ -302,7 +298,7 @@ float3 neeShading(
 	{
 		if (material->type == PBR) {
 
-			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream, NULL);
+			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream);
 		}
 
 		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
@@ -311,17 +307,16 @@ float3 neeShading(
 		outShadowData->flags = 0;
 		outShadowData->multiplier = Ld * inData->multiplier;
 		outShadowData->ray = createRay(intersection + L * EPSILON, L);
-		//outShadowData->ray.origin += outShadowData->ray.direction * EPSILON;
 		outShadowData->rayLength = dist - 2 * EPSILON;
 	} else {
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 	}
 
 	// Continue random walk
-	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
+	float3 reflection = diffuseReflection(edge1, edge2, invTransform, randomStream);
 	
 	if (material->type == PBR) {
-		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream, NULL);
+		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
 	}
 
 	outData->flags = 0;
@@ -340,13 +335,13 @@ float3 naiveShading(
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
-	const float* normalTransform,
+	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	ShadingData* inData,
-	ShadingData* outData,
-	ShadingData* outShadowData)
+	RayData* inData,
+	RayData* outData,
+	RayData* outShadowData)
 {
 	outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 	// Gather intersection data
@@ -356,7 +351,7 @@ float3 naiveShading(
 	float3 edge1 = vertices[1].vertex - vertices[0].vertex;
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = normalize(cross(edge1, edge2));
-	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
+	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
@@ -373,7 +368,7 @@ float3 naiveShading(
 	}
 
 	// Continue in random direction
-	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
+	float3 reflection = diffuseReflection(edge1, edge2, invTransform, randomStream);
 
 	// Update throughput
 	outData->flags = 0;

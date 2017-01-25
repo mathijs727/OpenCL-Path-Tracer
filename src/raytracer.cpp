@@ -24,7 +24,7 @@
 #define MAX_RAYS_PER_PIXEL 5000
 #define MAX_NUM_LIGHTS 256
 
-#define MAX_ACTIVE_RAYS 512*256
+#define MAX_ACTIVE_RAYS 1280*720// Number of rays per pass (top performance = all pixels in 1 pass but very large buffer sizes at 4K?)
 
 struct KernelData
 {
@@ -173,7 +173,8 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 
 	_generate_rays_kernel = LoadKernel("assets/cl/kernel.cl", "generatePrimaryRays");
 	_intersect_shadows_kernel = LoadKernel("assets/cl/kernel.cl", "intersectShadows");
-	_intersect_shade_kernel = LoadKernel("assets/cl/kernel.cl", "intersectAndShade");
+	_intersect_walk_kernel = LoadKernel("assets/cl/kernel.cl", "intersectWalk");
+	_shading_kernel = LoadKernel("assets/cl/kernel.cl", "shade");
 	_update_kernel_data_kernel = LoadKernel("assets/cl/kernel.cl", "updateKernelData");
 	_accumulate_kernel = LoadKernel("assets/cl/accumulate.cl", "accumulate");
 
@@ -341,11 +342,13 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 	_queue.enqueueAcquireGLObjects(&images);
 #endif
 
-	if (camera.dirty)
+	// Easier than setting dirty flag all the time, bit more work intensive but not a big deal
+	static CameraData prevFrameCamData = { };
+	if (memcmp(&camera.get_camera_data(), &prevFrameCamData, sizeof(CameraData)) != 0)
 	{
+		prevFrameCamData = camera.get_camera_data();
 		ClearAccumulationBuffer();
 		_rays_per_pixel = 0;
-		camera.dirty = false;
 	}
 
 	if (_rays_per_pixel >= MAX_RAYS_PER_PIXEL)
@@ -353,11 +356,10 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 
 	// Non blocking CPU
 	TraceRays(camera);
-	Accumulate();
+	Accumulate(camera);
 #ifdef OUTPUT_AVERAGE_GRAYSCALE
 	CalculateAverageGrayscale();
 #endif
-	GammaCorrection();
 	
 	_queue.finish();
 
@@ -446,22 +448,44 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 
 
 
-		_intersect_shade_kernel.setArg(0, _accumulation_buffer);
-		_intersect_shade_kernel.setArg(1, _rays_buffers[outRayBuffer]);
-		_intersect_shade_kernel.setArg(2, _shadow_rays_buffer);
-		_intersect_shade_kernel.setArg(3, _rays_buffers[inRayBuffer]);
-		_intersect_shade_kernel.setArg(4, _ray_kernel_data);
-		_intersect_shade_kernel.setArg(5, _vertices[_active_buffers]);
-		_intersect_shade_kernel.setArg(6, _triangles[_active_buffers]);
-		_intersect_shade_kernel.setArg(7, _emissive_trangles[_active_buffers]);
-		_intersect_shade_kernel.setArg(8, _materials[_active_buffers]);
-		_intersect_shade_kernel.setArg(9, _material_textures);
-		_intersect_shade_kernel.setArg(10, _sub_bvh[_active_buffers]);
-		_intersect_shade_kernel.setArg(11, _top_bvh[_active_buffers]);
-		_intersect_shade_kernel.setArg(12, _random_streams);
+		// Output data
+		_intersect_walk_kernel.setArg(0, _shading_buffer);
+		// Input data
+		_intersect_walk_kernel.setArg(1, _rays_buffers[inRayBuffer]);
+		_intersect_walk_kernel.setArg(2, _ray_kernel_data);
+		_intersect_walk_kernel.setArg(3, _vertices[_active_buffers]);
+		_intersect_walk_kernel.setArg(4, _triangles[_active_buffers]);
+		_intersect_walk_kernel.setArg(5, _sub_bvh[_active_buffers]);
+		_intersect_walk_kernel.setArg(6, _top_bvh[_active_buffers]);
+		_intersect_walk_kernel.setArg(7, _accumulation_buffer);
 
 		err = _queue.enqueueNDRangeKernel(
-			_intersect_shade_kernel,
+			_intersect_walk_kernel,
+			cl::NullRange,
+			cl::NDRange(MAX_ACTIVE_RAYS),
+			cl::NDRange(64));
+		checkClErr(err, "CommandQueue::enqueueNDRangeKernel()");
+
+
+
+		// Output data
+		_shading_kernel.setArg(0, _accumulation_buffer);
+		_shading_kernel.setArg(1, _rays_buffers[outRayBuffer]);
+		_shading_kernel.setArg(2, _shadow_rays_buffer);
+		// Input data
+		_shading_kernel.setArg(3, _rays_buffers[inRayBuffer]);
+		_shading_kernel.setArg(4, _shading_buffer);
+		_shading_kernel.setArg(5, _ray_kernel_data);
+		// Static input data
+		_shading_kernel.setArg(6, _vertices[_active_buffers]);
+		_shading_kernel.setArg(7, _triangles[_active_buffers]);
+		_shading_kernel.setArg(8, _emissive_trangles[_active_buffers]);
+		_shading_kernel.setArg(9, _materials[_active_buffers]);
+		_shading_kernel.setArg(10, _material_textures);
+		_shading_kernel.setArg(11, _random_streams);
+
+		err = _queue.enqueueNDRangeKernel(
+			_shading_kernel,
 			cl::NullRange,
 			cl::NDRange(MAX_ACTIVE_RAYS),
 			cl::NDRange(64));
@@ -485,6 +509,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		if (survivingRays == 0 &&// We are out of rays
 			(updatedKernelData.rayOffset + updatedKernelData.newRays >= maxRays))// And we wont generate new ones
 			break;
+		//survivingRays = MAX_ACTIVE_RAYS;
 
 
 		if (survivingRays != 0)
@@ -526,16 +551,17 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	_rays_per_pixel += 1;
 }
 
-void raytracer::RayTracer::Accumulate()
+void raytracer::RayTracer::Accumulate(const Camera& camera)
 {
-	_accumulate_kernel.setArg(0, _accumulation_buffer);
 #ifdef OPENCL_GL_INTEROP
-	_accumulate_kernel.setArg(1, _output_image);
+	_accumulate_kernel.setArg(0, _output_image);
 #else
-	_accumulate_kernel.setArg(1, _output_image_cl);
+	_accumulate_kernel.setArg(0, _output_image_cl);
 #endif
-	_accumulate_kernel.setArg(2, _rays_per_pixel);
-	_accumulate_kernel.setArg(3, _scr_width);
+	_accumulate_kernel.setArg(1, _accumulation_buffer);
+	_accumulate_kernel.setArg(2, _ray_kernel_data);
+	_accumulate_kernel.setArg(3, _rays_per_pixel);
+	_accumulate_kernel.setArg(4, _scr_width);
 	_queue.enqueueNDRangeKernel(
 		_accumulate_kernel,
 		cl::NullRange,
@@ -543,10 +569,6 @@ void raytracer::RayTracer::Accumulate()
 		cl::NullRange,
 		nullptr,
 		nullptr);
-}
-
-void raytracer::RayTracer::GammaCorrection()
-{
 }
 
 void raytracer::RayTracer::ClearAccumulationBuffer()
@@ -712,6 +734,7 @@ void raytracer::RayTracer::CollectTransformedLights(const SceneNode* node, const
 			result.vertices[1] = newTransform * vertices[triangle.indices[1]].vertex;
 			result.vertices[2] = newTransform * vertices[triangle.indices[2]].vertex;
 			result.material = materials[triangle.material_index];
+			result.material.emissive.emissiveColour;
 			_emissive_triangles_host.push_back(result);
 		}
 	}
@@ -1024,21 +1047,29 @@ void raytracer::RayTracer::InitBuffers(
 		&err);
 	checkClErr(err, "cl::Buffer");
 
-	const int shadingDataStructSize = 80;
+	const int rayDataStructSize = 64;
 	_rays_buffers[0] = cl::Buffer(_context,
 		CL_MEM_READ_WRITE,
-		(size_t)MAX_ACTIVE_RAYS * shadingDataStructSize,
+		(size_t)MAX_ACTIVE_RAYS * rayDataStructSize,
 		nullptr,
 		&err);
 	checkClErr(err, "cl::Buffer");
 	_rays_buffers[1] = cl::Buffer(_context,
 		CL_MEM_READ_WRITE,
-		(size_t)MAX_ACTIVE_RAYS * shadingDataStructSize,
+		(size_t)MAX_ACTIVE_RAYS * rayDataStructSize,
 		nullptr,
 		&err);
 	checkClErr(err, "cl::Buffer");
 
 	_shadow_rays_buffer = cl::Buffer(_context,
+		CL_MEM_READ_WRITE,
+		(size_t)MAX_ACTIVE_RAYS * rayDataStructSize,
+		nullptr,
+		&err);
+	checkClErr(err, "cl::Buffer");
+
+	const int shadingDataStructSize = 64;
+	_shading_buffer = cl::Buffer(_context,
 		CL_MEM_READ_WRITE,
 		(size_t)MAX_ACTIVE_RAYS * shadingDataStructSize,
 		nullptr,
