@@ -237,10 +237,21 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float3 reflection;
 	if (material->type == PBR) {
 		float choiceValue = clrngLfsr113RandomU01(randomStream);
+		float3 f0;
+		if (material->pbr.metallic) {
+			f0 = material->pbr.reflectance;
+		} else {
+			f0 = material->pbr.f0NonMetal;
+		}
+		float f90 = 1.0f;
 		reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
-		//reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
-		//PDF = dot(realNormal, reflection) / PI;
-		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
+		float LdotH = saturate(dot(-rayDirection, realNormal));
+		float3 F = F_Schlick(f0, f90, LdotH);
+		if (!material->pbr.metallic && choiceValue > F.x) {
+			reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+			PDF = dot(realNormal, reflection) / PI;
+		}
+		BRDF = pbrBrdfChoice(normalize(-rayDirection), reflection, shadingNormal, material, choiceValue);
 	}
 	else if (material->type == Diffuse) {
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);

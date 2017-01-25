@@ -172,7 +172,7 @@ float3 pbrBrdfChoice(
 
 
 	float3 F = F_Schlick(f0, f90, LdotH);
-	float choiceThreshold = 0.5f;
+	float choiceThreshold = F.x;
 	if (material->pbr.metallic || choiceValue < choiceThreshold) {
 	// Specular BRDF
 		float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
@@ -183,12 +183,12 @@ float3 pbrBrdfChoice(
 		float3 Fr;
 		if (G != 0.0f)
 		{
-			Fr = D * F * G / (4.0f * NdotL * NdotV);
+			Fr = D * G / (4.0f * NdotL * NdotV);
 		}
 		else {
 			Fr = 0.0f;
 		}
-		if (!material->pbr.metallic) Fr /= choiceThreshold;
+		if (material->pbr.metallic) Fr *= F;
 		return Fr;
 	}
 	else {
@@ -204,7 +204,7 @@ float3 pbrBrdfChoice(
 		else {
 			diffuseColour = material->pbr.baseColour;
 		}
-		float3 diffuse = (1.0f - F) * (Fd * diffuseColour) / (1 - choiceThreshold);
+		float3 diffuse = Fd * diffuseColour;
 		return diffuse;
 	}
 }
