@@ -342,7 +342,7 @@ float3 naiveShading(
 	float2 uv,
 	image2d_array_t textures,
 	clrngLfsr113Stream* randomStream,
-	RayData* inData,
+	const __global RayData* inData,
 	RayData* outData,
 	RayData* outShadowData)
 {
@@ -375,7 +375,14 @@ float3 naiveShading(
 
 	// Update throughput
 	outData->flags = 0;
-	float3 BRDF = material->diffuse.diffuseColour / PI;
+	//float3 BRDF = material->diffuse.diffuseColour / PI;
+	float3 BRDF;
+	if (material->type == PBR) {
+		BRDF = pbrBrdf(normalize(-rayDirection), reflection, realNormal, material, randomStream);
+	} else if (material->type == Diffuse)
+	{
+		BRDF = diffuseColour(material, vertices, uv, textures) / PI;
+	}
 	float3 Ei = dot(realNormal , reflection);// Irradiance
 	float3 integral = PI * 2.0f * BRDF * Ei;
 	float3 oldMultiplier = inData->multiplier;

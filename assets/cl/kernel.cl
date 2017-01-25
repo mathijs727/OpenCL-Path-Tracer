@@ -3,6 +3,8 @@
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
 #define MAX_ITERATIONS 4
 
+#define COMPARE_SHADING
+
 #include <clRNG/lfsr113.clh>
 #include "shapes.cl"
 #include "material.cl"
@@ -40,6 +42,10 @@ __kernel void generatePrimaryRays(
 	uint x = rayIndex % inputData->scrWidth;
 	uint y = rayIndex / inputData->scrWidth;
 
+#ifdef COMPARE_SHADING
+	if (x >= inputData->scrWidth / 2)
+		x -= inputData->scrWidth / 2; 
+#endif
 	size_t outIndex = inputData->numInRays + gid;
 	if (inputData->camera.thinLenseEnabled)
 	{
@@ -220,18 +226,37 @@ __kernel void shade(
 		clrngLfsr113Stream randomStream;
 		clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
-		outputPixels[rayData->outputPixel] += neeShading(
-			&scene,
-			shadingData->triangleIndex,
-			intersection,
-			normalize(rayData->ray.direction),
-			shadingData->invTransform,
-			shadingData->uv,
-			textures,
-			&randomStream,
-			rayData,
-			&outRayData,
-			&outShadowRayData);
+#ifdef COMPARE_SHADING
+		if ((rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2)
+		{
+			outputPixels[rayData->outputPixel] += naiveShading(
+				&scene,
+				shadingData->triangleIndex,
+				intersection,
+				normalize(rayData->ray.direction),
+				shadingData->invTransform,
+				shadingData->uv,
+				textures,
+				&randomStream,
+				rayData,
+				&outRayData,
+				&outShadowRayData);
+		} else
+#endif
+		{
+			outputPixels[rayData->outputPixel] += neeShading(
+				&scene,
+				shadingData->triangleIndex,
+				intersection,
+				normalize(rayData->ray.direction),
+				shadingData->invTransform,
+				shadingData->uv,
+				textures,
+				&randomStream,
+				rayData,
+				&outRayData,
+				&outShadowRayData);
+		}
 
 		// Store random streams
 		clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
