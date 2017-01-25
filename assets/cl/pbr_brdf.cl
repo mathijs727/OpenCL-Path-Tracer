@@ -65,7 +65,8 @@ float3 pbrBrdf(
 	float3 L,
 	float3 N,
 	const __global Material* material,
-	clrngLfsr113Stream* randomStream)
+	clrngLfsr113Stream* randomStream, 
+	bool* outIsMetallic)
 {
 	float3 f0 = material->pbr.reflectance;
 	float f90 = 1.0f;
@@ -90,7 +91,9 @@ float3 pbrBrdf(
 	float Fd = Fr_DisneyDiffuse (NdotV, NdotL, LdotH, linearRoughness) / PI;
 
 	float choiceValue = (float)clrngLfsr113RandomU01(randomStream);
-	if (choiceValue < material->pbr.metallic)
+	bool isMetallic = choiceValue < material->pbr.metallic;
+	if (outIsMetallic != NULL) *outIsMetallic = isMetallic;
+	if (isMetallic)
 	{
 		// Metalic
 		return Fr;// * material->pbr.metallic;

@@ -86,6 +86,38 @@ float3 cosineWeightedDiffuseReflection(
 	return normalize(orientedSample);
 }
 
+float3 ggxWeightedImportanceDirection(float3 edge1,
+	float3 edge2,
+	const float* normalTransform,
+	float a,
+	clrngLfsr113Stream* randomStream) {
+	
+	float r0 = clrngLfsr113RandomU01(randomStream);
+	float r1 = clrngLfsr113RandomU01(randomStream);
+	float r = sqrt(r1);
+	
+	float phi = 2.0f * PI * r0;
+	float theta = acos(sqrt((1.0f - r1)/ ((a*a - 1.0f) * r1 + 1.0f) ));
+
+	float x = r * cos(theta);
+	float y = r * sin(theta);
+	float z = r * sin(phi);
+
+	float3 sample = (float3)(x,y,z);
+
+	float3 normal = normalize(cross(edge1, edge2));
+	float3 tangent = normalize(cross(normal, edge1));
+	float3 bitangent = cross(normal, tangent);
+
+	// Transform hemisphere to normal of the surface (of the static model)
+	// [tangent, bitangent, normal]
+	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
+	
+	// Apply the normal transform (top level BVH)
+	orientedSample = normalize(matrixMultiplyLocal(normalTransform, (float4)(orientedSample, 0.0f)).xyz);
+	return normalize(orientedSample);
+}
+
 // http://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
 float3 uniformSampleTriangle(const float3* vertices, clrngLfsr113Stream* randomStream)
 {

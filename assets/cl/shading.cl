@@ -134,6 +134,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = cross(edge1, edge2);
 	realNormal = normalize(matrixMultiplyLocal(normalTransform, (float4)(realNormal, 0.0f)).xyz);
+	float3 shadingNormal = interpolateNormal(vertices, uv);
+	//realNormal = shadingNormal;
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
@@ -163,8 +165,6 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		return BLACK;
 	}
 
-	float3 BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
-
 	// Sample a random light source
 	float3 lightPos, lightNormal, lightColour; float lightArea;
 	weightedRandomPointOnLight(
@@ -181,10 +181,18 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float dist = sqrt(dist2);
 	L /= dist;
 
+	float3 BRDF = 0;
+	if (material->type == Diffuse) {
+		BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
+	}
+
 	//float3 Ld = BLACK;
 	//Ray lightRay = createRay(intersection + L * EPSILON, L);
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
+		if (material->type == PBR) {
+			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream, NULL);
+		}
 		float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * dot(realNormal, L);
 		outShadowData->multiplier = Ld * inData->multiplier;
 		outShadowData->ray = createRay(intersection + L * EPSILON, L);
@@ -194,8 +202,24 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 	}
 
+	float3 reflection;
+	
+	if (material->type == Diffuse) {
+		reflection = cosineWeightedDiffuseReflection(edge1, edge2, normalTransform, randomStream);
+	}
+
+	if (material->type == PBR) {
+		bool isMetallic;
+		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream, &isMetallic);
+		if (isMetallic) {
+			
+		}
+		else {
+			reflection = cosineWeightedDiffuseReflection(edge1, edge2, normalTransform, randomStream);
+		}
+	}
+
 	// Continue random walk
-	float3 reflection = cosineWeightedDiffuseReflection(edge1, edge2, normalTransform, randomStream);
 	outData->flags = 0;
 	float3 Ei = PI;
 	float3 integral = BRDF * Ei;
@@ -269,16 +293,16 @@ float3 neeShading(
 	float dist = sqrt(dist2);
 	L /= dist;
 
-	
+	float3 BRDF = 0;
+	if (material->type == Diffuse) {
+		BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
+	}
 
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
-		float3 BRDF;
-		if (material->type == Diffuse) {
-			BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
-		} else if (material->type == PBR) {
+		if (material->type == PBR) {
 
-			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream);
+			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material, randomStream, NULL);
 		}
 
 		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
@@ -296,12 +320,8 @@ float3 neeShading(
 	// Continue random walk
 	float3 reflection = diffuseReflection(edge1, edge2, normalTransform, randomStream);
 	
-	float3 BRDF;
-	if (material->type == Diffuse) {
-		BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
-	} else if (material->type == PBR) {
-
-		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream);
+	if (material->type == PBR) {
+		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material, randomStream, NULL);
 	}
 
 	outData->flags = 0;
