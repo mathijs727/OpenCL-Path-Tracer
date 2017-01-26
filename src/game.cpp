@@ -43,6 +43,18 @@ void Game::Init()
 		_scene->add_node(cornell);
 	}
 
+	{
+		Transform transform;
+		transform.location.y = 1.0f;
+		transform.scale = glm::vec3(0.3f);
+		//transform.orientation = glm::quat(glm::vec3(0, -1, 0));
+
+		auto sphere = std::make_shared<Mesh>();
+		sphere->loadFromFile("assets/3dmodels/sphere.obj",
+			Material::Refractive(0.5f, 0.04f, 1.5f));
+		_scene->add_node(sphere, transform);
+	}
+
 	/*// Mitsuba Test Object:
 	// http://graphics.cs.williams.edu/data/meshes.xml
 	{
@@ -65,7 +77,7 @@ void Game::Init()
 		_scene->add_node(testObject, transform);
 	}*/
 
-	{
+	/*{
 		Transform transform;
 		transform.scale = glm::vec3(4.0f);
 		//transform.location = glm::vec3(0, 0.5f, 0);
@@ -73,18 +85,19 @@ void Game::Init()
 		auto bunny = std::make_shared<Mesh>();
 #if TRUE
 		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply",
-		//	Material::PBRMetal(
-		//		glm::vec3(0.955f, 0.638f, 0.538f), // Copper
-		//		0.8f));
-			Material::PBRDielectric(
-				glm::vec3(1.0f, 0.1f, 0.1f),
-				0.8f,
-				0.08f));
+			Material::Refractive(0.5f, 0.04f, 1.517));
+			//Material::PBRMetal(
+			//	glm::vec3(0.955f, 0.638f, 0.538f), // Copper
+			//	0.8f));
+			//Material::PBRDielectric(
+			//	glm::vec3(1.0f, 0.1f, 0.1f),
+			//	0.8f,
+			//	0.08f));
 #else
 		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
 #endif
 		_scene->add_node(bunny, transform);
-	}
+	}*/
 
 	/*{
 		Transform transform;

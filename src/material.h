@@ -27,6 +27,7 @@ struct Material
 	{
 		Diffuse,
 		PBR,
+		Refractive,
 		Emissive
 	};
 
@@ -55,6 +56,12 @@ struct Material
 			float f0NonMetal;
 			bool metallic; byte __padding[4];
 		} pbr;
+		struct
+		{
+			float f0;
+			float smoothness;
+			float refractiveIndex;
+		} refractive;
 		struct
 		{
 			CL_VEC3(emissiveColour);
@@ -97,6 +104,16 @@ struct Material
 		result.pbr.smoothness = smoothness;
 		result.pbr.f0NonMetal = f0;
 		result.pbr.metallic = false;
+		return result;
+	}
+
+	static Material Refractive(float smoothness, float f0, float refractiveIndex)
+	{
+		Material result;
+		result.type = Type::Refractive;
+		result.refractive.smoothness = smoothness;
+		result.refractive.f0 = f0;
+		result.refractive.refractiveIndex = refractiveIndex;
 		return result;
 	}
 

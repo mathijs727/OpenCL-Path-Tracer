@@ -4,6 +4,7 @@
 #include <clRNG/lfsr113.clh>
 #include "light.cl"
 #include "pbr_brdf.cl"
+#include "refract.cl"
 
 enum {
 	SHADINGFLAGS_HASFINISHED = 1,
@@ -305,10 +306,11 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 
 	if (dot(realNormal, -rayDirection) < 0.0f)
 	{
-		// Stop if we hit the back side
+		/*// Stop if we hit the back side
 		outData->flags = SHADINGFLAGS_HASFINISHED;
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
-		return BLACK;
+		return WHITE;*/
+		realNormal *= -1;
 	}
 
 	// Sample a random light source
@@ -327,13 +329,17 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	L /= dist;
 
 	float3 BRDF = 0.0f;
-	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
+	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)// dot(realNormal, L) may be <0.0f for transparent materials?
 	{
 		if (material->type == PBR) {
-			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material);
+			BRDF = pbrBrdf(-rayDirection, L, shadingNormal, material);
 		} else if (material->type == Diffuse)
 		{
 			BRDF = diffuseColour(material, vertices, uv, textures) / PI;
+		} else if (material->type == Refractive)
+		{
+			//BRDF = refractiveBSDF(-rayDirection, L, shadingNormal, material);
+			BRDF = 0;
 		}
 
 		//float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
@@ -358,7 +364,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		} else {
 			f0 = material->pbr.f0NonMetal;
 		}
-		float3 V = normalize(-rayDirection);
+		float3 V = -rayDirection;
 		float f90 = 1.0f;
 		reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
 		float3 H = normalize(V + reflection);
@@ -373,6 +379,42 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		} else {
 			BRDF = brdfOnly(V, reflection, shadingNormal, material);
 		}
+	} else if (material->type == Refractive)
+	{
+		// Slide 34
+		// http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2001%20-%20intro%20&%20whitted.pdf
+		float3 D = rayDirection;
+
+		float n1, n2;
+		if (dot(realNormal, -D) > 0.0f)
+		{
+			n1 = 1.000277f;
+			n2 = material->refractive.refractiveIndex;
+		} else {
+			n1 = material->refractive.refractiveIndex;
+			n2 = 1.000277f;
+		}
+		float cos1 = dot(realNormal, -D);
+		float n1n2 = n1 / n2;
+		float K = 1 - (n1n2*n1n2) * (1 - cos1*cos1);
+		if (K >= 0)
+		{
+			// Total internal reflection
+			//reflection = normalize(D - 2 * dot(D, realNormal) * realNormal);
+			reflection = normalize(rayDirection * n1n2 + realNormal * (n1n2 * cos1 - sqrt(K)));
+		} else {
+			reflection = normalize(D - 2 * dot(D, realNormal) * realNormal);
+		}
+		BRDF = 1.0f;
+		PDF = 1.0f;
+		/*float3 reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->refractive.smoothness, randomStream, &PDF);
+		float rand01 = clrngLfsr113RandomU01(randomStream);
+		if (rand01 < 1.0f)// 50% chance of picking ray going inside
+			reflection *= -1;
+		//PDF /= 2.0f;// Chance of picking that ray halfs
+
+		BRDF = refractiveBSDF(-rayDirection, reflection, realNormal, material);*/
+
 	}
 	else if (material->type == Diffuse) {
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
@@ -380,13 +422,13 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		BRDF = diffuseColour(material, vertices, uv, textures) / PI;
 	}
 
-	if (dot(realNormal, reflection) < 0.0f)
+	/*if (dot(realNormal, reflection) < 0.0f)
 	{
 		// Stop if we have a ray going inside
 		outData->flags = SHADINGFLAGS_HASFINISHED;
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
-	}
+	}*/
 
 	// Continue random walk
 	outData->flags = 0;

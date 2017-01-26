@@ -3,6 +3,7 @@
 typedef enum {
 		Diffuse,
 		PBR,
+		Refractive,
 		Emissive
 } MaterialType;
 
@@ -29,6 +30,12 @@ typedef struct
 			float f0NonMetal;
 			bool metallic;
 		} pbr;
+		struct
+		{
+			float f0;
+			float smoothness;
+			float refractiveIndex;
+		} refractive;
 		struct
 		{
 			float3 emissiveColour;
