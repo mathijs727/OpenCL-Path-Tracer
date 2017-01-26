@@ -81,8 +81,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	clrngLfsr113Stream* randomStream,
 	const __global RayData* inData,
 	RayData* outData,
-	RayData* outShadowData,
-	bool leftSide)
+	RayData* outShadowData)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -202,36 +201,28 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	float PDF;
 	float3 reflection;
 	if (material->type == PBR) {
-		if (leftSide)
-		{
-			reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
-			BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material);
-			PDF = dot(realNormal, reflection) / PI;
+		float3 f0;
+		if (material->pbr.metallic) {
+			f0 = material->pbr.reflectance;
 		}
 		else {
-			float3 f0;
-			if (material->pbr.metallic) {
-				f0 = material->pbr.reflectance;
-			}
-			else {
-				f0 = material->pbr.f0NonMetal;
-			}
-			float3 V = normalize(-rayDirection);
-			float f90 = 1.0f;
-			reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
-			float3 H = normalize(V + reflection);
-			float LdotH = saturate(dot(reflection, H));
-			float3 F = F_Schlick(f0, f90, LdotH);
-			float rand01 = clrngLfsr113RandomU01(randomStream);
-			if (!material->pbr.metallic && rand01 > F.x)
-			{
-				reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
-				PDF = dot(realNormal, reflection) / PI;
-				BRDF = diffuseOnly(V, reflection, shadingNormal, material);
-			}
-			else {
-				BRDF = brdfOnly(V, reflection, shadingNormal, material);
-			}
+			f0 = material->pbr.f0NonMetal;
+		}
+		float3 V = normalize(-rayDirection);
+		float f90 = 1.0f;
+		reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
+		float3 H = normalize(V + reflection);
+		float LdotH = saturate(dot(reflection, H));
+		float3 F = F_Schlick(f0, f90, LdotH);
+		float rand01 = clrngLfsr113RandomU01(randomStream);
+		if (!material->pbr.metallic && rand01 > F.x)
+		{
+			reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+			PDF = dot(realNormal, reflection) / PI;
+			BRDF = diffuseOnly(V, reflection, shadingNormal, material);
+		}
+		else {
+			BRDF = brdfOnly(V, reflection, shadingNormal, material);
 		}
 
 

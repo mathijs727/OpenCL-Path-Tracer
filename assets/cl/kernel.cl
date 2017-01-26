@@ -254,12 +254,10 @@ __kernel void shade(
 				&randomStream,
 				rayData,
 				&outRayData,
-				&outShadowRayData,
-				false);
+				&outShadowRayData);
 		} else
 #endif
 		{
-			bool left = (rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2;
 			outputPixels[rayData->outputPixel] += neeMisShading(
 				&scene,
 				shadingData->triangleIndex,
