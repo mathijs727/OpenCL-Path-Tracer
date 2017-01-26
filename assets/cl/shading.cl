@@ -407,11 +407,13 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		}
 		BRDF = 1.0f;
 		PDF = 1.0f;
+
+
 		/*float3 reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->refractive.smoothness, randomStream, &PDF);
 		float rand01 = clrngLfsr113RandomU01(randomStream);
 		if (rand01 < 1.0f)// 50% chance of picking ray going inside
 			reflection *= -1;
-		//PDF /= 2.0f;// Chance of picking that ray halfs
+		PDF /= 2.0f;// Chance of picking that ray halfs
 
 		BRDF = refractiveBSDF(-rayDirection, reflection, realNormal, material);*/
 
@@ -432,6 +434,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 
 	// Continue random walk
 	outData->flags = 0;
+	if (material->type == Refractive)
+		outData->flags = SHADINGFLAGS_LASTSPECULAR;
 	float3 integral = BRDF * dot(realNormal, reflection) / PDF;
 	outData->ray.origin = intersection + reflection * EPSILON;
 	outData->ray.direction = reflection;
