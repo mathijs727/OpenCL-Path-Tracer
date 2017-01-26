@@ -51,6 +51,10 @@ void Game::Init()
 
 		auto sphere = std::make_shared<Mesh>();
 		sphere->loadFromFile("assets/3dmodels/sphere.obj",
+			//Material::PBRMetal(
+			//	glm::vec3(0.955f, 0.638f, 0.538f), // Copper
+			//	0.8f));
+			//Material::Refractive(0.9f, 0.04f, 1.5f));
 			Material::BasicRefractive(1.5f));
 		_scene->add_node(sphere, transform);
 	}

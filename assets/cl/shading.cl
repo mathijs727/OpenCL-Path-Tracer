@@ -287,6 +287,9 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float3 realNormal = cross(edge1, edge2);
 	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
 	float3 shadingNormal = realNormal;//interpolateNormal(vertices, uv);
+	float3 raySideNormal = realNormal;
+	if (dot(raySideNormal, -rayDirection) < 0.0f)
+		raySideNormal *= -1;
 	//shadingNormal = realNormal;
 
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
@@ -310,7 +313,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		outData->flags = SHADINGFLAGS_HASFINISHED;
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 		return WHITE;*/
-		realNormal *= -1;
+		//realNormal *= -1;
 	}
 
 	// Sample a random light source
@@ -394,28 +397,36 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			n1 = material->basicRefractive.refractiveIndex;
 			n2 = 1.000277f;
 		}
-		float cos1 = dot(realNormal, -D);
+		float cos1 = dot(raySideNormal, -D);
 		float n1n2 = n1 / n2;
 		float K = 1 - (n1n2*n1n2) * (1 - cos1*cos1);
 		if (K >= 0)
 		{
-			// Total internal reflection
-			//reflection = normalize(D - 2 * dot(D, realNormal) * realNormal);
+			// Refraction
 			reflection = normalize(rayDirection * n1n2 + realNormal * (n1n2 * cos1 - sqrt(K)));
 		} else {
-			reflection = normalize(D - 2 * dot(D, realNormal) * realNormal);
+			// Total internal reflection
+			reflection = normalize(D - 2 * dot(D, raySideNormal) * raySideNormal);
+			//reflection = BLACK;
 		}
 		BRDF = 1.0f;
 		PDF = 1.0f;
 	} else if (material->type == REFRACTIVE)
 	{
-		/*float3 reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->refractive.smoothness, randomStream, &PDF);
-		float rand01 = clrngLfsr113RandomU01(randomStream);
-		if (rand01 < 1.0f)// 50% chance of picking ray going inside
-			reflection *= -1;
-		PDF /= 2.0f;// Chance of picking that ray halfs
-
-		BRDF = refractiveBSDF(-rayDirection, reflection, realNormal, material);*/
+		if (dot(realNormal, rayDirection) > 0)
+		{
+			// Passing straight through the backside
+			reflection = rayDirection;
+			PDF = 1.0f;
+			BRDF = 1.0f;
+		} else {
+			reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->refractive.smoothness, randomStream, &PDF);
+			float rand01 = clrngLfsr113RandomU01(randomStream);
+			if (rand01 < 1.0f)// 50% chance of picking ray going inside
+				reflection *= -1;
+			PDF /= 2.0f;// Chance of picking that ray halfs
+			BRDF = refractiveBSDF(-rayDirection, reflection, realNormal, material);
+		}
 	} else if (material->type == DIFFUSE) {
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 		PDF = dot(realNormal, reflection) / PI;
@@ -434,7 +445,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	outData->flags = 0;
 	if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE)
 		outData->flags = SHADINGFLAGS_LASTSPECULAR;
-	float3 integral = BRDF * dot(realNormal, reflection) / PDF;
+	float3 integral = BRDF * dot(raySideNormal, reflection) / PDF;
 	outData->ray.origin = intersection + reflection * EPSILON;
 	outData->ray.direction = reflection;
 	outData->multiplier = inData->multiplier * integral;
