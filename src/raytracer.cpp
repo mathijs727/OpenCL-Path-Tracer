@@ -1053,7 +1053,7 @@ void raytracer::RayTracer::InitBuffers(
 		&err);
 	checkClErr(err, "cl::Buffer");
 
-	const int rayDataStructSize = 64;
+	const int rayDataStructSize = 80;
 	_rays_buffers[0] = cl::Buffer(_context,
 		CL_MEM_READ_WRITE,
 		(size_t)MAX_ACTIVE_RAYS * rayDataStructSize,

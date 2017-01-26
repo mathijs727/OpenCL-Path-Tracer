@@ -244,7 +244,7 @@ __kernel void shade(
 #if FALSE
 		if ((rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2)
 		{
-			outputPixels[rayData->outputPixel] += naiveShading(
+			outputPixels[rayData->outputPixel] += neeShading(
 				&scene,
 				shadingData->triangleIndex,
 				intersection,
