@@ -243,7 +243,7 @@ __kernel void shade(
 #ifdef COMPARE_SHADING
 		if ((rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2)
 		{
-			outputPixels[rayData->outputPixel] += naiveShading(
+			outputPixels[rayData->outputPixel] += neeIsShading(
 				&scene,
 				shadingData->triangleIndex,
 				intersection,
@@ -254,12 +254,13 @@ __kernel void shade(
 				&randomStream,
 				rayData,
 				&outRayData,
-				&outShadowRayData);
+				&outShadowRayData,
+				false);
 		} else
 #endif
 		{
 			bool left = (rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2;
-			outputPixels[rayData->outputPixel] += neeIsShading(
+			outputPixels[rayData->outputPixel] += neeMisShading(
 				&scene,
 				shadingData->triangleIndex,
 				intersection,

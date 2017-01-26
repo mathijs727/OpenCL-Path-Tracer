@@ -20,8 +20,52 @@ typedef struct {
 		float rayLength;// Only shadows use this
 		int numBounces;// And shadows dont bounce
 	};
-	// Aligned to 16 bytes so struct has size of 64 bytes
+	float pdf; // 4
+	// Aligned to 16 bytes so struct has size of 80 bytes
 } RayData;
+
+
+/*float3 v[3];
+for (int i = 0; i < 3; ++i) v[i] = vertices[i].vertex;
+float lightArea = triangleArea(v);
+float3 distV = intersection - inData->ray.origin;
+float dist2 = dot(distV, distV);
+float solidAngle = (dot(realNormal, -rayDirection) * lightArea) / dist2;
+solidAngle = min(2 * PI, solidAngle);
+float pdf1 = 1 / solidAngle;
+float pdf2 = inData->pdf;
+float weight = pdf2 / (pdf1 + pdf2);
+return inData->multiplier * material->emissive.emissiveColour * weight;*/
+
+
+/*float3 f0;
+if (material->pbr.metallic) {
+f0 = material->pbr.reflectance;
+}
+else {
+f0 = material->pbr.f0NonMetal;
+}
+float f90 = 1.0f;
+float3 H = normalize(-rayDirection + L);
+float LdotH = saturate(dot(L, H));
+float3 F = F_Schlick(f0, f90, LdotH);
+float rand01 = clrngLfsr113RandomU01(randomStream);
+if (material->pbr.metallic || rand01 < F.x) {
+float a = 1 - material->pbr.smoothness;
+float dotProduct = dot(H, realNormal);
+float denom = dotProduct*dotProduct*(a*a - 1) + 1;
+pdf2 = a*a / (PI*denom*denom);
+}
+else {
+pdf2 = dot(realNormal, L) / PI;
+}			*/
+
+//float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
+//solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
+//float pdf1 = 0;
+//if (solidAngle > EPSILON) {
+//	pdf1 = 1 / solidAngle;
+//}
 
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
@@ -37,7 +81,8 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	clrngLfsr113Stream* randomStream,
 	const __global RayData* inData,
 	RayData* outData,
-	RayData* outShadowData)
+	RayData* outShadowData,
+	bool leftSide)
 {
 	// Gather intersection data
 	VertexData vertices[3];
@@ -52,6 +97,14 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
+	if (dot(realNormal, -rayDirection) < 0.0f)
+	{
+		// Stop if we hit the back side
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
+		return BLACK;
+	}
+
 	// Terminate if we hit a light source
 	if (material->type == Emissive)
 	{
@@ -61,23 +114,27 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 			return inData->multiplier * material->emissive.emissiveColour;
 		}
 		else {
-			return BLACK;
+			float3 v[3];
+			for (int i = 0; i < 3; ++i) v[i] = vertices[i].vertex;
+			float lightArea = triangleArea(v);
+			float3 distV = intersection - inData->ray.origin;
+			float dist2 = dot(distV, distV);
+			float solidAngle = (dot(realNormal, -rayDirection) * lightArea) / dist2;
+			solidAngle = min(2 * PI, solidAngle);
+			float pdf1 = 0;
+			if (solidAngle > EPSILON) {
+				pdf1 = 1 / solidAngle;
+			}
+			float pdf2 = inData->pdf;
+			float weight = pdf2 / (pdf1 + pdf2);
+			return inData->multiplier * material->emissive.emissiveColour * weight;
 		}
-	}
-
-	if (dot(realNormal, -rayDirection) < 0.0f)
-	{
-		// Stop if we hit the back side
-		outData->flags = SHADINGFLAGS_HASFINISHED;
-		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
-		return BLACK;
 	}
 
 	// Sample a random light source
 	float3 lightPos, lightNormal, lightColour; float lightArea;
-	weightedRandomPointOnLight(
+	randomPointOnLight(
 		scene,
-		intersection,
 		randomStream,
 		&lightPos,
 		&lightNormal,
@@ -91,17 +148,47 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	float3 BRDF = 0.0f;
 	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)
 	{
+		float pdf2;
 		if (material->type == PBR) {
 			BRDF = pbrBrdf(normalize(-rayDirection), L, shadingNormal, material);
+			float3 f0;
+			if (material->pbr.metallic) {
+				f0 = material->pbr.reflectance;
+			}
+			else {
+				f0 = material->pbr.f0NonMetal;
+			}
+			float f90 = 1.0f;
+			float3 H = normalize(-rayDirection + L);
+			float LdotH = saturate(dot(L, H));
+			float3 F = F_Schlick(f0, f90, LdotH);
+			float rand01 = clrngLfsr113RandomU01(randomStream);
+				if (material->pbr.metallic || rand01 < F.x) {
+				float a = 1 - material->pbr.smoothness;
+				float NdotH = dot(H, realNormal);
+				pdf2 = 0;
+				if (NdotH > EPSILON) {
+					float denom = NdotH*NdotH*(a*a - 1) + 1;
+					pdf2 = a*a / (PI*denom*denom);
+				}
+			}
+			else {
+				pdf2 = dot(realNormal, L) / PI;
+			}
 		}
 		else if (material->type == Diffuse)
 		{
 			BRDF = diffuseColour(material, vertices, uv, textures) / PI;
+			pdf2 = dot(realNormal, L) / PI;
 		}
 
 		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
 		solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
-		float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * dot(realNormal, L);
+		float pdf1 = 1 / solidAngle;
+
+		//float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
+		//solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
+		float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * dot(realNormal, L) / (pdf1+pdf2);
 		outShadowData->flags = 0;
 		outShadowData->multiplier = Ld * inData->multiplier;
 		outShadowData->ray = createRay(intersection + L * EPSILON, L);
@@ -115,10 +202,47 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	float PDF;
 	float3 reflection;
 	if (material->type == PBR) {
-		//reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
-		//PDF = dot(realNormal, reflection) / PI;
-		reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
-		BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material);
+		if (leftSide)
+		{
+			reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+			BRDF = pbrBrdf(normalize(-rayDirection), reflection, shadingNormal, material);
+			PDF = dot(realNormal, reflection) / PI;
+		}
+		else {
+			float3 f0;
+			if (material->pbr.metallic) {
+				f0 = material->pbr.reflectance;
+			}
+			else {
+				f0 = material->pbr.f0NonMetal;
+			}
+			float3 V = normalize(-rayDirection);
+			float f90 = 1.0f;
+			reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
+			float3 H = normalize(V + reflection);
+			float LdotH = saturate(dot(reflection, H));
+			float3 F = F_Schlick(f0, f90, LdotH);
+			float rand01 = clrngLfsr113RandomU01(randomStream);
+			if (!material->pbr.metallic && rand01 > F.x)
+			{
+				reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+				PDF = dot(realNormal, reflection) / PI;
+				BRDF = diffuseOnly(V, reflection, shadingNormal, material);
+			}
+			else {
+				BRDF = brdfOnly(V, reflection, shadingNormal, material);
+			}
+		}
+
+
+		/*reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
+		float LdotH = saturate(dot(-rayDirection, realNormal));
+		float3 F = F_Schlick(f0, f90, LdotH);
+		if (!material->pbr.metallic && choiceValue > F.x) {
+		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+		PDF = dot(realNormal, reflection) / PI;
+		}
+		BRDF = pbrBrdfChoice(normalize(-rayDirection), reflection, shadingNormal, material, choiceValue);*/
 	}
 	else if (material->type == Diffuse) {
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
@@ -136,6 +260,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 
 	// Continue random walk
 	outData->flags = 0;
+	outData->pdf = PDF;
 	float3 integral = BRDF * dot(realNormal, reflection) / PDF;
 	outData->ray.origin = intersection + reflection * EPSILON;
 	outData->ray.direction = reflection;
@@ -220,8 +345,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			BRDF = diffuseColour(material, vertices, uv, textures) / PI;
 		}
 
-		float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
-		solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
+		//float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
+		//solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
 		float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * dot(realNormal, L);
 		outShadowData->flags = 0;
 		outShadowData->multiplier = Ld * inData->multiplier;
