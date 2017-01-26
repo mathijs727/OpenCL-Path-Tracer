@@ -406,7 +406,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			reflection = normalize(rayDirection * n1n2 + realNormal * (n1n2 * cos1 - sqrt(K)));
 		} else {
 			// Total internal reflection
-			reflection = normalize(D - 2 * dot(D, raySideNormal) * raySideNormal);
+			reflection = normalize(-D - 2 * dot(-D, raySideNormal) * raySideNormal);
 			//reflection = BLACK;
 		}
 		BRDF = 1.0f;
