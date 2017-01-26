@@ -1,10 +1,11 @@
 #ifndef __MATERIAL_CL
 #define __MATERIAL_CL
 typedef enum {
-		Diffuse,
+		DIFFUSE,
 		PBR,
-		Refractive,
-		Emissive
+		REFRACTIVE,
+		BASIC_REFRACTIVE,
+		EMISSIVE
 } MaterialType;
 
 typedef struct
@@ -36,6 +37,10 @@ typedef struct
 			float smoothness;
 			float refractiveIndex;
 		} refractive;
+		struct
+		{
+			float refractiveIndex;
+		} basicRefractive;
 		struct
 		{
 			float3 emissiveColour;

@@ -141,7 +141,7 @@ void raytracer::Mesh::collectEmissiveTriangles()
 		vertices[0] = _vertices[triangle.indices.x].vertex;
 		vertices[1] = _vertices[triangle.indices.y].vertex;
 		vertices[2] = _vertices[triangle.indices.z].vertex;
-		if (material.type == Material::Type::Emissive)
+		if (material.type == Material::Type::EMISSIVE)
 			_emissive_triangles.push_back(i);
 	}
 }

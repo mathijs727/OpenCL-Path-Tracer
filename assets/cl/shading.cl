@@ -106,7 +106,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	}
 
 	// Terminate if we hit a light source
-	if (material->type == Emissive)
+	if (material->type == EMISSIVE)
 	{
 		outData->flags = SHADINGFLAGS_HASFINISHED;
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
@@ -176,7 +176,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 				pdf2 = dot(realNormal, L) / PI;
 			}
 		}
-		else if (material->type == Diffuse)
+		else if (material->type == DIFFUSE)
 		{
 			BRDF = diffuseColour(material, vertices, uv, textures) / PI;
 			pdf2 = dot(realNormal, L) / PI;
@@ -236,7 +236,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 		}
 		BRDF = pbrBrdfChoice(normalize(-rayDirection), reflection, shadingNormal, material, choiceValue);*/
 	}
-	else if (material->type == Diffuse) {
+	else if (material->type == DIFFUSE) {
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 		PDF = dot(realNormal, reflection) / PI;
 		BRDF = diffuseColour(material, vertices, uv, textures) / PI;
@@ -292,7 +292,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	// Terminate if we hit a light source
-	if (material->type == Emissive)
+	if (material->type == EMISSIVE)
 	{
 		outData->flags = SHADINGFLAGS_HASFINISHED;
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
@@ -333,10 +333,10 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	{
 		if (material->type == PBR) {
 			BRDF = pbrBrdf(-rayDirection, L, shadingNormal, material);
-		} else if (material->type == Diffuse)
+		} else if (material->type == DIFFUSE)
 		{
 			BRDF = diffuseColour(material, vertices, uv, textures) / PI;
-		} else if (material->type == Refractive)
+		} else if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE)
 		{
 			//BRDF = refractiveBSDF(-rayDirection, L, shadingNormal, material);
 			BRDF = 0;
@@ -379,7 +379,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		} else {
 			BRDF = brdfOnly(V, reflection, shadingNormal, material);
 		}
-	} else if (material->type == Refractive)
+	} else if (material->type == BASIC_REFRACTIVE)
 	{
 		// Slide 34
 		// http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2001%20-%20intro%20&%20whitted.pdf
@@ -389,9 +389,9 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		if (dot(realNormal, -D) > 0.0f)
 		{
 			n1 = 1.000277f;
-			n2 = material->refractive.refractiveIndex;
+			n2 = material->basicRefractive.refractiveIndex;
 		} else {
-			n1 = material->refractive.refractiveIndex;
+			n1 = material->basicRefractive.refractiveIndex;
 			n2 = 1.000277f;
 		}
 		float cos1 = dot(realNormal, -D);
@@ -407,8 +407,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		}
 		BRDF = 1.0f;
 		PDF = 1.0f;
-
-
+	} else if (material->type == REFRACTIVE)
+	{
 		/*float3 reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->refractive.smoothness, randomStream, &PDF);
 		float rand01 = clrngLfsr113RandomU01(randomStream);
 		if (rand01 < 1.0f)// 50% chance of picking ray going inside
@@ -416,9 +416,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		PDF /= 2.0f;// Chance of picking that ray halfs
 
 		BRDF = refractiveBSDF(-rayDirection, reflection, realNormal, material);*/
-
-	}
-	else if (material->type == Diffuse) {
+	} else if (material->type == DIFFUSE) {
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 		PDF = dot(realNormal, reflection) / PI;
 		BRDF = diffuseColour(material, vertices, uv, textures) / PI;
@@ -434,7 +432,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 
 	// Continue random walk
 	outData->flags = 0;
-	if (material->type == Refractive)
+	if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE)
 		outData->flags = SHADINGFLAGS_LASTSPECULAR;
 	float3 integral = BRDF * dot(realNormal, reflection) / PDF;
 	outData->ray.origin = intersection + reflection * EPSILON;
@@ -474,7 +472,7 @@ float3 neeShading(
 	const __global Material* material = &scene->meshMaterials[scene->triangles[triangleIndex].mat_index];
 
 	// Terminate if we hit a light source
-	if (material->type == Emissive)
+	if (material->type == EMISSIVE)
 	{
 		outData->flags = SHADINGFLAGS_HASFINISHED;
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
@@ -508,7 +506,7 @@ float3 neeShading(
 	L /= dist;
 
 	float3 BRDF = 0;
-	if (material->type == Diffuse) {
+	if (material->type == DIFFUSE) {
 		BRDF = diffuseColour(material, vertices, uv, textures) * INVPI;
 	}
 
@@ -578,7 +576,7 @@ float3 naiveShading(
 	}
 
 	// Terminate if we hit a light source
-	if (material->type == Emissive)
+	if (material->type == EMISSIVE)
 	{
 		outData->flags = SHADINGFLAGS_HASFINISHED;
 		return inData->multiplier * material->emissive.emissiveColour;
@@ -593,7 +591,7 @@ float3 naiveShading(
 	float3 BRDF;
 	if (material->type == PBR) {
 		BRDF = pbrBrdf(normalize(-rayDirection), reflection, realNormal, material);
-	} else if (material->type == Diffuse)
+	} else if (material->type == DIFFUSE)
 	{
 		BRDF = diffuseColour(material, vertices, uv, textures) / PI;
 	}

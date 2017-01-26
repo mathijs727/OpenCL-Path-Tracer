@@ -25,10 +25,11 @@ struct Material
 {
 	enum class Type : cl_int
 	{
-		Diffuse,
+		DIFFUSE,
 		PBR,
-		Refractive,
-		Emissive
+		REFRACTIVE,
+		BASIC_REFRACTIVE,
+		EMISSIVE
 	};
 
 	Material() { }
@@ -64,6 +65,10 @@ struct Material
 		} refractive;
 		struct
 		{
+			float refractiveIndex;
+		} basicRefractive;
+		struct
+		{
 			CL_VEC3(emissiveColour);
 		} emissive;
 	};
@@ -72,7 +77,7 @@ struct Material
 
 	static Material Diffuse(const glm::vec3& colour) {
 		Material result;
-		result.type = Type::Diffuse;
+		result.type = Type::DIFFUSE;
 		result.diffuse.diffuseColour = colour;
 		result.diffuse.tex_id = -1;
 		return result;
@@ -80,7 +85,7 @@ struct Material
 
 	static Material Diffuse(const raytracer::Texture& diffuse, const glm::vec3& colour = glm::vec3(0)) {
 		Material result;
-		result.type = Type::Diffuse;
+		result.type = Type::DIFFUSE;
 		result.diffuse.diffuseColour = colour;
 		result.diffuse.tex_id = diffuse.getId();
 		return result;
@@ -110,17 +115,25 @@ struct Material
 	static Material Refractive(float smoothness, float f0, float refractiveIndex)
 	{
 		Material result;
-		result.type = Type::Refractive;
+		result.type = Type::REFRACTIVE;
 		result.refractive.smoothness = smoothness;
 		result.refractive.f0 = f0;
 		result.refractive.refractiveIndex = refractiveIndex;
 		return result;
 	}
 
+	static Material BasicRefractive(float refractiveIndex)
+	{
+		Material result;
+		result.type = Type::BASIC_REFRACTIVE;
+		result.basicRefractive.refractiveIndex = refractiveIndex;
+		return result;
+	}
+
 	static Material Emissive(const glm::vec3& colour) {
 		// Cornell box is not defined in physical units so multiply by 5 to make it brighter
 		Material result;
-		result.type = Type::Emissive;
+		result.type = Type::EMISSIVE;
 		result.emissive.emissiveColour = colour * 5.0f;
 		return result;
 	}

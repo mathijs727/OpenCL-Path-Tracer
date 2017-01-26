@@ -51,7 +51,7 @@ void Game::Init()
 
 		auto sphere = std::make_shared<Mesh>();
 		sphere->loadFromFile("assets/3dmodels/sphere.obj",
-			Material::Refractive(0.5f, 0.04f, 1.5f));
+			Material::BasicRefractive(1.5f));
 		_scene->add_node(sphere, transform);
 	}
 
