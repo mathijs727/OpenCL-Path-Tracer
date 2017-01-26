@@ -240,8 +240,7 @@ __kernel void shade(
 		clrngLfsr113Stream randomStream;
 		clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
-//#ifdef COMPARE_SHADING
-#if FALSE
+#ifdef COMPARE_SHADING
 		if ((rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2)
 		{
 			outputPixels[rayData->outputPixel] += naiveShading(
@@ -271,8 +270,7 @@ __kernel void shade(
 				&randomStream,
 				rayData,
 				&outRayData,
-				&outShadowRayData,
-				left);
+				&outShadowRayData);
 		}
 
 		// Store random streams
