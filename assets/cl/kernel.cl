@@ -4,6 +4,7 @@
 #define MAX_ITERATIONS 4
 
 #define COMPARE_SHADING
+#define CLRNG_SINGLE_PRECISION
 
 #include <clRNG/lfsr113.clh>
 #include "shapes.cl"
@@ -239,7 +240,8 @@ __kernel void shade(
 		clrngLfsr113Stream randomStream;
 		clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
-#ifdef COMPARE_SHADING
+//#ifdef COMPARE_SHADING
+#if FALSE
 		if ((rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2)
 		{
 			outputPixels[rayData->outputPixel] += naiveShading(
@@ -257,6 +259,7 @@ __kernel void shade(
 		} else
 #endif
 		{
+			bool left = (rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2;
 			outputPixels[rayData->outputPixel] += neeIsShading(
 				&scene,
 				shadingData->triangleIndex,
@@ -268,7 +271,8 @@ __kernel void shade(
 				&randomStream,
 				rayData,
 				&outRayData,
-				&outShadowRayData);
+				&outShadowRayData,
+				left);
 		}
 
 		// Store random streams

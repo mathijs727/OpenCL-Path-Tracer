@@ -167,7 +167,7 @@ float3 brdfOnly(
 	float NdotL = saturate(dot(N, L));
 
 	// Specular BRDF
-	float3 F = F_Schlick(f0, f90, LdotH);
+	//float3 F = F_Schlick(f0, f90, LdotH);
 	float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
 	float D = D_GGX(NdotH, roughness);
 	// The G function might return 0.0f because of the heavyside function.
@@ -176,7 +176,7 @@ float3 brdfOnly(
 	float3 Fr;
 	if (G != 0.0f)
 	{
-		return F * D * G / (4.0f * NdotL * NdotV);
+		return D * G / (4.0f * NdotL * NdotV);
 	}
 	else {
 		return BLACK;
@@ -205,7 +205,7 @@ float3 diffuseOnly(
 	float NdotH = saturate(dot(N, H));
 	float NdotL = saturate(dot(N, L));
 
-	float3 F = F_Schlick(f0, f90, LdotH);
+	//float3 F = F_Schlick(f0, f90, LdotH);
 
 	// Diffuse BRDF (called BRDF because it assumes light enters and exists at the same point,
 	//  but it tries to approximate diffuse scatering so maybe this should be called BTDF and
