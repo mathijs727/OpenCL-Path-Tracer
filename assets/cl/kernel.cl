@@ -167,7 +167,7 @@ __kernel void intersectWalk(
 	ShadingData shadingData;
 	shadingData.hit = false;
 
-	if (gid < (inputData->numInRays + inputData->newRays) && rayData.flags != SHADINGFLAGS_HASFINISHED)
+	if (gid < (inputData->numInRays + inputData->newRays) && !(rayData.flags & SHADINGFLAGS_HASFINISHED))
 	{
 		// Trace rays
 		shadingData.hit = traceRay(
@@ -225,7 +225,7 @@ __kernel void shade(
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	if (gid < (inputData->numInRays + inputData->newRays) &&
-		rayData->flags != SHADINGFLAGS_HASFINISHED &&
+		!(rayData->flags & SHADINGFLAGS_HASFINISHED) &&
 		shadingData->hit)
 	{		
 		outRayData.outputPixel = rayData->outputPixel;
