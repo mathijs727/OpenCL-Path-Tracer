@@ -348,6 +348,15 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 	}
 
+	float3 c = material->diffuse.diffuseColour;
+	float probabilityToSurvive = fmax(fmax(c.x, c.y), c.z);
+	probabilityToSurvive = fmin(fmax(probabilityToSurvive, 0.0f), 1.0f);
+	float choiceToSurvive = clrngLfsr113RandomU01(randomStream);
+
+	if (choiceToSurvive > probabilityToSurvive) {
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		return BLACK;
+	}
 
 	float PDF;
 	float3 reflection;
@@ -382,11 +391,11 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float n1, n2;
 		if (dot(realNormal, -D) > 0.0f)
 		{
-			n1 = 1.000277f;
-			n2 = material->basicRefractive.refractiveIndex;
-		} else {
-			n1 = material->basicRefractive.refractiveIndex;
 			n2 = 1.000277f;
+			n1 = material->basicRefractive.refractiveIndex;
+		} else {
+			n2 = material->basicRefractive.refractiveIndex;
+			n1 = 1.000277f;
 		}
 		float cos1 = dot(raySideNormal, -D);
 		float n1n2 = n1 / n2;
@@ -424,8 +433,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 				if (dot(realNormal, -rayDirection) >= 0.0f)
 				{
 					// Hit from outside, refracting inwards
-					n_i = 1.000277f;
-					n_t = material->refractive.refractiveIndex;
+					n_t = 1.000277f;
+					n_i = material->refractive.refractiveIndex;
 				} else {
 					// Hit from inside, refracting outwards
 					n_t = material->refractive.refractiveIndex;
@@ -457,7 +466,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float3 integral = BRDF * dot(raySideNormal, reflection) / PDF;
 	outData->ray.origin = intersection + reflection * EPSILON;
 	outData->ray.direction = reflection;
-	outData->multiplier = inData->multiplier * integral;
+	outData->multiplier = inData->multiplier * integral / probabilityToSurvive;
 	return BLACK;
 }
 
