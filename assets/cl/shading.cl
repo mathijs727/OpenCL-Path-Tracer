@@ -403,7 +403,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		if (K >= 0)
 		{
 			// Refraction
-			reflection = normalize(rayDirection * n1n2 + realNormal * (n1n2 * cos1 - sqrt(K)));
+			reflection = normalize(D * n1n2 + realNormal * (n1n2 * cos1 - sqrt(K)));
 		} else {
 			// Total internal reflection
 			reflection = normalize(-D - 2 * dot(-D, raySideNormal) * raySideNormal);
@@ -413,20 +413,37 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		PDF = 1.0f;
 	} else if (material->type == REFRACTIVE)
 	{
-		if (dot(realNormal, rayDirection) > 0)
+		/*if (dot(-rayDirection, realNormal) < 0.0f)
 		{
-			// Passing straight through the backside
 			reflection = rayDirection;
 			PDF = 1.0f;
 			BRDF = 1.0f;
-		} else {
-			reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->refractive.smoothness, randomStream, &PDF);
+		} else */{
+			float3 halfway = ggxWeightedHalfway(edge1, edge2, invTransform, 1 - material->refractive.smoothness, randomStream);
+			if (dot(halfway, -rayDirection) < 0.0f)// We may hit the mesh at the inside
+				halfway *= -1;// Where the normal (and thus halfway) has to point inward
+			float f0 = material->refractive.f0;
+			float f90 = 1.0f;
+			float3 F = F_Schlick(f0, f90, dot(-rayDirection, halfway));
 			float rand01 = clrngLfsr113RandomU01(randomStream);
-			if (rand01 < 1.0f)// 50% chance of picking ray going inside
-				reflection *= -1;
-			PDF /= 2.0f;// Chance of picking that ray halfs
-			BRDF = refractiveBSDF(-rayDirection, reflection, realNormal, material);
+			if (rand01 < F.x)
+			{
+				BRDF = evaluateReflect(-rayDirection, realNormal, halfway, material, &reflection);
+			} else {
+				float n1, n2;
+				if (dot(realNormal, -rayDirection) >= 0.0f)
+				{
+					n1 = 1.000277f;
+					n2 = material->refractive.refractiveIndex;
+				} else {
+					n1 = material->refractive.refractiveIndex;
+					n2 = 1.000277f;
+				}
+				BRDF = evaluateRefract(-rayDirection, raySideNormal, halfway, n1, n2, material, &reflection);
+			}
 		}
+		// Remove the cos from the integral, because its integrated in the BRDF
+		PDF = dot(raySideNormal, reflection);
 	} else if (material->type == DIFFUSE) {
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
 		PDF = dot(realNormal, reflection) / PI;

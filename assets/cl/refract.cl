@@ -81,12 +81,12 @@ float3 refractiveBTDF(
 
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
 float3 refractiveBSDF(
-	float3 V,
+	float3 V, 
 	float3 L,
 	float3 N,
 	const __global Material* material)
 {
-	if (dot(N, V) > 0.0f)
+	/*if (dot(N, V) > 0.0f)
 	{
 		// From outside
 		if (dot(N, L) > 0.0f)
@@ -102,14 +102,48 @@ float3 refractiveBSDF(
 		if (dot(N, L) > 0.0f)
 		{
 			// To outside
-			return refractiveBTDF(V, L, N, material);
+			return refractiveBTDF(V, L, -N, material);
 		} else {
 			// To inside
-			return refractiveBRDF(V, L, N, material);
+			return refractiveBRDF(V, L, -N, material);
 		}
-	}
+	}*/
 
 	return BLACK;// Never reached
+}
+
+// https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
+// Section 5.3
+float calcWeight(float3 I, float3 N, float3 M, const __global Material* material, float3 O)
+{
+	float IdotM = fabs(dot(I, M));
+	float MdotN = fabs(dot(M, N));
+	float NdotI = fabs(dot(N, I));
+	float NdotO = fabs(dot(N, O));
+
+	float roughness = 1.0f - material->refractive.smoothness;
+	float G = G_SmithGGXCorrelated(NdotI, NdotO, roughness);
+
+	return (IdotM * G) / (NdotI * MdotN);
+}
+
+// https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
+// Section 5.3
+float evaluateReflect(float3 I, float3 N, float3 M, const __global Material* material, float3* o_r)
+{
+	*o_r = 2 * fabs(dot(I, M)) * M - I;
+	return calcWeight(I, N, M, material, *o_r);
+}
+
+// https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
+// Section 5.3
+// n_i / n_t = refractive indices
+float evaluateRefract(float3 I, float3 N, float3 M, float n_i, float n_t, const __global Material* material, float3* o_t)
+{
+	float c = dot(I, M);
+	float n = n_i / n_t;
+	*o_t = (n * c - sign(dot(I, N)) * sqrt(1 + n * (c*c - 1)) ) * M - n * I;
+	return calcWeight(I, N, M, material, *o_t);
 }
 
 #endif// __REFRACT_CL

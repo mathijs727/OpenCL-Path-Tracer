@@ -45,17 +45,17 @@ void Game::Init()
 
 	{
 		Transform transform;
-		transform.location.y = 1.0f;
-		transform.scale = glm::vec3(0.3f);
+		transform.scale = glm::vec3(4.0f);
+		//transform.scale = glm::vec3(0.0001f);
 		//transform.orientation = glm::quat(glm::vec3(0, -1, 0));
 
 		auto sphere = std::make_shared<Mesh>();
-		sphere->loadFromFile("assets/3dmodels/sphere.obj",
+		sphere->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply",
 			//Material::PBRMetal(
 			//	glm::vec3(0.955f, 0.638f, 0.538f), // Copper
 			//	0.8f));
-			//Material::Refractive(0.9f, 0.04f, 1.5f));
-			Material::BasicRefractive(1.5f));
+			Material::Refractive(0.8f, 0.04f, 1.5f));
+			//Material::BasicRefractive(1.5f));
 		_scene->add_node(sphere, transform);
 	}
 

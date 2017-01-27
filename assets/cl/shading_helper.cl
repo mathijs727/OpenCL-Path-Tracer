@@ -132,6 +132,39 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 inciden
 	return normalize(2*dot(orientedSample, L)*orientedSample - L);
 }
 
+float3 ggxWeightedHalfway(
+	float3 edge1,
+	float3 edge2,
+	const __global float* invTransform,
+	float alpha,
+	clrngLfsr113Stream* randomStream)
+{
+	// http://blog.tobias-franke.eu/2014/03/30/notes_on_importance_sampling.html
+	float r0 = clrngLfsr113RandomU01(randomStream);	
+	float r1 = clrngLfsr113RandomU01(randomStream);
+	float phi = 2.0f * PI * r0;
+	float theta = acos(sqrt((1.0f - r1) / ((alpha*alpha - 1.0f) * r1 + 1.0f)));
+
+	float x = cos(phi) * cos(PI/2 - theta);
+	float y = sin(phi) * cos(PI/2 - theta);
+	float z = sin(PI/2 - theta);
+
+	float3 sample = (float3)(x,y,z);
+
+	float3 normal = normalize(cross(edge1, edge2));
+	float3 tangent = normalize(cross(normal, edge1));
+	float3 bitangent = cross(normal, tangent);
+
+	// Transform hemisphere to normal of the surface (of the static model)
+	// [tangent, bitangent, normal]
+	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
+	
+	// Apply the normal transform (top level BVH)
+	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
+
+	return orientedSample;
+}
+
 // http://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
 float3 uniformSampleTriangle(const float3* vertices, clrngLfsr113Stream* randomStream)
 {
