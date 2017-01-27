@@ -112,12 +112,11 @@ struct Material
 		return result;
 	}
 
-	static Material Refractive(float smoothness, float f0, float refractiveIndex)
+	static Material Refractive(float smoothness, float refractiveIndex)
 	{
 		Material result;
 		result.type = Type::REFRACTIVE;
 		result.refractive.smoothness = smoothness;
-		result.refractive.f0 = f0;
 		result.refractive.refractiveIndex = refractiveIndex;
 		return result;
 	}

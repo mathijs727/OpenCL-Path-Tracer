@@ -287,7 +287,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float3 realNormal = cross(edge1, edge2);
 	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
 	float3 shadingNormal = realNormal;//interpolateNormal(vertices, uv);
-	float3 raySideNormal = realNormal;
+	float3 raySideNormal = shadingNormal;
 	if (dot(raySideNormal, -rayDirection) < 0.0f)
 		raySideNormal *= -1;
 	//shadingNormal = realNormal;
@@ -306,56 +306,65 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			return BLACK;
 		}
 	}
-
-	// Sample a random light source
-	float3 lightPos, lightNormal, lightColour; float lightArea;
-	weightedRandomPointOnLight(
-		scene,
-		intersection,
-		randomStream,
-		&lightPos,
-		&lightNormal,
-		&lightColour,
-		&lightArea);
-	float3 L = lightPos - intersection;
-	float dist2 = dot(L, L);
-	float dist = sqrt(dist2);
-	L /= dist;
-
+	
 	float3 BRDF = 0.0f;
-	if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)// dot(realNormal, L) may be <0.0f for transparent materials?
+	if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE)
 	{
-		if (material->type == PBR) {
-			BRDF = pbrBrdf(-rayDirection, L, shadingNormal, material);
-		} else if (material->type == DIFFUSE)
-		{
-			BRDF = diffuseColour(material, vertices, uv, textures) / PI;
-		} else if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE)
-		{
-			//BRDF = refractiveBSDF(-rayDirection, L, shadingNormal, material);
-			BRDF = 0;
-		}
-
-		//float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
-		//solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
-		float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * dot(realNormal, L);
-		outShadowData->flags = 0;
-		outShadowData->multiplier = Ld * inData->multiplier;
-		outShadowData->ray = createRay(intersection + L * EPSILON, L);
-		outShadowData->rayLength = dist - 2 * EPSILON;
-	}
-	else {
 		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 	}
+	else
+	{
+		// Sample a random light source
+		float3 lightPos, lightNormal, lightColour; float lightArea;
+		randomPointOnLight(
+			scene,
+			randomStream,
+			&lightPos,
+			&lightNormal,
+			&lightColour,
+			&lightArea);
+		float3 L = lightPos - intersection;
+		float dist2 = dot(L, L);
+		float dist = sqrt(dist2);
+		L /= dist;
+		if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)// dot(realNormal, L) may be <0.0f for transparent materials?
+		{
+			if (material->type == PBR) {
+				BRDF = pbrBrdf(-rayDirection, L, shadingNormal, material);
+			} else if (material->type == DIFFUSE)
+			{
+				BRDF = diffuseColour(material, vertices, uv, textures) / PI;
+			} else if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE)
+			{
+				//BRDF = refractiveBSDF(-rayDirection, L, shadingNormal, material);
+				BRDF = 0;
+			}
 
-	float3 c = material->diffuse.diffuseColour;
-	float probabilityToSurvive = fmax(fmax(c.x, c.y), c.z);
-	probabilityToSurvive = fmin(fmax(probabilityToSurvive, 0.0f), 1.0f);
-	float choiceToSurvive = clrngLfsr113RandomU01(randomStream);
+			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
+			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
+			float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * solidAngle * dot(realNormal, L);
+			outShadowData->flags = 0;
+			outShadowData->multiplier = Ld * inData->multiplier;
+			outShadowData->ray = createRay(intersection + L * EPSILON, L);
+			outShadowData->rayLength = dist - 2 * EPSILON;
+		}
+		else {
+			outShadowData->flags = SHADINGFLAGS_HASFINISHED;
+		}
+	}
+	
+	float probabilityToSurvive = 1.0f;
+	if (material->type == DIFFUSE || material->type == PBR)
+	{
+		float3 c = material->diffuse.diffuseColour;
+		probabilityToSurvive = fmax(fmax(c.x, c.y), c.z);
+		probabilityToSurvive = fmin(fmax(probabilityToSurvive, 0.0f), 1.0f);
+		float choiceToSurvive = clrngLfsr113RandomU01(randomStream);
 
-	if (choiceToSurvive > probabilityToSurvive) {
-		outData->flags = SHADINGFLAGS_HASFINISHED;
-		return BLACK;
+		if (choiceToSurvive > probabilityToSurvive) {
+			outData->flags = SHADINGFLAGS_HASFINISHED;
+			return BLACK;
+		}
 	}
 
 	float PDF;
@@ -391,56 +400,64 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float n1, n2;
 		if (dot(realNormal, -D) > 0.0f)
 		{
-			n2 = 1.000277f;
-			n1 = material->basicRefractive.refractiveIndex;
-		} else {
-			n2 = material->basicRefractive.refractiveIndex;
 			n1 = 1.000277f;
+			n2 = material->basicRefractive.refractiveIndex;
+		} else {
+			n1 = material->basicRefractive.refractiveIndex;
+			n2 = 1.000277f;
 		}
 		float cos1 = dot(raySideNormal, -D);
 		float n1n2 = n1 / n2;
 		float K = 1 - (n1n2*n1n2) * (1 - cos1*cos1);
 		if (K >= 0)
 		{
-			// Refraction
-			reflection = normalize(n1n2 * D + raySideNormal * (n1n2 * cos1 - sqrt(K)));
+			float rand01 = clrngLfsr113RandomU01(randomStream);
+			float f0 = pow((n1-n2)/(n1+n2),2.0f);
+			float3 F = F_Schlick(f0, 1.0f, dot(raySideNormal, -rayDirection));
+			if (rand01 < F.x) {
+				// Refraction
+				reflection = normalize(n1n2 * D + raySideNormal * (n1n2 * cos1 - sqrt(K)));
+			}
+			else {
+				reflection = normalize(-D - 2 * dot(-D, raySideNormal) * raySideNormal);
+			}
 		} else {
 			// Total internal reflection
 			reflection = normalize(-D - 2 * dot(-D, raySideNormal) * raySideNormal);
-			//reflection = BLACK;
 		}
 		BRDF = 1.0f;
 		PDF = dot(raySideNormal, reflection);
 	} else if (material->type == REFRACTIVE)
 	{
-		/*if (dot(-rayDirection, realNormal) < 0.0f)
-		{
-			reflection = rayDirection;
-			PDF = 1.0f;
-			BRDF = 1.0f;
-		} else */{
-			float3 halfway = ggxWeightedHalfway(edge1, edge2, raySideNormal, invTransform, 1 - material->refractive.smoothness, randomStream);
+		float3 halfway = ggxWeightedHalfway(edge1, edge2, raySideNormal, invTransform, 1 - material->refractive.smoothness, randomStream);
 
-			float f0 = material->refractive.f0;
-			float f90 = 1.0f;
-			float3 F = F_Schlick(f0, f90, dot(-rayDirection, halfway));
-			float rand01 = clrngLfsr113RandomU01(randomStream);
-			if (rand01 < F.x)
-			{
-				BRDF = evaluateReflect(-rayDirection, raySideNormal, halfway, material, &reflection);
-			} else {
-				float n_i, n_t;
-				if (dot(realNormal, -rayDirection) >= 0.0f)
-				{
-					// Hit from outside, refracting inwards
-					n_t = 1.000277f;
-					n_i = material->refractive.refractiveIndex;
-				} else {
-					// Hit from inside, refracting outwards
-					n_t = material->refractive.refractiveIndex;
-					n_i = 1.000277f;
-				}
+		float n_i, n_t;
+		if (dot(realNormal, -rayDirection) >= 0.0f)
+		{
+			// Hit from outside, refracting inwards
+			n_i = 1.000277f;
+			n_t = material->refractive.refractiveIndex;
+		} else {
+			// Hit from inside, refracting outwards
+			n_i = material->refractive.refractiveIndex;
+			n_t = 1.000277f;
+		}
+
+		float f0 = material->refractive.f0;
+		float f90 = 1.0f;
+		float3 F = F_Schlick(f0, f90, dot(-rayDirection, halfway));
+		float rand01 = clrngLfsr113RandomU01(randomStream);
+		if (rand01 < F.x)
+		{
+			BRDF = evaluateReflect(-rayDirection, raySideNormal, halfway, material, &reflection);
+		} else {
+			float n1n2 = n_i / n_t;
+			float cos1 = dot(halfway, -rayDirection);
+			float K = 1 - (n1n2*n1n2) * (1 - cos1*cos1);
+			if (K >= 0) {
 				BRDF = evaluateRefract(-rayDirection, raySideNormal, halfway, n_i, n_t, material, &reflection);
+			} else {
+				BRDF = evaluateReflect(-rayDirection, raySideNormal, halfway, material, &reflection);
 			}
 		}
 		// Remove the cos from the integral, because its integrated in the BRDF
