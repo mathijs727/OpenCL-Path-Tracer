@@ -307,15 +307,6 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		}
 	}
 
-	if (dot(realNormal, -rayDirection) < 0.0f)
-	{
-		/*// Stop if we hit the back side
-		outData->flags = SHADINGFLAGS_HASFINISHED;
-		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
-		return WHITE;*/
-		//realNormal *= -1;
-	}
-
 	// Sample a random light source
 	float3 lightPos, lightNormal, lightColour; float lightArea;
 	weightedRandomPointOnLight(
@@ -410,7 +401,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			//reflection = BLACK;
 		}
 		BRDF = 1.0f;
-		PDF = 1.0f;
+		PDF = dot(raySideNormal, reflection);
 	} else if (material->type == REFRACTIVE)
 	{
 		/*if (dot(-rayDirection, realNormal) < 0.0f)
@@ -420,7 +411,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			BRDF = 1.0f;
 		} else */{
 			float3 halfway = ggxWeightedHalfway(edge1, edge2, invTransform, 1 - material->refractive.smoothness, randomStream);
-			if (dot(halfway, -rayDirection) < 0.0f)// We may hit the mesh at the inside
+			if (dot(realNormal, -rayDirection) < 0.0f)// We may hit the mesh at the inside
 				halfway *= -1;// Where the normal (and thus halfway) has to point inward
 			float f0 = material->refractive.f0;
 			float f90 = 1.0f;
@@ -430,16 +421,18 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			{
 				BRDF = evaluateReflect(-rayDirection, realNormal, halfway, material, &reflection);
 			} else {
-				float n1, n2;
-				if (dot(realNormal, -rayDirection) >= 0.0f)
+				float n_i, n_t;
+				if (dot(realNormal, -rayDirection) > 0.0f)
 				{
-					n1 = 1.000277f;
-					n2 = material->refractive.refractiveIndex;
+					// Hit from outside, refracting inwards
+					n_i = 1.000277f;
+					n_t = material->refractive.refractiveIndex;
 				} else {
-					n1 = material->refractive.refractiveIndex;
-					n2 = 1.000277f;
+					// Hit from inside, refracting outwards
+					n_t = 1.000277f;
+					n_i = material->refractive.refractiveIndex;
 				}
-				BRDF = evaluateRefract(-rayDirection, raySideNormal, halfway, n1, n2, material, &reflection);
+				BRDF = evaluateRefract(-rayDirection, raySideNormal, halfway, n_i, n_t, material, &reflection);
 			}
 		}
 		// Remove the cos from the integral, because its integrated in the BRDF
