@@ -1,4 +1,4 @@
-#ifndef __SHADER_HELPER_CL
+﻿#ifndef __SHADER_HELPER_CL
 #define __SHADER_HELPER_CL
 #include <clRNG/lfsr113.clh>
 #include "math.cl"
@@ -93,6 +93,9 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 inciden
 	clrngLfsr113Stream* randomStream,
 	float* outScalingFactor) {
 	
+	float3 normal = normalize(cross(edge1, edge2));
+	a = (1.2f - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*a;
+
 	float r0 = clrngLfsr113RandomU01(randomStream);	
 	float phi = 2.0f * PI * r0;
 	float theta;
@@ -113,7 +116,6 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 inciden
 	*/
 	float3 sample = (float3)(x,y,z);
 	
-	float3 normal = normalize(cross(edge1, edge2));
 	float3 tangent = normalize(cross(normal, edge1));
 	float3 bitangent = cross(normal, tangent);
 
@@ -135,11 +137,14 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 inciden
 float3 ggxWeightedHalfway(
 	float3 edge1,
 	float3 edge2,
+	float3 incidenceVector,
 	float3 normal,
 	const __global float* invTransform,
 	float alpha,
 	clrngLfsr113Stream* randomStream)
 {
+	alpha = (1.2f - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*alpha;
+
 	// http://blog.tobias-franke.eu/2014/03/30/notes_on_importance_sampling.html
 	float r0 = clrngLfsr113RandomU01(randomStream);	
 	float r1 = clrngLfsr113RandomU01(randomStream);

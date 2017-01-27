@@ -40,11 +40,11 @@ float G_SmithGGXCorrelated(float NdotL, float NdotV, float alpha)
 	// Heavyside function f(a) = 1 if a > 0 else 0
 	// Last row of table 1 of "Movign Frostbite to PBR"
 	// Does not have to be applied here since we do it in the main function?
-	if (NdotL <= 0 || NdotV <= 0) {
-		return 0.0f;
-	} else {
+	//if (NdotL <= 0 || NdotV <= 0) {
+	//	return 0.0f;
+	//} else {
 		return G_SmithGGXCorrelated;
-	}
+	//}
 
 	
 	/*// This is the optimize version (including divide by 4 * NdotL * NdotV)

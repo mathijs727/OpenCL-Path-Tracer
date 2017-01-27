@@ -368,6 +368,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	}
 
 	float PDF;
+	float cosineTerm;
 	float3 reflection;
 	if (material->type == PBR) {
 		float3 f0;
@@ -391,6 +392,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		} else {
 			BRDF = brdfOnly(V, reflection, shadingNormal, material);
 		}
+		cosineTerm = dot(raySideNormal, reflection);
 	} else if (material->type == BASIC_REFRACTIVE)
 	{
 		// Slide 34
@@ -426,13 +428,14 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			reflection = normalize(-D - 2 * dot(-D, raySideNormal) * raySideNormal);
 		}
 		BRDF = 1.0f;
-		PDF = dot(raySideNormal, reflection);
+		cosineTerm = 1.0f;
+		PDF = 1.0f;
 	} else if (material->type == REFRACTIVE)
 	{
-		float3 halfway = ggxWeightedHalfway(edge1, edge2, raySideNormal, invTransform, 1 - material->refractive.smoothness, randomStream);
+		float3 halfway = ggxWeightedHalfway(edge1, edge2, rayDirection, raySideNormal, invTransform, 1 - material->refractive.smoothness, randomStream);
 
 		float n_i, n_t;
-		if (dot(realNormal, -rayDirection) >= 0.0f)
+		if (dot(halfway, -rayDirection) > 0.0f)
 		{
 			// Hit from outside, refracting inwards
 			n_i = 1.000277f;
@@ -461,10 +464,12 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			}
 		}
 		// Remove the cos from the integral, because its integrated in the BRDF
-		PDF = dot(raySideNormal, reflection);
+		cosineTerm = 1.0f;
+		PDF = 1.0f;
 	} else if (material->type == DIFFUSE) {
 		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
-		PDF = dot(realNormal, reflection) / PI;
+		PDF = 1.0f / PI; // we simplify the cosine term away from PDF and cosineTerm
+		cosineTerm = 1.0f;
 		BRDF = diffuseColour(material, vertices, uv, textures) / PI;
 	}
 
@@ -480,7 +485,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	outData->flags = 0;
 	if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE)
 		outData->flags = SHADINGFLAGS_LASTSPECULAR;
-	float3 integral = BRDF * dot(raySideNormal, reflection) / PDF;
+	float3 integral = BRDF * cosineTerm / PDF;
 	outData->ray.origin = intersection + reflection * EPSILON;
 	outData->ray.direction = reflection;
 	outData->multiplier = inData->multiplier * integral / probabilityToSurvive;
