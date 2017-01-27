@@ -132,6 +132,7 @@ float calcWeight(float3 I, float3 N, float3 M, const __global Material* material
 float evaluateReflect(float3 I, float3 N, float3 M, const __global Material* material, float3* o_r)
 {
 	*o_r = normalize(2 * fabs(dot(I, M)) * M - I);
+
 	return calcWeight(I, N, M, material, *o_r);
 }
 
@@ -142,7 +143,9 @@ float evaluateRefract(float3 I, float3 N, float3 M, float n_i, float n_t, const 
 {
 	float c = dot(I, M);
 	float n = n_i / n_t;
+
 	*o_t = normalize((n * c - sign(dot(I, N)) * sqrt(1 + n * (c*c - 1)) ) * M - n * I);
+	
 	return calcWeight(I, N, M, material, *o_t);
 }
 

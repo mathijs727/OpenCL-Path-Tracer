@@ -1,7 +1,7 @@
 #define NO_PARALLEL_RAYS// When a ray is parallel to axis, the intersection tests are really slow
 #define USE_BVH
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
-#define MAX_ITERATIONS 16
+#define MAX_ITERATIONS 8
 
 //#define COMPARE_SHADING
 #define CLRNG_SINGLE_PRECISION

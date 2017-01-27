@@ -135,6 +135,7 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 inciden
 float3 ggxWeightedHalfway(
 	float3 edge1,
 	float3 edge2,
+	float3 normal,
 	const __global float* invTransform,
 	float alpha,
 	clrngLfsr113Stream* randomStream)
@@ -151,7 +152,7 @@ float3 ggxWeightedHalfway(
 
 	float3 sample = (float3)(x,y,z);
 
-	float3 normal = normalize(cross(edge1, edge2));
+	//float3 normal = normalize(cross(edge1, edge2));
 	float3 tangent = normalize(cross(normal, edge1));
 	float3 bitangent = cross(normal, tangent);
 

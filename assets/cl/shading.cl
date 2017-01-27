@@ -394,7 +394,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		if (K >= 0)
 		{
 			// Refraction
-			reflection = normalize(D * n1n2 + realNormal * (n1n2 * cos1 - sqrt(K)));
+			reflection = normalize(n1n2 * D + raySideNormal * (n1n2 * cos1 - sqrt(K)));
 		} else {
 			// Total internal reflection
 			reflection = normalize(-D - 2 * dot(-D, raySideNormal) * raySideNormal);
@@ -410,27 +410,26 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			PDF = 1.0f;
 			BRDF = 1.0f;
 		} else */{
-			float3 halfway = ggxWeightedHalfway(edge1, edge2, invTransform, 1 - material->refractive.smoothness, randomStream);
-			if (dot(realNormal, -rayDirection) < 0.0f)// We may hit the mesh at the inside
-				halfway *= -1;// Where the normal (and thus halfway) has to point inward
+			float3 halfway = ggxWeightedHalfway(edge1, edge2, raySideNormal, invTransform, 1 - material->refractive.smoothness, randomStream);
+
 			float f0 = material->refractive.f0;
 			float f90 = 1.0f;
 			float3 F = F_Schlick(f0, f90, dot(-rayDirection, halfway));
 			float rand01 = clrngLfsr113RandomU01(randomStream);
 			if (rand01 < F.x)
 			{
-				BRDF = evaluateReflect(-rayDirection, realNormal, halfway, material, &reflection);
+				BRDF = evaluateReflect(-rayDirection, raySideNormal, halfway, material, &reflection);
 			} else {
 				float n_i, n_t;
-				if (dot(realNormal, -rayDirection) > 0.0f)
+				if (dot(realNormal, -rayDirection) >= 0.0f)
 				{
 					// Hit from outside, refracting inwards
 					n_i = 1.000277f;
 					n_t = material->refractive.refractiveIndex;
 				} else {
 					// Hit from inside, refracting outwards
-					n_t = 1.000277f;
-					n_i = material->refractive.refractiveIndex;
+					n_t = material->refractive.refractiveIndex;
+					n_i = 1.000277f;
 				}
 				BRDF = evaluateRefract(-rayDirection, raySideNormal, halfway, n_i, n_t, material, &reflection);
 			}
