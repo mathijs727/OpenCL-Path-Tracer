@@ -21,7 +21,8 @@ typedef struct {
 		float rayLength;// Only shadows use this
 		int numBounces;// And shadows dont bounce
 	};
-	float pdf; // 4
+	float pdf; // 4 bytes
+	float t;// 4 bytes
 	// Aligned to 16 bytes so struct has size of 80 bytes
 } RayData;
 
@@ -76,6 +77,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
+	float t,
 	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
@@ -270,6 +272,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	int triangleIndex,
 	float3 intersection,
 	float3 rayDirection,
+	float t,
 	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
@@ -398,6 +401,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		// Slide 34
 		// http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2001%20-%20intro%20&%20whitted.pdf
 		float3 D = rayDirection;
+		float3 absorptionFactor = 1.0f;
 
 		float n1, n2;
 		if (dot(realNormal, -D) > 0.0f)
@@ -407,6 +411,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		} else {
 			n1 = material->basicRefractive.refractiveIndex;
 			n2 = 1.000277f;
+
+			absorptionFactor = exp(-material->basicRefractive.absorption * t);
 		}
 		float cos1 = dot(raySideNormal, -D);
 		float n1n2 = n1 / n2;
@@ -417,36 +423,44 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			float f0 = pow((n1-n2)/(n1+n2),2.0f);
 			float3 F = F_Schlick(f0, 1.0f, dot(raySideNormal, -rayDirection));
 			if (rand01 < F.x) {
-				// Refraction
-				reflection = normalize(n1n2 * D + raySideNormal * (n1n2 * cos1 - sqrt(K)));
+				// Reflection
+				reflection = normalize(-D - 2 * dot(-D, raySideNormal) * raySideNormal);
 			}
 			else {
-				reflection = normalize(-D - 2 * dot(-D, raySideNormal) * raySideNormal);
+				// Refraction
+				reflection = normalize(n1n2 * D + raySideNormal * (n1n2 * cos1 - sqrt(K)));
 			}
 		} else {
 			// Total internal reflection
 			reflection = normalize(-D - 2 * dot(-D, raySideNormal) * raySideNormal);
 		}
-		BRDF = 1.0f;
+
+		// Apply beer's law by multiplying it with the BRDF
+		BRDF = absorptionFactor;
 		cosineTerm = 1.0f;
 		PDF = 1.0f;
 	} else if (material->type == REFRACTIVE)
 	{
 		float3 halfway = ggxWeightedHalfway(edge1, edge2, rayDirection, raySideNormal, invTransform, 1 - material->refractive.smoothness, randomStream);
+		float3 absorptionFactor = 1.0f;
 
 		float n_i, n_t;
-		if (dot(halfway, -rayDirection) > 0.0f)
+		if (dot(realNormal, -rayDirection) > 0.0f)
 		{
 			// Hit from outside, refracting inwards
 			n_i = 1.000277f;
-			n_t = material->refractive.refractiveIndex;
+			n_t = material->refractive.refractiveIndex;			
 		} else {
 			// Hit from inside, refracting outwards
 			n_i = material->refractive.refractiveIndex;
 			n_t = 1.000277f;
+
+			// http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2001%20-%20intro%20&%20whitted.pdf
+			// Slide 42
+			absorptionFactor = exp(-material->refractive.absorption * t);
 		}
 
-		float f0 = material->refractive.f0;
+		float f0 = pow((n_i - n_t) / (n_i + n_t), 2);
 		float f90 = 1.0f;
 		float3 F = F_Schlick(f0, f90, dot(-rayDirection, halfway));
 		float rand01 = clrngLfsr113RandomU01(randomStream);
@@ -463,6 +477,10 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 				BRDF = evaluateReflect(-rayDirection, raySideNormal, halfway, material, &reflection);
 			}
 		}
+
+		// Apply beer's law by multiplying it with the BRDF
+		BRDF *= absorptionFactor;
+
 		// Remove the cos from the integral, because its integrated in the BRDF
 		cosineTerm = 1.0f;
 		PDF = 1.0f;
@@ -472,14 +490,6 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		cosineTerm = 1.0f;
 		BRDF = diffuseColour(material, vertices, uv, textures) / PI;
 	}
-
-	/*if (dot(realNormal, reflection) < 0.0f)
-	{
-		// Stop if we have a ray going inside
-		outData->flags = SHADINGFLAGS_HASFINISHED;
-		outShadowData->flags = SHADINGFLAGS_HASFINISHED;
-		return BLACK;
-	}*/
 
 	// Continue random walk
 	outData->flags = 0;

@@ -180,7 +180,7 @@ __kernel void intersectWalk(
 			&shadingData.t,
 			&shadingData.uv,
 			&shadingData.invTransform);
-	} 
+	}
 
 	outShadingData[gid] = shadingData;
 }
@@ -248,6 +248,7 @@ __kernel void shade(
 				shadingData->triangleIndex,
 				intersection,
 				normalize(rayData->ray.direction),
+				shadingData->t,
 				shadingData->invTransform,
 				shadingData->uv,
 				textures,
@@ -263,6 +264,7 @@ __kernel void shade(
 				shadingData->triangleIndex,
 				intersection,
 				normalize(rayData->ray.direction),
+				shadingData->t,
 				shadingData->invTransform,
 				shadingData->uv,
 				textures,

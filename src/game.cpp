@@ -54,8 +54,8 @@ void Game::Init()
 			//Material::PBRMetal(
 			//	glm::vec3(0.955f, 0.638f, 0.538f), // Copper
 			//	0.8f));
-			Material::Refractive(0.5f, 1.5f));
-			//Material::BasicRefractive(1.5f));
+			//Material::Refractive(0.2f, 1.5f, glm::vec3(0,0,1), 4.f));
+			Material::BasicRefractive(1.5f, glm::vec3(1,0,0), 3.0f));
 		_scene->add_node(sphere, transform);
 	}
 

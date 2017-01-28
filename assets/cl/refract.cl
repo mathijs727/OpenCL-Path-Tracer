@@ -2,7 +2,7 @@
 #define __REFRACT_CL
 #include "pbr_brdf.cl"
 
-float3 refractiveBRDF(
+/*float3 refractiveBRDF(
 	float3 V,
 	float3 L,
 	float3 N,
@@ -41,7 +41,6 @@ float3 refractiveBTDF(
 	float3 N,
 	const __global Material* material)
 {
-	float f0 = material->refractive.f0;
 	float f90 = 1.0f;
 	float roughness = 1.0f - material->refractive.smoothness;
 
@@ -86,7 +85,7 @@ float3 refractiveBSDF(
 	float3 N,
 	const __global Material* material)
 {
-	/*if (dot(N, V) > 0.0f)
+	/if (dot(N, V) > 0.0f)
 	{
 		// From outside
 		if (dot(N, L) > 0.0f)
@@ -107,10 +106,10 @@ float3 refractiveBSDF(
 			// To inside
 			return refractiveBRDF(V, L, -N, material);
 		}
-	}*/
+	}/
 
 	return BLACK;// Never reached
-}
+}*/
 
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
 // Section 5.3

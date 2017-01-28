@@ -59,12 +59,13 @@ struct Material
 		} pbr;
 		struct
 		{
-			float f0;
+			CL_VEC3(absorption);
 			float smoothness;
 			float refractiveIndex;
 		} refractive;
 		struct
 		{
+			CL_VEC3(absorption);
 			float refractiveIndex;
 		} basicRefractive;
 		struct
@@ -118,6 +119,17 @@ struct Material
 		result.type = Type::REFRACTIVE;
 		result.refractive.smoothness = smoothness;
 		result.refractive.refractiveIndex = refractiveIndex;
+		result.refractive.absorption = glm::vec3(0);
+		return result;
+	}
+
+	static Material Refractive(float smoothness, float refractiveIndex, glm::vec3 colour, float absorptionFactor)
+	{
+		Material result;
+		result.type = Type::REFRACTIVE;
+		result.refractive.smoothness = smoothness;
+		result.refractive.refractiveIndex = refractiveIndex;
+		result.refractive.absorption = (1.0f - colour) * absorptionFactor;
 		return result;
 	}
 
@@ -126,6 +138,16 @@ struct Material
 		Material result;
 		result.type = Type::BASIC_REFRACTIVE;
 		result.basicRefractive.refractiveIndex = refractiveIndex;
+		result.basicRefractive.absorption = glm::vec3(0);
+		return result;
+	}
+
+	static Material BasicRefractive(float refractiveIndex, glm::vec3 colour, float absorptionFactor)
+	{
+		Material result;
+		result.type = Type::BASIC_REFRACTIVE;
+		result.basicRefractive.refractiveIndex = refractiveIndex;
+		result.basicRefractive.absorption = (1.0f - colour) * absorptionFactor;
 		return result;
 	}
 

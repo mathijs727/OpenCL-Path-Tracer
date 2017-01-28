@@ -33,12 +33,13 @@ typedef struct
 		} pbr;
 		struct
 		{
-			float f0;
+			float3 absorption;
 			float smoothness;
 			float refractiveIndex;
 		} refractive;
 		struct
 		{
+			float3 absorption;
 			float refractiveIndex;
 		} basicRefractive;
 		struct
