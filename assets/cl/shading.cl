@@ -357,17 +357,36 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	}
 	
 	float probabilityToSurvive = 1.0f;
-	if (material->type == DIFFUSE || material->type == PBR)
-	{
-		float3 c = material->diffuse.diffuseColour;
-		probabilityToSurvive = fmax(fmax(c.x, c.y), c.z);
-		probabilityToSurvive = fmin(fmax(probabilityToSurvive, 0.0f), 1.0f);
-		float choiceToSurvive = clrngLfsr113RandomU01(randomStream);
-
-		if (choiceToSurvive > probabilityToSurvive) {
-			outData->flags = SHADINGFLAGS_HASFINISHED;
-			return BLACK;
+	float3 c;
+	if (material->type == DIFFUSE) {
+		c = diffuseColour(material, vertices, uv, textures);
+	} else if (material->type == PBR) {
+		// Either baseColour for dielectrics or f0 (fresnel) for metals
+		c = material->pbr.baseColour;
+		
+	} else if (material->type == BASIC_REFRACTIVE || material->type == REFRACTIVE) {
+		float3 absorption;
+		if (dot(realNormal, -rayDirection) < 0.0f)
+		{
+			// Outgoing ray
+			if (material->type == BASIC_REFRACTIVE) {
+				absorption = material->basicRefractive.absorption;
+			} else {
+				absorption = material->refractive.absorption;
+			}
+		} else {
+			// Ingoing ray
+			absorption = 0.0f;
 		}
+		c = exp(-absorption * t);
+	}
+	probabilityToSurvive = fmax(fmax(c.x, c.y), c.z);
+	probabilityToSurvive = saturate(probabilityToSurvive);
+	float choiceToSurvive = clrngLfsr113RandomU01(randomStream);
+
+	if (choiceToSurvive > probabilityToSurvive) {
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		return BLACK;
 	}
 
 	float PDF;
