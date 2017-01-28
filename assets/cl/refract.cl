@@ -121,7 +121,6 @@ float calcWeight(float3 I, float3 N, float3 M, const __global Material* material
 	float NdotO = fabs(dot(N, O));
 
 	float roughness = 1.0f - material->refractive.smoothness;
-	roughness = (1.2f - 0.2f * sqrt(NdotI)) * roughness;
 	float G = G_SmithGGXCorrelated(NdotI, NdotO, roughness);
 
 	return (IdotM * G) / (NdotI * MdotN);
