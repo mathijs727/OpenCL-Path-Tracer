@@ -89,12 +89,12 @@ float3 cosineWeightedDiffuseReflection(
 
 float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 incidenceVector,
 	const __global float* invTransform,
-	float a,
+	float a_orig,
 	randStream* randomStream,
 	float* outScalingFactor) {
 	
 	float3 normal = normalize(cross(edge1, edge2));
-	a = (1.2f - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*a;
+	float a = (1.5f - 0.5f * sqrt(fabs(dot(incidenceVector,normal))))*a_orig;
 
 	float r0 = randRandomU01(randomStream);	
 	float phi = 2.0f * PI * r0;
@@ -126,11 +126,15 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 inciden
 	// Apply the normal transform (top level BVH)
 	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
 	
+	a = a_orig;
 	float3 L = -incidenceVector;
 	float dotProduct = dot(orientedSample, normal);
 	float denom = dotProduct*dotProduct*(a*a-1) + 1;
-	//*outScalingFactor = (a + 2) / (2 * PI)*dot(normal,orientedSample); 
-	*outScalingFactor = a*a / (PI*denom*denom);
+	denom = PI*denom*denom;
+	//*outScalingFactor = 1000000.0f; // very high value
+	//if (denom > EPSILON) {
+		*outScalingFactor = a*a / denom;
+	//}	
 	return normalize(2*dot(orientedSample, L)*orientedSample - L);
 }
 

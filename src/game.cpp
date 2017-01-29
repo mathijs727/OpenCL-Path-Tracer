@@ -63,7 +63,7 @@ void Game::Init()
 	// http://graphics.cs.williams.edu/data/meshes.xml
 	{
 		Transform transform;
-		transform.scale = glm::vec3(0.25f);
+		transform.scale = glm::vec3(0.5f);
 		//transform.location = glm::vec3(0, 0.5f, 0);
 		//transform.orientation = glm::quat(glm::vec3(0, 1, 0));
 		auto testObject = std::make_shared<Mesh>();
@@ -72,10 +72,12 @@ void Game::Init()
 			//Material::PBRMetal(
 			//	glm::vec3(0.955f, 0.638f, 0.538f), // Copper
 			//	0.8f));
-			//Material::Refractive(0.8f, 1.5f, glm::vec3(1, 0, 0), 3.f));
-			Material::PBRDielectric(
-				glm::vec3(0.9f, 0.1f, 0.5f),
-				0.9f));
+			//Material::BasicRefractive(1.5f),
+			Material::Refractive(1.0f, 1.5f, glm::vec3(1, 0, 0), 3.f),
+			//Material::PBRDielectric(
+			//	glm::vec3(0.9f, 0.1f, 0.5f),
+			//	0.9f));
+			transform);
 #else
 		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba.obj");
 #endif

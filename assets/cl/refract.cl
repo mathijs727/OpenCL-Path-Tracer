@@ -122,28 +122,30 @@ float calcWeight(float3 I, float3 N, float3 M, const __global Material* material
 
 	float roughness = 1.0f - material->refractive.smoothness;
 	float G = G_SmithGGXCorrelated(NdotI, NdotO, roughness);
-
-	return (IdotM * G) / (NdotI * MdotN);
+	float denom = NdotI * MdotN;
+	//if (denom > EPSILON) {
+		return (IdotM * G) / denom;
+	//}	
+	//else return 1000000.0f; // very high value
 }
 
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
 // Section 5.3
 float evaluateReflect(float3 I, float3 N, float3 M, const __global Material* material, float3* o_r)
 {
-	*o_r = normalize(2 * fabs(dot(I, M)) * M - I);
-
+	*o_r = normalize(I - 2 * dot(I, M) * M);
 	return calcWeight(I, N, M, material, *o_r);
 }
 
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
 // Section 5.3
 // n_i / n_t = refractive indices
-float evaluateRefract(float3 I, float3 N, float3 M, float n_i, float n_t, const __global Material* material, float3* o_t)
+float evaluateRefract(float3 I, float3 N, float3 M, float n1n2, float IdotM, float K, const __global Material* material, float3* o_t)
 {
-	float c = dot(I, M);
-	float n = n_i / n_t;
+	//float c = dot(I, M);
+	//float n = n_i / n_t;
 
-	*o_t = normalize((n * c - sign(dot(I, N)) * sqrt(1 + n * (c*c - 1)) ) * M - n * I);
+	*o_t = normalize(-n1n2 * I + M * (n1n2 * IdotM - sqrt(K))); //normalize((n * c - sign(dot(I, N)) * sqrt(1 + n * (c*c - 1)) ) * M - n * I);
 	
 	return calcWeight(I, N, M, material, *o_t);
 }

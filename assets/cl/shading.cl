@@ -289,7 +289,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float3 edge2 = vertices[2].vertex - vertices[0].vertex;
 	float3 realNormal = cross(edge1, edge2);
 	realNormal = normalize(matrixMultiplyTranspose(invTransform, realNormal));
-	float3 shadingNormal = realNormal;//interpolateNormal(vertices, uv);
+	float3 shadingNormal = interpolateNormal(vertices, uv);
 	float3 raySideNormal = shadingNormal;
 	if (dot(raySideNormal, -rayDirection) < 0.0f)
 		raySideNormal *= -1;
@@ -491,7 +491,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			float cos1 = dot(halfway, -rayDirection);
 			float K = 1 - (n1n2*n1n2) * (1 - cos1*cos1);
 			if (K >= 0) {
-				BRDF = evaluateRefract(-rayDirection, raySideNormal, halfway, n_i, n_t, material, &reflection);
+				BRDF = evaluateRefract(-rayDirection, raySideNormal, halfway, n1n2, cos1, K, material, &reflection);
 			} else {
 				BRDF = evaluateReflect(-rayDirection, raySideNormal, halfway, material, &reflection);
 			}
@@ -509,7 +509,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		cosineTerm = 1.0f;
 		BRDF = diffuseColour(material, vertices, uv, textures) / PI;
 	}
-
+	//PDF = fmax(PDF, 0.25f);
+	//probabilityToSurvive = fmax(probabilityToSurvive, 0.25f);
 	// Continue random walk
 	outData->flags = 0;
 	if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE)
