@@ -36,7 +36,7 @@ void Game::Init()
 	//camera_transform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.0f);
 
-	
+
 	{
 		auto cornell = std::make_shared<Mesh>();
 		cornell->loadFromFile("assets/3dmodels/cornel/CornellBox-Empty-RG.obj");
@@ -150,6 +150,7 @@ void Game::Init()
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
+	_ray_tracer->SetCubemap("assets/cubemap/xxx_c%02d.bmp");
 	_ray_tracer->SetScene(_scene);
 	_ray_tracer->SetTarget(_out.GetGLTexture());
 }

@@ -63,7 +63,7 @@ void Surface::LoadImage( char* a_File, int width, int height, bool linearColorSp
 	FIBITMAP* tmp = FreeImage_Load( fif, a_File );
 	if (width > 0 && height > 0)
 		tmp = FreeImage_Rescale(tmp, width, height, FILTER_LANCZOS3);
-	if (linearColorSpace)
+	if (!linearColorSpace)
 		FreeImage_AdjustGamma(tmp, 1.0f / 2.2f);
 	FIBITMAP* dib = FreeImage_ConvertTo32Bits( tmp );
 	FreeImage_Unload( tmp );
