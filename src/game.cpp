@@ -37,11 +37,11 @@ void Game::Init()
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.0f);
 
 	
-	{
+	/*{
 		auto cornell = std::make_shared<Mesh>();
 		cornell->loadFromFile("assets/3dmodels/cornel/CornellBox-Empty-RG.obj");
 		_scene->add_node(cornell);
-	}
+	}*/
 
 	/*{
 		Transform transform;
@@ -129,7 +129,7 @@ void Game::Init()
 
 	
 	// Sponza
-	/*{
+	{
 		Transform transform;
 		transform.location = glm::vec3(0, 10, -0.5f);
 		transform.scale = glm::vec3(1, 1, 0.3f);
@@ -146,7 +146,7 @@ void Game::Init()
 		_scene->add_node(sponza , transform);
 		BvhTester test = BvhTester(sponza);
 		test.test();
-	}*/
+	}
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
