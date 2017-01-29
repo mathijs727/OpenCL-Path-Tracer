@@ -332,7 +332,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float dist2 = dot(L, L);
 		float dist = sqrt(dist2);
 		L /= dist;
-		if (dot(realNormal, L) > 0.0f && dot(lightNormal, -L) > 0.0f)// dot(realNormal, L) may be <0.0f for transparent materials?
+		if (dot(shadingNormal, L) > EPSILON && dot(realNormal, L) > EPSILON && dot(lightNormal, -L) > EPSILON)// dot(realNormal, L) may be <0.0f for transparent materials?
 		{
 			if (material->type == PBR) {
 				BRDF = pbrBrdf(-rayDirection, L, shadingNormal, material);
@@ -412,6 +412,10 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float3 V = -rayDirection;
 		float f90 = 1.0f;
 		reflection = beckmannWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
+		if (dot(shadingNormal, reflection) < EPSILON || dot(realNormal, reflection) < EPSILON) {
+			outData->flags = SHADINGFLAGS_HASFINISHED;
+			return BLACK;
+		}
 		float3 H = normalize(V + reflection);
 		float LdotH = saturate(dot(reflection, H));
 		float3 F = F_Schlick(f0, f90, LdotH);
@@ -422,14 +426,9 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			PDF = dot(realNormal, reflection) / PI;
 			BRDF = diffuseOnly(V, reflection, shadingNormal, material);
 		} else {
-			PDF = 1.0f;
 			BRDF = brdfOnly(V, reflection, shadingNormal, material);
 		}
-		cosineTerm = dot(raySideNormal, reflection);
-		if (cosineTerm < 0) {
-			outData->flags = SHADINGFLAGS_HASFINISHED;
-			return BLACK;
-		}
+		cosineTerm = dot(realNormal, reflection);
 	} else if (material->type == BASIC_REFRACTIVE)
 	{
 		// Slide 34
@@ -476,10 +475,10 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	} else if (material->type == REFRACTIVE)
 	{
 		float3 halfway = beckmannWeightedHalfway(edge1, edge2, rayDirection, raySideNormal, invTransform, 1 - material->refractive.smoothness, randomStream);
-		if (dot(halfway, raySideNormal) < 0.9f) {
-			outData->flags = SHADINGFLAGS_HASFINISHED;
-			return BLACK;
-		}
+		//if (dot(halfway, raySideNormal) < 0.9f) {
+		//	outData->flags = SHADINGFLAGS_HASFINISHED;
+		//	return BLACK;
+		//}
 		float3 absorptionFactor = 1.0f;
 
 		float n_i, n_t;

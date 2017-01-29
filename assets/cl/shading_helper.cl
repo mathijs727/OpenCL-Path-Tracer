@@ -173,7 +173,7 @@ float3 beckmannWeightedImportanceDirection(float3 edge1, float3 edge2, float3 in
 	// Apply the normal transform (top level BVH)
 	float3 L = -incidenceVector;
 	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
-	if (outScalingFactor != NULL) *outScalingFactor = D_Beckmann(dot(orientedSample, normal), a_orig) * dot(orientedSample, normal);
+	if (outScalingFactor != NULL) *outScalingFactor = D_Beckmann(dot(orientedSample, normal), a_orig);
 	return normalize(2*dot(orientedSample, L)*orientedSample - L);
 }
 

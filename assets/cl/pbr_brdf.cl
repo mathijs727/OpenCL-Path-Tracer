@@ -73,10 +73,10 @@ float G_SmithGGXCorrelated(float NdotL, float NdotV, float alpha)
 
 float D_Beckmann(float NdotH, float alpha) 
 {
-	float angle = acos(NdotH);
-	float tanA = tan(angle);
-	float num = (1 - NdotH*NdotH) / (NdotH*NdotH*alpha*alpha);
-	float den = NdotH*NdotH*NdotH*NdotH*alpha*alpha*PI;
+	float tanA = tan(acos(NdotH));
+	float cos2 = NdotH*NdotH;
+	float num = (1 - cos2) / (cos2*alpha*alpha);
+	float den = cos2*cos2*alpha*alpha*PI;
 	return exp(-num)/den;
 
 }
@@ -140,10 +140,10 @@ float3 pbrBrdf(
 
 	// Specular BRDF
 	float3 F = F_Schlick(f0, f90, LdotH);
-	float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
-	//float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
-	float D = D_GGX (NdotH , roughness);
-	//float D = D_Beckmann (NdotH , roughness);
+	//float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
+	float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
+	//float D = D_GGX (NdotH , roughness);
+	float D = D_Beckmann (NdotH , roughness);
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
@@ -197,10 +197,11 @@ float3 brdfOnly(
 	float VdotH = saturate(dot(V, H));
 	// Specular BRDF
 	//float3 F = F_Schlick(f0, f90, LdotH);
+	//float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
 	float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
 	//float D = D_GGX (NdotH , roughness);
-	//float D = D_Beckmann (NdotH, roughness);
-	float D = 1.0f;
+	float D = D_Beckmann (NdotH, roughness);
+	//float D = 1.0f;
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
