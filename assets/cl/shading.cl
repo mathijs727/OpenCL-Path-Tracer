@@ -6,6 +6,8 @@
 #include "pbr_brdf.cl"
 #include "refract.cl"
 
+#define MAXWEIGHT
+
 enum {
 	SHADINGFLAGS_HASFINISHED = 1,
 	SHADINGFLAGS_LASTSPECULAR = 2
@@ -357,7 +359,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	}
 	
 	float probabilityToSurvive = 1.0f;
-	float3 c;
+	float3 c = (float3)(1.0f, 1.0f, 1.0f);
 	if (material->type == DIFFUSE) {
 		c = diffuseColour(material, vertices, uv, textures);
 	} else if (material->type == PBR) {
@@ -378,7 +380,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			// Ingoing ray
 			absorption = 0.0f;
 		}
-		c = exp(-absorption * t);
+	//	c = exp(-absorption * t);
 	}
 	probabilityToSurvive = fmax(fmax(c.x, c.y), c.z);
 	probabilityToSurvive = saturate(probabilityToSurvive);
@@ -401,7 +403,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		}
 		float3 V = -rayDirection;
 		float f90 = 1.0f;
-		reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
+		reflection = beckmannWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
 		float3 H = normalize(V + reflection);
 		float LdotH = saturate(dot(reflection, H));
 		float3 F = F_Schlick(f0, f90, LdotH);
@@ -460,7 +462,11 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		PDF = 1.0f;
 	} else if (material->type == REFRACTIVE)
 	{
-		float3 halfway = ggxWeightedHalfway(edge1, edge2, rayDirection, raySideNormal, invTransform, 1 - material->refractive.smoothness, randomStream);
+		float3 halfway = beckmannWeightedHalfway(edge1, edge2, rayDirection, raySideNormal, invTransform, 1 - material->refractive.smoothness, randomStream);
+		if (dot(halfway, raySideNormal) < 0.9f) {
+			outData->flags = SHADINGFLAGS_HASFINISHED;
+			return BLACK;
+		}
 		float3 absorptionFactor = 1.0f;
 
 		float n_i, n_t;
@@ -496,7 +502,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 				BRDF = evaluateReflect(-rayDirection, raySideNormal, halfway, material, &reflection);
 			}
 		}
-
+		
+		//BRDF = fmin(BRDF,1.0f);
 		// Apply beer's law by multiplying it with the BRDF
 		BRDF *= absorptionFactor;
 

@@ -22,6 +22,22 @@ float3 F_Schlick(float3 f0, float f90, float u)// u = NdotL
 	return f0 + (f90 - f0) * pow (1.0f - u, 5.0f);
 }
 
+// http://igorsklyar.com/system/documents/papers/28/Schlick94.pdf
+float G_Schlick(float VdotN, float alpha) {
+	float k = sqrt(2*alpha*alpha/PI);
+	return VdotN / (VdotN*(1-k)+k);
+}
+
+float G_SmithBeckmannCorrelated(float VdotM, float NdotV, float alpha) {
+	float a = 1.0f/(alpha*tan(acos(NdotV)));
+	float chi = a > 0 ? 1.0f : 0.0f;
+	float approximation = 1.0f;
+	if (a < 1.6f) {
+		approximation = (3.535f * a + 2.181f * a * a) / ( 1 + 2.276f * a + 2.577f * a * a);
+	}
+	return chi * VdotM / NdotV * approximation;
+}
+
 float G_SmithGGXCorrelated(float NdotL, float NdotV, float alpha)
 {
 	// Height correlated Smith GGX geometry term as defined in (equation 3 of section 3.1.2):
@@ -53,6 +69,16 @@ float G_SmithGGXCorrelated(float NdotL, float NdotV, float alpha)
 	float Lambda_GGXL = NdotV * sqrt((-NdotL * alpha2 + NdotL) * NdotL + alpha2);
 
 	return 0.5f / (Lambda_GGXV + Lambda_GGXL);*/
+}
+
+float D_Beckmann(float NdotH, float alpha) 
+{
+	float angle = acos(NdotH);
+	float tanA = tan(angle);
+	float num = (1 - NdotH*NdotH) / (NdotH*NdotH*alpha*alpha);
+	float den = NdotH*NdotH*NdotH*NdotH*alpha*alpha*PI;
+	return exp(-num)/den;
+
 }
 
 float D_GGX (float NdotH, float alpha)
@@ -110,11 +136,14 @@ float3 pbrBrdf(
 	float LdotH = saturate(dot(L, H));
 	float NdotH = saturate(dot(N, H));
 	float NdotL = saturate(dot(N, L));
+	float VdotH = saturate(dot(V, H));
 
 	// Specular BRDF
 	float3 F = F_Schlick(f0, f90, LdotH);
-	float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
-	float D = D_GGX (NdotH , roughness);
+	//float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
+	float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
+	//float D = D_GGX (NdotH , roughness);
+	float D = D_Beckmann (NdotH , roughness);
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
@@ -165,11 +194,12 @@ float3 brdfOnly(
 	float LdotH = saturate(dot(L, H));
 	float NdotH = saturate(dot(N, H));
 	float NdotL = saturate(dot(N, L));
-
+	float VdotH = saturate(dot(V, H));
 	// Specular BRDF
 	//float3 F = F_Schlick(f0, f90, LdotH);
-	float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
-	float D = D_GGX(NdotH, roughness);
+	float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
+	//float D = D_GGX (NdotH , roughness);
+	float D = D_Beckmann (NdotH , roughness);
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.

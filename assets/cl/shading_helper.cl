@@ -14,6 +14,8 @@
 
 #define EPSILON 0.0001f
 
+#include "pbr_brdf.cl"
+
 __constant sampler_t sampler =
 	CLK_NORMALIZED_COORDS_TRUE |
 	CLK_ADDRESS_REPEAT |
@@ -94,13 +96,12 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 inciden
 	float* outScalingFactor) {
 	
 	float3 normal = normalize(cross(edge1, edge2));
-	float a = (1.5f - 0.5f * sqrt(fabs(dot(incidenceVector,normal))))*a_orig;
+	float a = (1.2 - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*a_orig;
 
 	float r0 = randRandomU01(randomStream);	
 	float phi = 2.0f * PI * r0;
-	float theta;
 	float r1 = randRandomU01(randomStream);
-	theta = acos(sqrt((1.0f - r1) / ((a*a - 1.0f) * r1 + 1.0f)));
+	float theta = acos(sqrt((1.0f - r1) / ((a*a - 1.0f) * r1 + 1.0f)));
 
 	float r = sqrt(r1);
 	float cosTheta = cos(theta);
@@ -124,19 +125,54 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 inciden
 	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
 	
 	// Apply the normal transform (top level BVH)
-	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
-	
-	a = a_orig;
 	float3 L = -incidenceVector;
-	float dotProduct = dot(orientedSample, normal);
-	float denom = dotProduct*dotProduct*(a*a-1) + 1;
-	denom = PI*denom*denom;
-	//*outScalingFactor = 1000000.0f; // very high value
-	//if (denom > EPSILON) {
-		*outScalingFactor = a*a / denom;
-	//}	
+	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
+	*outScalingFactor = D_GGX(fabs(dot(orientedSample, normal)), a_orig);
 	return normalize(2*dot(orientedSample, L)*orientedSample - L);
 }
+
+float3 beckmannWeightedImportanceDirection(float3 edge1, float3 edge2, float3 incidenceVector,
+	const __global float* invTransform,
+	float a_orig,
+	randStream* randomStream,
+	float* outScalingFactor) {
+	
+	float3 normal = normalize(cross(edge1, edge2));
+	float alpha = (1.2f - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*a_orig;
+
+	float r0 = randRandomU01(randomStream);	
+	float r1 = randRandomU01(randomStream);
+	float phi = 2.0f * PI * r0;
+	float theta = atan(-alpha * alpha * log1p(-r1));
+
+	float r = sqrt(r1);
+	float cosTheta = cos(theta);
+	float sinTheta = sin(theta);
+	float x = r * cos(phi) * cos(PI/2 - theta);
+	float y = r * sin(phi) * cos(PI/2 - theta);
+	float z = sin(PI/2 - theta);
+	/*
+	float t = pow(r0, 2 / (a + 1));
+	x = cos(2 * PI*r1)*sqrt(1 - t);
+	y = sin(2 * PI*r1)*sqrt(1 - t);
+	z = sqrt(t);
+	*/
+	float3 sample = (float3)(x,y,z);
+	
+	float3 tangent = normalize(cross(normal, edge1));
+	float3 bitangent = cross(normal, tangent);
+
+	// Transform hemisphere to normal of the surface (of the static model)
+	// [tangent, bitangent, normal]
+	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
+	
+	// Apply the normal transform (top level BVH)
+	float3 L = -incidenceVector;
+	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
+	*outScalingFactor = D_Beckmann(fabs(dot(orientedSample, normal)), a_orig);
+	return normalize(2*dot(orientedSample, L)*orientedSample - L);
+}
+
 
 float3 ggxWeightedHalfway(
 	float3 edge1,
@@ -151,9 +187,46 @@ float3 ggxWeightedHalfway(
 
 	// http://blog.tobias-franke.eu/2014/03/30/notes_on_importance_sampling.html
 	float r0 = randRandomU01(randomStream);	
+	float phi = 2.0f * PI * r0;
+	float r1 = randRandomU01(randomStream);
+	float theta = acos(sqrt((1.0f - r1) / ((alpha*alpha - 1.0f) * r1 + 1.0f)));
+
+	float x = cos(phi) * cos(PI/2 - theta);
+	float y = sin(phi) * cos(PI/2 - theta);
+	float z = sin(PI/2 - theta);
+
+	float3 sample = (float3)(x,y,z);
+
+	//float3 normal = normalize(cross(edge1, edge2));
+	float3 tangent = normalize(cross(normal, edge1));
+	float3 bitangent = cross(normal, tangent);
+
+	// Transform hemisphere to normal of the surface (of the static model)
+	// [tangent, bitangent, normal]
+	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
+	
+	// Apply the normal transform (top level BVH)
+	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
+
+	return orientedSample;
+}
+
+float3 beckmannWeightedHalfway(
+	float3 edge1,
+	float3 edge2,
+	float3 incidenceVector,
+	float3 normal,
+	const __global float* invTransform,
+	float alpha,
+	randStream* randomStream)
+{
+	alpha = (1.2f - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*alpha;
+
+	// http://blog.tobias-franke.eu/2014/03/30/notes_on_importance_sampling.html
+	float r0 = randRandomU01(randomStream);	
 	float r1 = randRandomU01(randomStream);
 	float phi = 2.0f * PI * r0;
-	float theta = acos(sqrt((1.0f - r1) / ((alpha*alpha - 1.0f) * r1 + 1.0f)));
+	float theta = atan(-alpha * alpha * log1p(-r1));
 
 	float x = cos(phi) * cos(PI/2 - theta);
 	float y = sin(phi) * cos(PI/2 - theta);

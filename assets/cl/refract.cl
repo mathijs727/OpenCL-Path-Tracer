@@ -118,15 +118,17 @@ float calcWeight(float3 I, float3 N, float3 M, const __global Material* material
 	float IdotM = fabs(dot(I, M));
 	float MdotN = fabs(dot(M, N));
 	float NdotI = fabs(dot(N, I));
+	float MdotO = fabs(dot(M, O));
 	float NdotO = fabs(dot(N, O));
 
 	float roughness = 1.0f - material->refractive.smoothness;
-	float G = G_SmithGGXCorrelated(NdotI, NdotO, roughness);
+	//roughness = (1.5f - 0.5f * sqrt(NdotI))*roughness;
+	//return 1.0f;
+	float G = G_SmithBeckmannCorrelated(IdotM, NdotI, roughness)*G_SmithBeckmannCorrelated(MdotO, NdotO, roughness);
+	G = fmax(fmin(G,4.0f),0.f);
 	float denom = NdotI * MdotN;
-	//if (denom > EPSILON) {
-		return (IdotM * G) / denom;
-	//}	
-	//else return 1000000.0f; // very high value
+	float weight = (IdotM * G) / denom;
+	return fmin(weight, 4.0f);
 }
 
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf

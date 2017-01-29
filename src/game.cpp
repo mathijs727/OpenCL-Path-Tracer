@@ -73,7 +73,7 @@ void Game::Init()
 			//	glm::vec3(0.955f, 0.638f, 0.538f), // Copper
 			//	0.8f));
 			//Material::BasicRefractive(1.5f),
-			Material::Refractive(1.0f, 1.5f, glm::vec3(1, 0, 0), 3.f),
+			Material::Refractive(0.7f, 1.5f, glm::vec3(1, 0, 0), 3.f),
 			//Material::PBRDielectric(
 			//	glm::vec3(0.9f, 0.1f, 0.5f),
 			//	0.9f));
