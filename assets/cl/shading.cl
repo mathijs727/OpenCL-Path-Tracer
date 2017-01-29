@@ -215,7 +215,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 		}
 		float3 V = normalize(-rayDirection);
 		float f90 = 1.0f;
-		float halfway;
+		float3 halfway;
 		reflection = ggxWeightedImportanceDirection(shadingNormal, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF, &halfway);
 		float3 H = normalize(V + reflection);
 		float LdotH = saturate(dot(reflection, H));
@@ -225,7 +225,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 		{
 			reflection = cosineWeightedDiffuseReflection(shadingNormal, edge1, invTransform, randomStream);
 			PDF = dot(realNormal, reflection) / PI;
-			BRDF = diffuseOnly(V, reflection, shadingNormal, material);
+			BRDF = diffuseOnly(V, halfway, reflection, shadingNormal, material);
 		}
 		else {
 			BRDF = brdfOnly(V, halfway, reflection, shadingNormal, material);
@@ -388,20 +388,23 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float LdotH = saturate(dot(reflection, halfway));
 		float3 F = F_Schlick(f0, f90, LdotH);
 		float rand01 = randRandomU01(randomStream);
-		if (material->pbr.metallic && rand01 > F.x)
+		if (!material->pbr.metallic && rand01 > F.x)
 		{
 			float3 c = material->pbr.baseColour;
 			reflection = cosineWeightedDiffuseReflection(shadingNormal, edge1, invTransform, randomStream);
 			PDF = INVPI;
 			cosineTerm = 1.0f; // simplification
-			BRDF = diffuseOnly(V, reflection, shadingNormal, material);
+			BRDF = c;//diffuseOnly(V, halfway, reflection, shadingNormal, material);
 		} else {
-			float HdotN = dot(halfway, shadingNormal);
+			//float HdotN = dot(halfway, shadingNormal);
 			PDF = 1.0f;//D_Beckmann(HdotN, roughness) / D_GGX(HdotN, roughness); //already accounted by making D = 1.0f;
 			BRDF = brdfOnly(V, halfway, reflection, shadingNormal, material);
 			if (material->pbr.smoothness > MAXSMOOTHNESS) dospecular = true;
 		}
-		if (material->pbr.metallic) BRDF *= F;
+		if (material->pbr.metallic) 
+		{
+			BRDF *= F;
+		}
 	} else if (material->type == BASIC_REFRACTIVE)
 	{
 		// Slide 34
@@ -486,8 +489,6 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 				BRDF = evaluateReflect(-rayDirection, raySideNormal, halfway, material, &reflection);
 			}
 		}
-		
-		//BRDF = fmin(BRDF,1.0f);
 		// Apply beer's law by multiplying it with the BRDF
 		BRDF *= absorptionFactor;
 

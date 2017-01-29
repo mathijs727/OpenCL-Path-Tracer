@@ -178,10 +178,10 @@ float3 pbrBrdfChoice(
 	} else {
 		diffuseColour = material->pbr.baseColour;
 	}
-	float3 reflected = nospecular ? 0.0f : Fr;
+	float3 reflected = Fr;
 	float3 diffuse = (1.0f - F) * (Fd * diffuseColour);
-
-	return reflected + diffuse;
+	if (nospecular) return diffuse;
+	else return reflected + diffuse;
 }
 
 float3 pbrBrdf(
@@ -239,39 +239,24 @@ float3 brdfOnly(
 
 float3 diffuseOnly(
 	float3 V,
+	float3 H,
 	float3 L,
 	float3 N,
 	const __global Material* material)
 {
-	float3 f0;
-	if (material->pbr.metallic) {
-		f0 = material->pbr.reflectance;
-	} else {
-		f0 = material->pbr.f0NonMetal;
-	}
-	float f90 = 1.0f;
 	float roughness = 1.0f - material->pbr.smoothness;
 	float linearRoughness = sqrt(roughness);
 
 	float NdotV = fabs(dot(N, V)) + 1e-5f; // avoid artifact
-	float3 H = normalize(V + L);
 	float LdotH = saturate(dot(L, H));
 	float NdotH = saturate(dot(N, H));
 	float NdotL = saturate(dot(N, L));
 
-	//float3 F = F_Schlick(f0, f90, LdotH);
-
 	// Diffuse BRDF (called BRDF because it assumes light enters and exists at the same point,
 	//  but it tries to approximate diffuse scatering so maybe this should be called BTDF and
 	//  call the whole function BSDF (which is BRDF + BTDF))
-	if (material->pbr.metallic)
-	{
-		return BLACK;
-	}
-	else {
-		float Fd = Fr_DisneyDiffuse(NdotV, NdotL, LdotH, linearRoughness) / PI;
-		return Fd * material->pbr.baseColour;
-	}
+	float Fd = Fr_DisneyDiffuse(NdotV, NdotL, LdotH, linearRoughness) / PI;
+	return Fd * material->pbr.baseColour;
 }
 
 
