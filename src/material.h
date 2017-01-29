@@ -155,7 +155,7 @@ struct Material
 		// Cornell box is not defined in physical units so multiply by 5 to make it brighter
 		Material result;
 		result.type = Type::EMISSIVE;
-		result.emissive.emissiveColour = colour * 10.0f;
+		result.emissive.emissiveColour = colour * 500.0f;
 		return result;
 	}
 
