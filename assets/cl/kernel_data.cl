@@ -21,6 +21,8 @@ typedef struct
 	uint numShadowRays;
 	uint maxRays;
 	uint newRays;
+
+	int cubemapTextureIndices[6];
 } KernelData;
 
 typedef struct

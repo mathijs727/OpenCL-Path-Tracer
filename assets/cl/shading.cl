@@ -16,7 +16,7 @@ enum {
 typedef struct {
 	Ray ray;// 2 * float3 = 32 bytes
 	float3 multiplier;// 16 bytes
-	size_t outputPixel;// 4/8 bytes?
+	size_t outputPixel;// 4 bytes?
 	int flags;// 4 bytes
 	union// 4 bytes
 	{
@@ -338,7 +338,13 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 				BRDF = pbrBrdf(-rayDirection, L, shadingNormal, material);
 			} else if (material->type == DIFFUSE)
 			{
-				BRDF = diffuseColour(material, vertices, uv, textures) / PI;
+
+				float3 c = diffuseColour(material, vertices, uv, textures);
+				if (c.x == -1.0f) {
+					BRDF = 0.0f;
+				} else {
+					BRDF = c / PI;
+				}
 			} else if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE)
 			{
 				//BRDF = refractiveBSDF(-rayDirection, L, shadingNormal, material);
@@ -362,6 +368,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	float3 c = (float3)(1.0f, 1.0f, 1.0f);
 	if (material->type == DIFFUSE) {
 		c = diffuseColour(material, vertices, uv, textures);
+		if (c.x == -1.0f)// Alpha == 0.0f, never kill the ray
+			c = WHITE;
 	} else if (material->type == PBR) {
 		// Either baseColour for dielectrics or f0 (fresnel) for metals
 		c = material->pbr.baseColour;
@@ -511,10 +519,19 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		cosineTerm = 1.0f;
 		PDF = 1.0f;
 	} else if (material->type == DIFFUSE) {
-		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
-		PDF = 1.0f / PI; // we simplify the cosine term away from PDF and cosineTerm
 		cosineTerm = 1.0f;
-		BRDF = diffuseColour(material, vertices, uv, textures) / PI;
+
+		float3 c = diffuseColour(material, vertices, uv, textures);
+		if (c.x == -1.0f)// Transparent
+		{
+			PDF = 1.0f;
+			reflection = rayDirection;
+			BRDF = 1.0f;
+		} else {
+			PDF = 1.0f / PI; // we simplify the cosine term away from PDF and cosineTerm
+			reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+			BRDF = c / PI;
+		}
 	}
 	//PDF = fmax(PDF, 0.25f);
 	//probabilityToSurvive = fmax(probabilityToSurvive, 0.25f);

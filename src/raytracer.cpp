@@ -49,6 +49,8 @@ struct KernelData
 	uint numShadowRays;
 	uint maxRays;
 	uint newRays;
+
+	cl_int _cubemapTextureIndices[6];
 };
 
 #ifdef WIN32
@@ -187,10 +189,26 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 
 	_num_emissive_triangles[0] = 0;
 	_num_emissive_triangles[1] = 0;
+
+	for (int i = 0; i < 6; i++)
+		_cubemap_tex_indices[i] = -1;
 }
 
 raytracer::RayTracer::~RayTracer()
 {
+}
+
+void raytracer::RayTracer::SetCubemap(const char* filePathFormat)
+{
+	auto fileNameBuffer = std::make_unique<char[]>(strlen(filePathFormat) + 20);
+
+	// For each side of the cube
+	for (int i = 0; i < 6; i++)
+	{
+		sprintf(fileNameBuffer.get(), filePathFormat, i);
+		Texture tex = Texture(fileNameBuffer.get(), true);
+		_cubemap_tex_indices[i] = tex.getId();
+	}
 }
 
 void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
@@ -402,6 +420,16 @@ void raytracer::RayTracer::FrameTick()
 	_active_buffers = (_active_buffers + 1) % 2;
 }
 
+int raytracer::RayTracer::GetNumPasses()
+{
+	return _rays_per_pixel;
+}
+
+int raytracer::RayTracer::GetMaxPasses()
+{
+	return MAX_RAYS_PER_PIXEL;
+}
+
 void raytracer::RayTracer::TraceRays(const Camera& camera)
 {
 	// Copy camera (and scene) data to the device using a struct so we dont use 20 kernel arguments
@@ -421,6 +449,9 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	data.numShadowRays = 0;
 	data.maxRays = MAX_ACTIVE_RAYS;
 	data.newRays = 0;
+
+	for (int i = 0; i < 6; i++)
+		data._cubemapTextureIndices[i] = _cubemap_tex_indices[i];
 
 	cl_int err = _queue.enqueueWriteBuffer(
 		_ray_kernel_data,
@@ -1043,7 +1074,7 @@ void raytracer::RayTracer::InitBuffers(
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<u32> dis;
-	for (int i = 0; i < numWorkItems; i++)
+	for (size_t i = 0; i < numWorkItems; i++)
 		streams[i] = dis(gen);
 
 	_random_streams = cl::Buffer(_context,

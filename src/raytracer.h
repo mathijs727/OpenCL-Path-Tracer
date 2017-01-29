@@ -23,11 +23,16 @@ public:
 	RayTracer(int width, int height);
 	~RayTracer();
 
+	void SetCubemap(const char* filePathFormat);
+
 	void SetScene(std::shared_ptr<Scene> scene);
 	void SetTarget(GLuint glTexture);
 	void RayTrace(Camera& camera);
 
 	void FrameTick();// Load next animation frame data
+
+	int GetNumPasses();
+	int GetMaxPasses();
 private:
 	void TraceRays(const Camera& camera);
 
@@ -53,6 +58,7 @@ private:
 	std::shared_ptr<Scene> _scene;
 
 	cl_uint _scr_width, _scr_height;
+	cl_int _cubemap_tex_indices[6];
 
 	cl::Context _context;
 	cl::Device _device;

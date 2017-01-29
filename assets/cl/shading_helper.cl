@@ -356,7 +356,12 @@ float3 diffuseColour(
 			textures,
 			sampler,
 			texCoords3d);
-		return colourWithAlpha.xyz;
+		if (colourWithAlpha.w == 0.0f)
+		{
+			return (float3)(-1.0f, -1.0f, -1.0f);
+		} else {
+			return colourWithAlpha.xyz;
+		}
 	}
 }
 

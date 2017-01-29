@@ -13,7 +13,7 @@ std::vector<std::unique_ptr<Tmpl8::Surface>> raytracer::Texture::s_textures =
 const uint raytracer::Texture::TEXTURE_WIDTH;// = 1024;
 const uint raytracer::Texture::TEXTURE_HEIGHT;// = 1024;
 
-raytracer::Texture::Texture(const char* fileName)
+raytracer::Texture::Texture(const char* fileName, bool isLinear)
 {
 	int texId;
 	auto res = s_texturesMap.find(fileName);
@@ -21,7 +21,7 @@ raytracer::Texture::Texture(const char* fileName)
 	{
 		texId = static_cast<int>(s_textures.size());
 		std::cout << "Loading texture: " << fileName << std::endl;
-		s_textures.push_back(std::make_unique<Tmpl8::Surface>(fileName, TEXTURE_WIDTH, TEXTURE_HEIGHT, true));
+		s_textures.push_back(std::make_unique<Tmpl8::Surface>(fileName, TEXTURE_WIDTH, TEXTURE_HEIGHT, isLinear));
 		s_texturesMap.insert(std::pair<const char*, int>(fileName, texId));
 	}
 	else {

@@ -17,6 +17,7 @@
 #include "camera.cl"
 #include "atomic.cl"
 #include "kernel_data.cl"
+#include "cubemap.cl"
 
 
 __kernel void generatePrimaryRays(
@@ -106,6 +107,7 @@ __kernel void intersectShadows(
 			subBvh,
 			inputData->topLevelBvhRoot,
 			topLevelBvh,
+			NULL,
 			&scene);
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
@@ -159,6 +161,7 @@ __kernel void intersectWalk(
 			subBvh,
 			inputData->topLevelBvhRoot,
 			topLevelBvh,
+			NULL,
 			&scene);
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
@@ -220,63 +223,70 @@ __kernel void shade(
 			NULL,
 			0,
 			NULL,
+			inputData->cubemapTextureIndices,
 			&scene);
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	if (gid < (inputData->numInRays + inputData->newRays) &&
-		!(rayData->flags & SHADINGFLAGS_HASFINISHED) &&
-		shadingData->hit)
-	{		
-		outRayData.outputPixel = rayData->outputPixel;
-		outShadowRayData.outputPixel = rayData->outputPixel;
-		outRayData.flags = 0;
-		outShadowRayData.flags = 0;
-		outRayData.numBounces = rayData->numBounces + 1;
+		!(rayData->flags & SHADINGFLAGS_HASFINISHED))
+	{
+		if (shadingData->hit)
+		{
+			outRayData.outputPixel = rayData->outputPixel;
+			outShadowRayData.outputPixel = rayData->outputPixel;
+			outRayData.flags = 0;
+			outShadowRayData.flags = 0;
+			outRayData.numBounces = rayData->numBounces + 1;
 
-		float3 intersection = rayData->ray.origin + shadingData->t * rayData->ray.direction;
+			float3 intersection = rayData->ray.origin + shadingData->t * rayData->ray.direction;
 
-		// Load random streams
-		randStream randomStream;
-		randCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+			// Load random streams
+			randStream randomStream;
+			randCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
 #ifdef COMPARE_SHADING
-		if ((rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2)
-		{
-			outputPixels[rayData->outputPixel] += neeIsShading(
-				&scene,
-				shadingData->triangleIndex,
-				intersection,
-				normalize(rayData->ray.direction),
-				shadingData->t,
-				shadingData->invTransform,
-				shadingData->uv,
-				textures,
-				&randomStream,
-				rayData,
-				&outRayData,
-				&outShadowRayData);
-		} else
+			if ((rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2)
+			{
+				outputPixels[rayData->outputPixel] += neeIsShading(
+					&scene,
+					shadingData->triangleIndex,
+					intersection,
+					normalize(rayData->ray.direction),
+					shadingData->t,
+					shadingData->invTransform,
+					shadingData->uv,
+					textures,
+					&randomStream,
+					rayData,
+					&outRayData,
+					&outShadowRayData);
+			} else
 #endif
-		{
-			outputPixels[rayData->outputPixel] += neeIsShading(
-				&scene,
-				shadingData->triangleIndex,
-				intersection,
-				normalize(rayData->ray.direction),
-				shadingData->t,
-				shadingData->invTransform,
-				shadingData->uv,
-				textures,
-				&randomStream,
-				rayData,
-				&outRayData,
-				&outShadowRayData);
-		}
+			{
+				outputPixels[rayData->outputPixel] += neeIsShading(
+					&scene,
+					shadingData->triangleIndex,
+					intersection,
+					normalize(rayData->ray.direction),
+					shadingData->t,
+					shadingData->invTransform,
+					shadingData->uv,
+					textures,
+					&randomStream,
+					rayData,
+					&outRayData,
+					&outShadowRayData);
+			}
 
-		// Store random streams
-		randCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
-		active = true;
+			active = true;
+			// Store random streams
+			randCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+		} else if (scene.cubemapTextureIndices[0] != -1) {
+			// We missed the scene, but have a skybox to fall back to
+			float3 c = 40.0f *  readCubeMap(normalize(rayData->ray.direction), textures, &scene);
+			outputPixels[rayData->outputPixel] += rayData->multiplier * c;
+		}
 	}
 
 	int index = workgroup_counter_inc(&inputData->numOutRays, active);
