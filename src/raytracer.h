@@ -28,6 +28,9 @@ public:
 	void RayTrace(Camera& camera);
 
 	void FrameTick();// Load next animation frame data
+
+	int GetNumPasses();
+	int GetMaxPasses();
 private:
 	void TraceRays(const Camera& camera);
 

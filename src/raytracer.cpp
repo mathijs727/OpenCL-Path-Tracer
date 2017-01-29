@@ -402,6 +402,16 @@ void raytracer::RayTracer::FrameTick()
 	_active_buffers = (_active_buffers + 1) % 2;
 }
 
+int raytracer::RayTracer::GetNumPasses()
+{
+	return _rays_per_pixel;
+}
+
+int raytracer::RayTracer::GetMaxPasses()
+{
+	return MAX_RAYS_PER_PIXEL;
+}
+
 void raytracer::RayTracer::TraceRays(const Camera& camera)
 {
 	// Copy camera (and scene) data to the device using a struct so we dont use 20 kernel arguments
@@ -1043,7 +1053,7 @@ void raytracer::RayTracer::InitBuffers(
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<u32> dis;
-	for (int i = 0; i < numWorkItems; i++)
+	for (size_t i = 0; i < numWorkItems; i++)
 		streams[i] = dis(gen);
 
 	_random_streams = cl::Buffer(_context,

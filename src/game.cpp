@@ -37,11 +37,11 @@ void Game::Init()
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.0f);
 
 	
-	/*{
+	{
 		auto cornell = std::make_shared<Mesh>();
 		cornell->loadFromFile("assets/3dmodels/cornel/CornellBox-Empty-RG.obj");
 		_scene->add_node(cornell);
-	}*/
+	}
 
 	/*{
 		Transform transform;
@@ -69,13 +69,13 @@ void Game::Init()
 		auto testObject = std::make_shared<Mesh>();
 #if TRUE
 		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba-sphere.obj",
-			//Material::PBRMetal(
-			//	glm::vec3(0.955f, 0.638f, 0.538f), // Copper
-			//	0.8f));
+			Material::PBRMetal(
+				glm::vec3(0.672411f, 0.637331f, 0.585456f), // Platinum
+				0.8f));
 			//Material::Refractive(0.8f, 1.5f, glm::vec3(1, 0, 0), 3.f));
-			Material::PBRDielectric(
-				glm::vec3(0.9f, 0.1f, 0.5f),
-				0.9f));
+			//Material::PBRDielectric(
+			//	glm::vec3(0.9f, 0.1f, 0.5f),
+			//	0.9f));
 #else
 		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba.obj");
 #endif
@@ -129,7 +129,7 @@ void Game::Init()
 
 	
 	// Sponza
-	{
+	/*{
 		Transform transform;
 		transform.location = glm::vec3(0, 10, -0.5f);
 		transform.scale = glm::vec3(1, 1, 0.3f);
@@ -146,7 +146,7 @@ void Game::Init()
 		_scene->add_node(sponza , transform);
 		BvhTester test = BvhTester(sponza);
 		test.test();
-	}
+	}*/
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
@@ -204,6 +204,9 @@ void Tmpl8::Game::UpdateGui()
 	ImGui::SliderFloat("Shutter time (s)", &_camera->get_shutter_time(), 1.0f / 500.0f, 1.0f / 32.0f);
 	ImGui::SliderFloat("Sensitivity (ISO)", &_camera->get_iso(), 100.0f, 3200.0f);
 
+	ImGui::Separator();
+
+	ImGui::Text("Rendered %d / %d frames", _ray_tracer->GetNumPasses(), _ray_tracer->GetMaxPasses());
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 	ImGui::End();
