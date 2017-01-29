@@ -140,10 +140,10 @@ float3 pbrBrdf(
 
 	// Specular BRDF
 	float3 F = F_Schlick(f0, f90, LdotH);
-	//float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
-	float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
-	//float D = D_GGX (NdotH , roughness);
-	float D = D_Beckmann (NdotH , roughness);
+	float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
+	//float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
+	float D = D_GGX (NdotH , roughness);
+	//float D = D_Beckmann (NdotH , roughness);
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.

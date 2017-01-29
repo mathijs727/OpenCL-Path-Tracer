@@ -123,11 +123,15 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 inciden
 	// Transform hemisphere to normal of the surface (of the static model)
 	// [tangent, bitangent, normal]
 	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
-	
-	// Apply the normal transform (top level BVH)
-	float3 L = -incidenceVector;
 	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
-	*outScalingFactor = D_GGX(fabs(dot(orientedSample, normal)), a_orig);
+	// Apply the normal transform (top level BVH)
+	a = a_orig;
+	float3 L = -incidenceVector;
+    float dotProduct = dot(orientedSample, normal);
+	float denom = dotProduct*dotProduct*(a*a-1.0f) + 1.0f;
+	//*outScalingFactor = (a + 2) / (2 * PI)*dot(normal,orientedSample);
+	*outScalingFactor = a*a / (PI*denom*denom);
+	//*outScalingFactor = D_GGX(fabs(dot(orientedSample, normal)), a_orig);
 	return normalize(2*dot(orientedSample, L)*orientedSample - L);
 }
 
@@ -167,7 +171,7 @@ float3 beckmannWeightedImportanceDirection(float3 edge1, float3 edge2, float3 in
 	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
 	
 	// Apply the normal transform (top level BVH)
-	float3 L = -incidenceVector;
+	float3 L = incidenceVector;
 	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
 	*outScalingFactor = D_Beckmann(fabs(dot(orientedSample, normal)), a_orig);
 	return normalize(2*dot(orientedSample, L)*orientedSample - L);
