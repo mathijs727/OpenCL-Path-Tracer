@@ -1130,10 +1130,16 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 	opts += fileName;
 	opts += "\"";*/
 #ifdef RANDOM_XOR32
-	opts += "-D RANDOM_XOR32";
+	opts += "-D RANDOM_XOR32 ";
 #elif defined(RANDOM_LFSR113)
-	opts += "-D RANDOM_LFSR113";
+	opts += "-D RANDOM_LFSR113 ";
 #endif
+
+#if !defined(_DEBUG)
+	opts += "-cl-mad-enable -cl-unsafe-math-optimizations -cl-finite-math-only -cl-fast-relaxed-math -cl-single-precision-constant ";
+#endif
+	opts += "-cl-std=CL1.2 ";
+
 	err = program.build(devices, opts.c_str());
 	{
 		if (err != CL_SUCCESS)
