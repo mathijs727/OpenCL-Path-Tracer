@@ -125,12 +125,12 @@ float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 inciden
 	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
 	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
 	// Apply the normal transform (top level BVH)
-	a = a_orig;
+	//a = (1.2 - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*a_orig;
 	float3 L = -incidenceVector;
     float dotProduct = dot(orientedSample, normal);
-	float denom = dotProduct*dotProduct*(a*a-1.0f) + 1.0f;
+	//float denom = dotProduct*dotProduct*(a*a-1.0f) + 1.0f;
 	//*outScalingFactor = (a + 2) / (2 * PI)*dot(normal,orientedSample);
-	*outScalingFactor = a*a / (PI*denom*denom);
+	if (outScalingFactor != NULL) *outScalingFactor = D_GGX(dotProduct, a_orig);
 	//*outScalingFactor = D_GGX(fabs(dot(orientedSample, normal)), a_orig);
 	return normalize(2*dot(orientedSample, L)*orientedSample - L);
 }
@@ -142,7 +142,7 @@ float3 beckmannWeightedImportanceDirection(float3 edge1, float3 edge2, float3 in
 	float* outScalingFactor) {
 	
 	float3 normal = normalize(cross(edge1, edge2));
-	float alpha = (1.2f - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*a_orig;
+	float alpha = (1.5f - 0.5f * sqrt(fabs(dot(incidenceVector,normal))))*a_orig;
 
 	float r0 = randRandomU01(randomStream);	
 	float r1 = randRandomU01(randomStream);
@@ -171,9 +171,9 @@ float3 beckmannWeightedImportanceDirection(float3 edge1, float3 edge2, float3 in
 	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
 	
 	// Apply the normal transform (top level BVH)
-	float3 L = incidenceVector;
+	float3 L = -incidenceVector;
 	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
-	*outScalingFactor = D_Beckmann(fabs(dot(orientedSample, normal)), a_orig);
+	if (outScalingFactor != NULL) *outScalingFactor = D_Beckmann(dot(orientedSample, normal), a_orig) * dot(orientedSample, normal);
 	return normalize(2*dot(orientedSample, L)*orientedSample - L);
 }
 
@@ -187,7 +187,7 @@ float3 ggxWeightedHalfway(
 	float alpha,
 	randStream* randomStream)
 {
-	alpha = (1.2f - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*alpha;
+	alpha = (1.5f - 0.5f * sqrt(fabs(dot(incidenceVector,normal))))*alpha;
 
 	// http://blog.tobias-franke.eu/2014/03/30/notes_on_importance_sampling.html
 	float r0 = randRandomU01(randomStream);	

@@ -388,7 +388,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			// Ingoing ray
 			absorption = 0.0f;
 		}
-	//	c = exp(-absorption * t);
+		c = exp(-absorption * t);
 	}
 	probabilityToSurvive = fmax(fmax(c.x, c.y), c.z);
 	probabilityToSurvive = saturate(probabilityToSurvive);
@@ -411,7 +411,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		}
 		float3 V = -rayDirection;
 		float f90 = 1.0f;
-		reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
+		reflection = beckmannWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
 		float3 H = normalize(V + reflection);
 		float LdotH = saturate(dot(reflection, H));
 		float3 F = F_Schlick(f0, f90, LdotH);
@@ -422,6 +422,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			PDF = dot(realNormal, reflection) / PI;
 			BRDF = diffuseOnly(V, reflection, shadingNormal, material);
 		} else {
+			PDF = 1.0f;
 			BRDF = brdfOnly(V, reflection, shadingNormal, material);
 		}
 		cosineTerm = dot(raySideNormal, reflection);
