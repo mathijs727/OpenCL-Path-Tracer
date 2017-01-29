@@ -130,11 +130,12 @@ float Fr_DisneyDiffuse(float NdotV, float NdotL, float LdotH, float linearRoughn
 //
 // Tells us linear roughness is sqrt of roughness (and not square):
 // https://seblagarde.wordpress.com/2014/04/14/dontnod-physically-based-rendering-chart-for-unreal-engine-4/
-float3 pbrBrdf(
+float3 pbrBrdfChoice(
 	float3 V,
 	float3 L,
 	float3 N,
-	const __global Material* material)
+	const __global Material* material,
+	bool nospecular)
 {
 	float3 f0;
 	if (material->pbr.metallic) {
@@ -182,12 +183,19 @@ float3 pbrBrdf(
 	} else {
 		diffuseColour = material->pbr.baseColour;
 	}
-	float3 reflected = Fr;
+	float3 reflected = nospecular ? 0.0f : Fr;
 	float3 diffuse = (1.0f - F) * (Fd * diffuseColour);
 
 	return reflected + diffuse;
 }
 
+float3 pbrBrdf(
+	float3 V,
+	float3 L,
+	float3 N,
+	const __global Material* material) {
+	return pbrBrdfChoice(V,L,N,material,false);
+}
 
 float3 brdfOnly(
 	float3 V,

@@ -6,7 +6,7 @@
 #include "pbr_brdf.cl"
 #include "refract.cl"
 
-#define MAXWEIGHT
+#define MAXSMOOTHNESS 0.95f
 
 enum {
 	SHADINGFLAGS_HASFINISHED = 1,
@@ -336,7 +336,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		if (dot(shadingNormal, L) > EPSILON && dot(realNormal, L) > EPSILON && dot(lightNormal, -L) > EPSILON)// dot(realNormal, L) may be <0.0f for transparent materials?
 		{
 			if (material->type == PBR) {
-				BRDF = pbrBrdf(-rayDirection, L, shadingNormal, material);
+				BRDF = pbrBrdfChoice(-rayDirection, L, shadingNormal, material, material->pbr.smoothness > MAXSMOOTHNESS);
 			} else if (material->type == DIFFUSE)
 			{
 
@@ -363,7 +363,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			outShadowData->flags = SHADINGFLAGS_HASFINISHED;
 		}
 	}
-	
+
+	float dospecular = false;
 	float probabilityToSurvive = 1.0f;
 	float3 c = (float3)(1.0f, 1.0f, 1.0f);
 	if (material->type == DIFFUSE) {
@@ -431,6 +432,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		} else {
 			PDF = 1.0f; //already accounted by making D = 1.0f;
 			BRDF = brdfOnly(V, halfway, reflection, shadingNormal, material);
+			if (material->pbr.smoothness > MAXSMOOTHNESS) dospecular = true;
 		}
 		if (material->pbr.metallic) BRDF *= F;
 	} else if (material->type == BASIC_REFRACTIVE)
@@ -545,7 +547,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	// Continue random walk
 	//BRDF = 0.1f;
 	outData->flags = 0;
-	if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE)
+	if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE || dospecular)
 		outData->flags = SHADINGFLAGS_LASTSPECULAR;
 	float3 integral = BRDF * cosineTerm / PDF;
 	outData->ray.origin = intersection + reflection * EPSILON;
