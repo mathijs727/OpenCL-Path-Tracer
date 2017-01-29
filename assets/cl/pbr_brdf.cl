@@ -164,13 +164,8 @@ float3 pbrBrdfChoice(
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
 	float Vis = V_SmithGGXCorrelated(NdotL, NdotV, roughness);
-	float3 Fr;
-	if (NdotL * NdotV > EPSILON)
-	{
-		Fr = D * F * Vis;
-	} else {
-		Fr = 0.0f;
-	}
+	Vis = fmin(Vis, 10.0f);
+	float3 Fr = D * F * Vis;
 
 	// Diffuse BRDF (called BRDF because it assumes light enters and exists at the same point,
 	//  but it tries to approximate diffuse scatering so maybe this should be called BTDF and
@@ -204,21 +199,19 @@ float3 brdfOnly(
 	float3 N,
 	const __global Material* material)
 {
-	float3 f0;
-	if (material->pbr.metallic) {
-		f0 = material->pbr.reflectance;
-	} else {
-		f0 = material->pbr.f0NonMetal;
-	}
-	float f90 = 1.0f;
+	//float3 f0;
+	//if (material->pbr.metallic) {
+	//	f0 = material->pbr.reflectance;
+	//} else {
+	//	f0 = material->pbr.f0NonMetal;
+	//}
+	//float f90 = 1.0f;
 	float roughness = 1.0f - material->pbr.smoothness;
-
-
 	float NdotV = fabs(dot(N, V)) + 1e-5f; // avoid artifact
-	float LdotH = saturate(dot(L, H));
-	float NdotH = saturate(dot(N, H));
+	//float LdotH = saturate(dot(L, H));
+	//float NdotH = saturate(dot(N, H));
 	float NdotL = saturate(dot(N, L));
-	float VdotH = saturate(dot(V, H));
+	//float VdotH = saturate(dot(V, H));
 	// Specular BRDF
 	//float3 F = F_Schlick(f0, f90, LdotH);
 	//float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
@@ -231,16 +224,17 @@ float3 brdfOnly(
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
 	float Vis = V_SmithGGXCorrelated(NdotL, NdotV, roughness);
-	float3 Fr;
-	float denom = NdotL * NdotV;
-	if (denom > EPSILON)
-	{
+	Vis = fmin(Vis, 10.0f);
+	//float3 Fr;
+	//float denom = NdotL * NdotV;
+	//if (denom > EPSILON)
+	//{
 		//denom = fmax(0.05f, denom);
 		return Vis;
-	}
-	else {
-		return BLACK;
-	}
+	//}
+	//else {
+	//	return BLACK;
+	//}
 }
 
 float3 diffuseOnly(

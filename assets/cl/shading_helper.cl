@@ -96,7 +96,7 @@ float3 ggxWeightedHalfway(
 	float alpha,
 	randStream* randomStream)
 {
-	alpha = (1.5f - 0.5f * sqrt(fabs(dot(incidenceVector,normal))))*alpha;
+	//alpha = (1.5f - 0.5f * sqrt(fabs(dot(incidenceVector,normal))))*alpha;
 
 	// http://blog.tobias-franke.eu/2014/03/30/notes_on_importance_sampling.html
 	float r0 = randRandomU01(randomStream);	

@@ -365,41 +365,6 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	}
 
 	float dospecular = false;
-	float probabilityToSurvive = 1.0f;
-	float3 c = (float3)(1.0f, 1.0f, 1.0f);
-	if (material->type == DIFFUSE) {
-		c = diffuseColour(material, vertices, uv, textures);
-		if (c.x == -1.0f)// Alpha == 0.0f, never kill the ray
-			c = WHITE;
-	} else if (material->type == PBR) {
-		// Either baseColour for dielectrics or f0 (fresnel) for metals
-		c = material->pbr.baseColour;
-		
-	} else if (material->type == BASIC_REFRACTIVE || material->type == REFRACTIVE) {
-		float3 absorption;
-		if (dot(realNormal, -rayDirection) < 0.0f)
-		{
-			// Outgoing ray
-			if (material->type == BASIC_REFRACTIVE) {
-				absorption = material->basicRefractive.absorption;
-			} else {
-				absorption = material->refractive.absorption;
-			}
-		} else {
-			// Ingoing ray
-			absorption = 0.0f;
-		}
-		c = exp(-absorption * t);
-	}
-	probabilityToSurvive = fmax(fmax(c.x, c.y), c.z);
-	probabilityToSurvive = saturate(probabilityToSurvive);
-	float choiceToSurvive = randRandomU01(randomStream);
-
-	if (probabilityToSurvive < 0.05f || choiceToSurvive > probabilityToSurvive) {
-		outData->flags = SHADINGFLAGS_HASFINISHED;
-		return BLACK;
-	}
-
 	float PDF;
 	float cosineTerm;
 	float3 reflection;
@@ -410,27 +375,29 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		} else {
 			f0 = material->pbr.f0NonMetal;
 		}
+		float roughness = 1.0f - material->pbr.smoothness;
 		float3 V = -rayDirection;
 		float f90 = 1.0f;
 		float3 halfway;
 		reflection = ggxWeightedImportanceDirection(shadingNormal, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, NULL, &halfway);
 		cosineTerm = dot(shadingNormal, reflection);
-		if (cosineTerm < EPSILON || dot(realNormal, reflection) < EPSILON) {
+		if (cosineTerm < 0.05f || dot(realNormal, reflection) < EPSILON) {
 			outData->flags = SHADINGFLAGS_HASFINISHED;
 			return BLACK;
 		}
-		float3 H = normalize(V + reflection);
-		float LdotH = saturate(dot(reflection, H));
+		float LdotH = saturate(dot(reflection, halfway));
 		float3 F = F_Schlick(f0, f90, LdotH);
 		float rand01 = randRandomU01(randomStream);
-		if (!material->pbr.metallic && rand01 > F.x)
+		if (material->pbr.metallic && rand01 > F.x)
 		{
+			float3 c = material->pbr.baseColour;
 			reflection = cosineWeightedDiffuseReflection(shadingNormal, edge1, invTransform, randomStream);
 			PDF = INVPI;
 			cosineTerm = 1.0f; // simplification
 			BRDF = diffuseOnly(V, reflection, shadingNormal, material);
 		} else {
-			PDF = 1.0f; //already accounted by making D = 1.0f;
+			float HdotN = dot(halfway, shadingNormal);
+			PDF = 1.0f;//D_Beckmann(HdotN, roughness) / D_GGX(HdotN, roughness); //already accounted by making D = 1.0f;
 			BRDF = brdfOnly(V, halfway, reflection, shadingNormal, material);
 			if (material->pbr.smoothness > MAXSMOOTHNESS) dospecular = true;
 		}
@@ -550,6 +517,15 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE || dospecular)
 		outData->flags = SHADINGFLAGS_LASTSPECULAR;
 	float3 integral = BRDF * cosineTerm / PDF;
+
+	float probabilityToSurvive = fmax(fmax(integral.x, integral.y), integral.z);
+	probabilityToSurvive = saturate(probabilityToSurvive);
+	float choiceToSurvive = randRandomU01(randomStream);
+	if (probabilityToSurvive < EPSILON || choiceToSurvive > probabilityToSurvive) {
+		outData->flags = SHADINGFLAGS_HASFINISHED;
+		return BLACK;
+	}
+
 	outData->ray.origin = intersection + reflection * EPSILON;
 	outData->ray.direction = reflection;
 	outData->multiplier = inData->multiplier * integral / probabilityToSurvive;
