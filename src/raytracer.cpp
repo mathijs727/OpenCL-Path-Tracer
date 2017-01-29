@@ -16,6 +16,7 @@
 #include <thread>
 #include <stdlib.h>
 #include <chrono>
+#include <random>
 #include <clRNG\lfsr113.h>
 
 //#define PROFILE_OPENCL
@@ -23,6 +24,9 @@
 //#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 20000000
 #define MAX_NUM_LIGHTS 256
+
+#define RANDOM_XOR32
+//#define RANDOM_LFSR113
 
 #define MAX_ACTIVE_RAYS 1280*720// Number of rays per pass (top performance = all pixels in 1 pass but very large buffer sizes at 4K?)
 
@@ -1031,6 +1035,24 @@ void raytracer::RayTracer::InitBuffers(
 
 	// Create random streams and copy them to the GPU
 	size_t numWorkItems = _scr_width * _scr_height;
+#ifdef RANDOM_XOR32
+	size_t streamBufferSize = numWorkItems * sizeof(u32);
+	auto streams = std::make_unique<u32[]>(numWorkItems);
+
+	// Generate random uints the C++11 way
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<u32> dis;
+	for (int i = 0; i < numWorkItems; i++)
+		streams[i] = dis(gen);
+
+	_random_streams = cl::Buffer(_context,
+		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+		streamBufferSize,
+		streams.get(),
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+#elif defined(RANDOM_LFSR113)
 	size_t streamBufferSize;
 	clrngLfsr113Stream* streams = clrngLfsr113CreateStreams(
 		NULL, numWorkItems, &streamBufferSize, (clrngStatus*)&err);
@@ -1042,6 +1064,7 @@ void raytracer::RayTracer::InitBuffers(
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 	clrngLfsr113DestroyStreams(streams);
+#endif
 
 
 
@@ -1106,6 +1129,11 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 	/*opts += "-g -s \"D:/Documents/Development/UU/INFMAGR/infmagr-assignment1/";
 	opts += fileName;
 	opts += "\"";*/
+#ifdef RANDOM_XOR32
+	opts += "-D RANDOM_XOR32";
+#elif defined(RANDOM_LFSR113)
+	opts += "-D RANDOM_LFSR113";
+#endif
 	err = program.build(devices, opts.c_str());
 	{
 		if (err != CL_SUCCESS)

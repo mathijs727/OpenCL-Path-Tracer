@@ -1,7 +1,7 @@
 #ifndef __SHADING_CL
 #define __SHADING_CL
 #include "shading_helper.cl"
-#include <clRNG/lfsr113.clh>
+#include "random.cl"
 #include "light.cl"
 #include "pbr_brdf.cl"
 #include "refract.cl"
@@ -51,7 +51,7 @@ float f90 = 1.0f;
 float3 H = normalize(-rayDirection + L);
 float LdotH = saturate(dot(L, H));
 float3 F = F_Schlick(f0, f90, LdotH);
-float rand01 = clrngLfsr113RandomU01(randomStream);
+float rand01 = randRandomU01(randomStream);
 if (material->pbr.metallic || rand01 < F.x) {
 float a = 1 - material->pbr.smoothness;
 float dotProduct = dot(H, realNormal);
@@ -81,7 +81,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
-	clrngLfsr113Stream* randomStream,
+	randStream* randomStream,
 	const __global RayData* inData,
 	RayData* outData,
 	RayData* outShadowData)
@@ -164,7 +164,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 			float3 H = normalize(-rayDirection + L);
 			float LdotH = saturate(dot(L, H));
 			float3 F = F_Schlick(f0, f90, LdotH);
-			float rand01 = clrngLfsr113RandomU01(randomStream);
+			float rand01 = randRandomU01(randomStream);
 				if (material->pbr.metallic || rand01 < F.x) {
 				float a = 1 - material->pbr.smoothness;
 				float NdotH = dot(H, realNormal);
@@ -217,7 +217,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 		float3 H = normalize(V + reflection);
 		float LdotH = saturate(dot(reflection, H));
 		float3 F = F_Schlick(f0, f90, LdotH);
-		float rand01 = clrngLfsr113RandomU01(randomStream);
+		float rand01 = randRandomU01(randomStream);
 		if (!material->pbr.metallic && rand01 > F.x)
 		{
 			reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
@@ -276,7 +276,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
-	clrngLfsr113Stream* randomStream,
+	randStream* randomStream,
 	const __global RayData* inData,
 	RayData* outData,
 	RayData* outShadowData)
@@ -382,7 +382,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	}
 	probabilityToSurvive = fmax(fmax(c.x, c.y), c.z);
 	probabilityToSurvive = saturate(probabilityToSurvive);
-	float choiceToSurvive = clrngLfsr113RandomU01(randomStream);
+	float choiceToSurvive = randRandomU01(randomStream);
 
 	if (choiceToSurvive > probabilityToSurvive) {
 		outData->flags = SHADINGFLAGS_HASFINISHED;
@@ -405,7 +405,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float3 H = normalize(V + reflection);
 		float LdotH = saturate(dot(reflection, H));
 		float3 F = F_Schlick(f0, f90, LdotH);
-		float rand01 = clrngLfsr113RandomU01(randomStream);
+		float rand01 = randRandomU01(randomStream);
 		if (!material->pbr.metallic && rand01 > F.x)
 		{
 			reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
@@ -438,7 +438,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float K = 1 - (n1n2*n1n2) * (1 - cos1*cos1);
 		if (K >= 0)
 		{
-			float rand01 = clrngLfsr113RandomU01(randomStream);
+			float rand01 = randRandomU01(randomStream);
 			float f0 = pow((n1-n2)/(n1+n2),2.0f);
 			float3 F = F_Schlick(f0, 1.0f, dot(raySideNormal, -rayDirection));
 			if (rand01 < F.x) {
@@ -482,7 +482,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float f0 = pow((n_i - n_t) / (n_i + n_t), 2);
 		float f90 = 1.0f;
 		float3 F = F_Schlick(f0, f90, dot(-rayDirection, halfway));
-		float rand01 = clrngLfsr113RandomU01(randomStream);
+		float rand01 = randRandomU01(randomStream);
 		if (rand01 < F.x)
 		{
 			BRDF = evaluateReflect(-rayDirection, raySideNormal, halfway, material, &reflection);
@@ -533,7 +533,7 @@ float3 neeShading(
 	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
-	clrngLfsr113Stream* randomStream,
+	randStream* randomStream,
 	const __global RayData* inData,
 	RayData* outData,
 	RayData* outShadowData)
@@ -633,7 +633,7 @@ float3 naiveShading(
 	const __global float* invTransform,
 	float2 uv,
 	image2d_array_t textures,
-	clrngLfsr113Stream* randomStream,
+	randStream* randomStream,
 	const __global RayData* inData,
 	RayData* outData,
 	RayData* outShadowData)

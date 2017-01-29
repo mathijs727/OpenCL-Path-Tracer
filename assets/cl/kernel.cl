@@ -1,12 +1,12 @@
 #define NO_PARALLEL_RAYS// When a ray is parallel to axis, the intersection tests are really slow
 #define USE_BVH
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
-#define MAX_ITERATIONS 256
+#define MAX_ITERATIONS 8
 
 //#define COMPARE_SHADING
 #define CLRNG_SINGLE_PRECISION
 
-#include <clRNG/lfsr113.clh>
+#include "random.cl"
 #include "shapes.cl"
 #include "material.cl"
 #include "scene.cl"
@@ -22,7 +22,7 @@
 __kernel void generatePrimaryRays(
 	__global RayData* outRays,
 	volatile __global KernelData* inputData,
-	__global clrngLfsr113HostStream* randomStreams)
+	__global randHostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
 	uint rayIndex = inputData->rayOffset + gid;
@@ -37,8 +37,8 @@ __kernel void generatePrimaryRays(
 	if (gid >= newRays)
 		return;
 
-	clrngLfsr113Stream randomStream;
-	clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+	randStream randomStream;
+	randCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
 	uint x = rayIndex % inputData->scrWidth;
 	uint y = rayIndex / inputData->scrWidth;
@@ -72,7 +72,7 @@ __kernel void generatePrimaryRays(
 	outRays[outIndex].numBounces = 0;
 
 	// Store random streams
-	clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+	randCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 
 	if (gid == 0)
 	{
@@ -199,7 +199,7 @@ __kernel void shade(
 	__global EmissiveTriangle* emissiveTriangles,
 	__global Material* materials,
 	__read_only image2d_array_t textures,
-	__global clrngLfsr113HostStream* randomStreams)
+	__global randHostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
 	RayData outRayData;
@@ -237,8 +237,8 @@ __kernel void shade(
 		float3 intersection = rayData->ray.origin + shadingData->t * rayData->ray.direction;
 
 		// Load random streams
-		clrngLfsr113Stream randomStream;
-		clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+		randStream randomStream;
+		randCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
 #ifdef COMPARE_SHADING
 		if ((rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2)
@@ -275,7 +275,7 @@ __kernel void shade(
 		}
 
 		// Store random streams
-		clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+		randCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 		active = true;
 	}
 

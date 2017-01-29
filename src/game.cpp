@@ -43,7 +43,7 @@ void Game::Init()
 		_scene->add_node(cornell);
 	}
 
-	{
+	/*{
 		Transform transform;
 		transform.scale = glm::vec3(4.0f);
 		//transform.scale = glm::vec3(0.0001f);
@@ -57,29 +57,30 @@ void Game::Init()
 			Material::Refractive(0.8f, 1.5f, glm::vec3(1,0,0), 3.f));
 			//Material::BasicRefractive(1.5f, glm::vec3(1,0,0), 3.0f));
 		_scene->add_node(sphere, transform);
-	}
+	}*/
 
-	/*// Mitsuba Test Object:
+	// Mitsuba Test Object:
 	// http://graphics.cs.williams.edu/data/meshes.xml
 	{
 		Transform transform;
-		transform.scale = glm::vec3(0.1f);
+		transform.scale = glm::vec3(0.25f);
 		//transform.location = glm::vec3(0, 0.5f, 0);
 		//transform.orientation = glm::quat(glm::vec3(0, 1, 0));
 		auto testObject = std::make_shared<Mesh>();
 #if TRUE
-		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba.obj",
-			Material::PBRMetal(
-				glm::vec3(0.955f, 0.638f, 0.538f), // Copper
-				0.8f));
-		//	Material::PBRDielectric(
-		//		glm::vec3(1.0f/123.0f, 1.0f/129.0f, 1.0f/83.0f), // Copper
-		//		0.5f));
+		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba-sphere.obj",
+			//Material::PBRMetal(
+			//	glm::vec3(0.955f, 0.638f, 0.538f), // Copper
+			//	0.8f));
+			//Material::Refractive(0.8f, 1.5f, glm::vec3(1, 0, 0), 3.f));
+			Material::PBRDielectric(
+				glm::vec3(0.9f, 0.1f, 0.5f),
+				0.9f));
 #else
 		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba.obj");
 #endif
 		_scene->add_node(testObject, transform);
-	}*/
+	}
 
 	/*{
 		Transform transform;
@@ -127,8 +128,8 @@ void Game::Init()
 
 
 	
-	/*// Sponza
-	{
+	// Sponza
+	/*{
 		Transform transform;
 		transform.location = glm::vec3(0, 10, -0.5f);
 		transform.scale = glm::vec3(1, 1, 0.3f);
