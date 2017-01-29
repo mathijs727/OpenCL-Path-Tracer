@@ -73,6 +73,16 @@ float G_SmithGGXCorrelated(float NdotL, float NdotV, float alpha)
 	return 0.5f / (Lambda_GGXV + Lambda_GGXL);*/
 }
 
+float V_SmithGGXCorrelated(float NdotL, float NdotV, float alphaG)
+{
+	// This is the optimize version
+	float alphaG2 = alphaG * alphaG ;
+	// Caution : the " NdotL *" and " NdotV *" are explicitely inversed , this is not a mistake .
+	float Lambda_GGXV = NdotL * sqrt (( - NdotV * alphaG2 + NdotV ) * NdotV + alphaG2 );
+	float Lambda_GGXL = NdotV * sqrt (( - NdotL * alphaG2 + NdotL ) * NdotL + alphaG2 );
+	return 0.5f / ( Lambda_GGXV + Lambda_GGXL );
+}
+
 float D_Beckmann(float NdotH, float alpha) 
 {
 	float tanA = tan(acos(NdotH));
@@ -146,16 +156,17 @@ float3 pbrBrdf(
 	// Specular BRDF
 	float3 F = F_Schlick(f0, f90, LdotH);
 	//float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
-	float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
-	//float D = D_GGX (NdotH , roughness);
-	float D = D_Beckmann (NdotH, roughness);
+	//float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
+	float D = D_GGX (NdotH , roughness);
+	//float D = D_Beckmann (NdotH, roughness);
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
+	float Vis = V_SmithGGXCorrelated(NdotL, NdotV, roughness);
 	float3 Fr;
 	if (NdotL * NdotV > EPSILON)
 	{
-		Fr = D * F * G / (4.0f * NdotL * NdotV);
+		Fr = D * F * Vis * INVPI;
 	} else {
 		Fr = 0.0f;
 	}
@@ -203,19 +214,21 @@ float3 brdfOnly(
 	// Specular BRDF
 	//float3 F = F_Schlick(f0, f90, LdotH);
 	//float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
-	float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
+	//float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
+	//G = fmax(fmin(G,4.0f),0.f); // theoretically guaranteed to never clamp according to paper
 	//float D = D_GGX (NdotH , roughness);
 	//float D = D_Beckmann (NdotH, roughness);
 	float D = 1.0f;
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
+	float Vis = V_SmithGGXCorrelated(NdotL, NdotV, roughness);
 	float3 Fr;
 	float denom = NdotL * NdotV;
 	if (denom > EPSILON)
 	{
-		denom = fmax(0.05f, denom);
-		return D * G / (4.0f * denom);
+		//denom = fmax(0.05f, denom);
+		return D * Vis * INVPI;
 	}
 	else {
 		return BLACK;

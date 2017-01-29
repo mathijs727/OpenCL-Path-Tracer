@@ -412,7 +412,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float3 V = -rayDirection;
 		float f90 = 1.0f;
 		float3 halfway;
-		reflection = beckmannWeightedImportanceDirection(shadingNormal, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, NULL, &halfway);
+		reflection = ggxWeightedImportanceDirection(shadingNormal, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, NULL, &halfway);
 		cosineTerm = dot(shadingNormal, reflection);
 		if (cosineTerm < EPSILON || dot(realNormal, reflection) < EPSILON) {
 			outData->flags = SHADINGFLAGS_HASFINISHED;
