@@ -167,7 +167,7 @@ float3 pbrBrdfChoice(
 	float3 Fr;
 	if (NdotL * NdotV > EPSILON)
 	{
-		Fr = D * F * Vis * INVPI;
+		Fr = D * F * Vis;
 	} else {
 		Fr = 0.0f;
 	}
@@ -226,7 +226,7 @@ float3 brdfOnly(
 	//G = fmax(fmin(G,4.0f),0.f); // theoretically guaranteed to never clamp according to paper
 	//float D = D_GGX (NdotH , roughness);
 	//float D = D_Beckmann (NdotH, roughness);
-	float D = 1.0f;
+	//float D = 1.0f;
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
@@ -236,7 +236,7 @@ float3 brdfOnly(
 	if (denom > EPSILON)
 	{
 		//denom = fmax(0.05f, denom);
-		return D * Vis * INVPI;
+		return Vis;
 	}
 	else {
 		return BLACK;
