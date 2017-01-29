@@ -215,19 +215,20 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 		}
 		float3 V = normalize(-rayDirection);
 		float f90 = 1.0f;
-		reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
+		float halfway;
+		reflection = ggxWeightedImportanceDirection(shadingNormal, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF, &halfway);
 		float3 H = normalize(V + reflection);
 		float LdotH = saturate(dot(reflection, H));
 		float3 F = F_Schlick(f0, f90, LdotH);
 		float rand01 = randRandomU01(randomStream);
 		if (!material->pbr.metallic && rand01 > F.x)
 		{
-			reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+			reflection = cosineWeightedDiffuseReflection(shadingNormal, edge1, invTransform, randomStream);
 			PDF = dot(realNormal, reflection) / PI;
 			BRDF = diffuseOnly(V, reflection, shadingNormal, material);
 		}
 		else {
-			BRDF = brdfOnly(V, reflection, shadingNormal, material);
+			BRDF = brdfOnly(V, halfway, reflection, shadingNormal, material);
 		}
 
 
@@ -235,13 +236,13 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 		float LdotH = saturate(dot(-rayDirection, realNormal));
 		float3 F = F_Schlick(f0, f90, LdotH);
 		if (!material->pbr.metallic && choiceValue > F.x) {
-		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+		reflection = cosineWeightedDiffuseReflection(shadingNormal, edge2, invTransform, randomStream);
 		PDF = dot(realNormal, reflection) / PI;
 		}
 		BRDF = pbrBrdfChoice(normalize(-rayDirection), reflection, shadingNormal, material, choiceValue);*/
 	}
 	else if (material->type == DIFFUSE) {
-		reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
+		reflection = cosineWeightedDiffuseReflection(shadingNormal, edge1, invTransform, randomStream);
 		PDF = dot(realNormal, reflection) / PI;
 		BRDF = diffuseColour(material, vertices, uv, textures) / PI;
 	}
@@ -345,15 +346,14 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 				} else {
 					BRDF = c / PI;
 				}
-			} else if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE)
-			{
-				//BRDF = refractiveBSDF(-rayDirection, L, shadingNormal, material);
-				BRDF = 0;
 			}
-
-			float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
-			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
-			float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * solidAngle * dot(realNormal, L);
+			float solidAngle = 2*PI;
+			if (dist2 > EPSILON)
+			{
+				solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
+				solidAngle = clamp(solidAngle, 0.0f, 2*PI);// Prevents white dots when dist is really small
+			}
+			float3 Ld = scene->numEmissiveTriangles * lightColour * BRDF * solidAngle * dot(shadingNormal, L);
 			outShadowData->flags = 0;
 			outShadowData->multiplier = Ld * inData->multiplier;
 			outShadowData->ray = createRay(intersection + L * EPSILON, L);
@@ -394,7 +394,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 	probabilityToSurvive = saturate(probabilityToSurvive);
 	float choiceToSurvive = randRandomU01(randomStream);
 
-	if (choiceToSurvive > probabilityToSurvive) {
+	if (probabilityToSurvive < 0.05f || choiceToSurvive > probabilityToSurvive) {
 		outData->flags = SHADINGFLAGS_HASFINISHED;
 		return BLACK;
 	}
@@ -411,8 +411,10 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		}
 		float3 V = -rayDirection;
 		float f90 = 1.0f;
-		reflection = beckmannWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
-		if (dot(shadingNormal, reflection) < EPSILON || dot(realNormal, reflection) < EPSILON) {
+		float3 halfway;
+		reflection = beckmannWeightedImportanceDirection(shadingNormal, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, NULL, &halfway);
+		cosineTerm = dot(shadingNormal, reflection);
+		if (cosineTerm < EPSILON || dot(realNormal, reflection) < EPSILON) {
 			outData->flags = SHADINGFLAGS_HASFINISHED;
 			return BLACK;
 		}
@@ -422,13 +424,15 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float rand01 = randRandomU01(randomStream);
 		if (!material->pbr.metallic && rand01 > F.x)
 		{
-			reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
-			PDF = dot(realNormal, reflection) / PI;
+			reflection = cosineWeightedDiffuseReflection(shadingNormal, edge1, invTransform, randomStream);
+			PDF = INVPI;
+			cosineTerm = 1.0f; // simplification
 			BRDF = diffuseOnly(V, reflection, shadingNormal, material);
 		} else {
-			BRDF = brdfOnly(V, reflection, shadingNormal, material);
+			PDF = 1.0f; //already accounted by making D = 1.0f;
+			BRDF = brdfOnly(V, halfway, reflection, shadingNormal, material);
 		}
-		cosineTerm = dot(realNormal, reflection);
+		if (material->pbr.metallic) BRDF *= F;
 	} else if (material->type == BASIC_REFRACTIVE)
 	{
 		// Slide 34
@@ -437,20 +441,19 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float3 absorptionFactor = 1.0f;
 
 		float n1, n2;
-		if (dot(realNormal, -D) > 0.0f)
+		if (dot(realNormal, -D) > EPSILON)
 		{
 			n1 = 1.000277f;
 			n2 = material->basicRefractive.refractiveIndex;
 		} else {
 			n1 = material->basicRefractive.refractiveIndex;
 			n2 = 1.000277f;
-
 			absorptionFactor = exp(-material->basicRefractive.absorption * t);
 		}
 		float cos1 = dot(raySideNormal, -D);
 		float n1n2 = n1 / n2;
 		float K = 1 - (n1n2*n1n2) * (1 - cos1*cos1);
-		if (K >= 0)
+		if (K > EPSILON)
 		{
 			float rand01 = randRandomU01(randomStream);
 			float f0 = pow((n1-n2)/(n1+n2),2.0f);
@@ -474,7 +477,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		PDF = 1.0f;
 	} else if (material->type == REFRACTIVE)
 	{
-		float3 halfway = beckmannWeightedHalfway(edge1, edge2, rayDirection, raySideNormal, invTransform, 1 - material->refractive.smoothness, randomStream);
+		float3 halfway = beckmannWeightedHalfway(raySideNormal, rayDirection, invTransform, 1 - material->refractive.smoothness, randomStream);
 		//if (dot(halfway, raySideNormal) < 0.9f) {
 		//	outData->flags = SHADINGFLAGS_HASFINISHED;
 		//	return BLACK;
@@ -532,14 +535,15 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			reflection = rayDirection;
 			BRDF = 1.0f;
 		} else {
-			PDF = 1.0f / PI; // we simplify the cosine term away from PDF and cosineTerm
-			reflection = cosineWeightedDiffuseReflection(edge1, edge2, invTransform, randomStream);
-			BRDF = c / PI;
+			PDF = 1.0f; // we simplify the cosine term away from PDF and cosineTerm
+			reflection = cosineWeightedDiffuseReflection(realNormal, edge1, invTransform, randomStream);
+			BRDF = c;
 		}
 	}
 	//PDF = fmax(PDF, 0.25f);
 	//probabilityToSurvive = fmax(probabilityToSurvive, 0.25f);
 	// Continue random walk
+	//BRDF = 0.1f;
 	outData->flags = 0;
 	if (material->type == REFRACTIVE || material->type == BASIC_REFRACTIVE)
 		outData->flags = SHADINGFLAGS_LASTSPECULAR;

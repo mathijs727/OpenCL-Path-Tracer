@@ -35,7 +35,9 @@ float G_SmithBeckmannCorrelated(float VdotM, float NdotV, float alpha) {
 	if (a < 1.6f) {
 		approximation = (3.535f * a + 2.181f * a * a) / ( 1 + 2.276f * a + 2.577f * a * a);
 	}
-	return chi * VdotM / NdotV * approximation;
+	//if (NdotV > EPSILON)
+		return chi * VdotM / NdotV * approximation;
+	//else return 1.0f;
 }
 
 float G_SmithGGXCorrelated(float NdotL, float NdotV, float alpha)
@@ -77,7 +79,9 @@ float D_Beckmann(float NdotH, float alpha)
 	float cos2 = NdotH*NdotH;
 	float num = (1 - cos2) / (cos2*alpha*alpha);
 	float den = cos2*cos2*alpha*alpha*PI;
-	return exp(-num)/den;
+	if (den > EPSILON)
+		return exp(-num)/den;
+	else return 1.0f;
 
 }
 
@@ -87,7 +91,9 @@ float D_GGX (float NdotH, float alpha)
 	// http://graphicrants.blogspot.nl/2013/08/specular-brdf-reference.html
 	float alpha2 = alpha * alpha;
 	float f = (NdotH*NdotH) * (alpha2 - 1) + 1;
-	return alpha2 / (PI * f * f);
+	if (f > EPSILON)
+		return alpha2 / (PI * f * f);
+	else return 1.0f;
 }
 
 float Fr_DisneyDiffuse(float NdotV, float NdotL, float LdotH, float linearRoughness)
@@ -130,7 +136,6 @@ float3 pbrBrdf(
 	float roughness = 1.0f - material->pbr.smoothness;
 	float linearRoughness = sqrt(roughness);
 
-
 	float NdotV = fabs(dot(N, V)) + 1e-5f; // avoid artifact
 	float3 H = normalize(V + L);
 	float LdotH = saturate(dot(L, H));
@@ -143,12 +148,12 @@ float3 pbrBrdf(
 	//float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
 	float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
 	//float D = D_GGX (NdotH , roughness);
-	float D = D_Beckmann (NdotH , roughness);
+	float D = D_Beckmann (NdotH, roughness);
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
 	float3 Fr;
-	if (G != 0.0f)
+	if (NdotL * NdotV > EPSILON)
 	{
 		Fr = D * F * G / (4.0f * NdotL * NdotV);
 	} else {
@@ -175,6 +180,7 @@ float3 pbrBrdf(
 
 float3 brdfOnly(
 	float3 V,
+	float3 H,
 	float3 L,
 	float3 N,
 	const __global Material* material)
@@ -190,7 +196,6 @@ float3 brdfOnly(
 
 
 	float NdotV = fabs(dot(N, V)) + 1e-5f; // avoid artifact
-	float3 H = normalize(V + L);
 	float LdotH = saturate(dot(L, H));
 	float NdotH = saturate(dot(N, H));
 	float NdotL = saturate(dot(N, L));
@@ -200,15 +205,17 @@ float3 brdfOnly(
 	//float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
 	float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
 	//float D = D_GGX (NdotH , roughness);
-	float D = D_Beckmann (NdotH, roughness);
-	//float D = 1.0f;
+	//float D = D_Beckmann (NdotH, roughness);
+	float D = 1.0f;
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
 	float3 Fr;
-	if (G != 0.0f)
+	float denom = NdotL * NdotV;
+	if (denom > EPSILON)
 	{
-		return D * G / (4.0f * NdotL * NdotV);
+		denom = fmax(0.05f, denom);
+		return D * G / (4.0f * denom);
 	}
 	else {
 		return BLACK;

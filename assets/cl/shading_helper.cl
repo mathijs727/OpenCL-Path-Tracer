@@ -60,8 +60,8 @@ float3 diffuseReflection(
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
 // Slide 41
 float3 cosineWeightedDiffuseReflection(
+	float3 normal,
 	float3 edge1,
-	float3 edge2,
 	const __global float* invTransform,
 	randStream* randomStream)
 {
@@ -76,7 +76,7 @@ float3 cosineWeightedDiffuseReflection(
 	float y = r * sin(theta);
 	float3 sample = (float3)(x, y, sqrt(1 - r0));
 
-	float3 normal = normalize(cross(edge1, edge2));
+	//float3 normal = normalize(cross(edge1, edge2));
 	float3 tangent = normalize(cross(normal, edge1));
 	float3 bitangent = cross(normal, tangent);
 
@@ -89,100 +89,9 @@ float3 cosineWeightedDiffuseReflection(
 	return normalize(orientedSample);
 }
 
-float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 incidenceVector,
-	const __global float* invTransform,
-	float a_orig,
-	randStream* randomStream,
-	float* outScalingFactor) {
-	
-	float3 normal = normalize(cross(edge1, edge2));
-	float a = (1.2 - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*a_orig;
-
-	float r0 = randRandomU01(randomStream);	
-	float phi = 2.0f * PI * r0;
-	float r1 = randRandomU01(randomStream);
-	float theta = acos(sqrt((1.0f - r1) / ((a*a - 1.0f) * r1 + 1.0f)));
-
-	float r = sqrt(r1);
-	float cosTheta = cos(theta);
-	float sinTheta = sin(theta);
-	float x = r * cos(phi) * cos(PI/2 - theta);
-	float y = r * sin(phi) * cos(PI/2 - theta);
-	float z = sin(PI/2 - theta);
-	/*
-	float t = pow(r0, 2 / (a + 1));
-	x = cos(2 * PI*r1)*sqrt(1 - t);
-	y = sin(2 * PI*r1)*sqrt(1 - t);
-	z = sqrt(t);
-	*/
-	float3 sample = (float3)(x,y,z);
-	
-	float3 tangent = normalize(cross(normal, edge1));
-	float3 bitangent = cross(normal, tangent);
-
-	// Transform hemisphere to normal of the surface (of the static model)
-	// [tangent, bitangent, normal]
-	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
-	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
-	// Apply the normal transform (top level BVH)
-	//a = (1.2 - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*a_orig;
-	float3 L = -incidenceVector;
-    float dotProduct = dot(orientedSample, normal);
-	//float denom = dotProduct*dotProduct*(a*a-1.0f) + 1.0f;
-	//*outScalingFactor = (a + 2) / (2 * PI)*dot(normal,orientedSample);
-	if (outScalingFactor != NULL) *outScalingFactor = D_GGX(dotProduct, a_orig);
-	//*outScalingFactor = D_GGX(fabs(dot(orientedSample, normal)), a_orig);
-	return normalize(2*dot(orientedSample, L)*orientedSample - L);
-}
-
-float3 beckmannWeightedImportanceDirection(float3 edge1, float3 edge2, float3 incidenceVector,
-	const __global float* invTransform,
-	float a_orig,
-	randStream* randomStream,
-	float* outScalingFactor) {
-	
-	float3 normal = normalize(cross(edge1, edge2));
-	float alpha = (1.5f - 0.5f * sqrt(fabs(dot(incidenceVector,normal))))*a_orig;
-
-	float r0 = randRandomU01(randomStream);	
-	float r1 = randRandomU01(randomStream);
-	float phi = 2.0f * PI * r0;
-	float theta = atan(-alpha * alpha * log1p(-r1));
-
-	float r = sqrt(r1);
-	float cosTheta = cos(theta);
-	float sinTheta = sin(theta);
-	float x = r * cos(phi) * cos(PI/2 - theta);
-	float y = r * sin(phi) * cos(PI/2 - theta);
-	float z = sin(PI/2 - theta);
-	/*
-	float t = pow(r0, 2 / (a + 1));
-	x = cos(2 * PI*r1)*sqrt(1 - t);
-	y = sin(2 * PI*r1)*sqrt(1 - t);
-	z = sqrt(t);
-	*/
-	float3 sample = (float3)(x,y,z);
-	
-	float3 tangent = normalize(cross(normal, edge1));
-	float3 bitangent = cross(normal, tangent);
-
-	// Transform hemisphere to normal of the surface (of the static model)
-	// [tangent, bitangent, normal]
-	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
-	
-	// Apply the normal transform (top level BVH)
-	float3 L = -incidenceVector;
-	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
-	if (outScalingFactor != NULL) *outScalingFactor = D_Beckmann(dot(orientedSample, normal), a_orig);
-	return normalize(2*dot(orientedSample, L)*orientedSample - L);
-}
-
-
 float3 ggxWeightedHalfway(
-	float3 edge1,
-	float3 edge2,
-	float3 incidenceVector,
 	float3 normal,
+	float3 incidenceVector,
 	const __global float* invTransform,
 	float alpha,
 	randStream* randomStream)
@@ -202,7 +111,7 @@ float3 ggxWeightedHalfway(
 	float3 sample = (float3)(x,y,z);
 
 	//float3 normal = normalize(cross(edge1, edge2));
-	float3 tangent = normalize(cross(normal, edge1));
+	float3 tangent = normalize(cross(normal, (float3)(1.0f, 0.0f, 0.0f)));
 	float3 bitangent = cross(normal, tangent);
 
 	// Transform hemisphere to normal of the surface (of the static model)
@@ -216,10 +125,8 @@ float3 ggxWeightedHalfway(
 }
 
 float3 beckmannWeightedHalfway(
-	float3 edge1,
-	float3 edge2,
-	float3 incidenceVector,
 	float3 normal,
+	float3 incidenceVector,
 	const __global float* invTransform,
 	float alpha,
 	randStream* randomStream)
@@ -239,7 +146,7 @@ float3 beckmannWeightedHalfway(
 	float3 sample = (float3)(x,y,z);
 
 	//float3 normal = normalize(cross(edge1, edge2));
-	float3 tangent = normalize(cross(normal, edge1));
+	float3 tangent = normalize(cross(normal, (float3)(1.0f, 0.0f, 0.0f)));
 	float3 bitangent = cross(normal, tangent);
 
 	// Transform hemisphere to normal of the surface (of the static model)
@@ -250,6 +157,36 @@ float3 beckmannWeightedHalfway(
 	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
 
 	return orientedSample;
+}
+
+float3 ggxWeightedImportanceDirection(float3 normal, float3 incidenceVector,
+	const __global float* invTransform,
+	float a_orig,
+	randStream* randomStream,
+	float* outScalingFactor,
+	float3* outHalfway)
+{
+	float3 orientedSample = ggxWeightedHalfway(normal, incidenceVector, invTransform, a_orig, randomStream);
+	float3 L = -incidenceVector;
+    float dotProduct = dot(orientedSample, normal);
+	if (outScalingFactor != NULL) *outScalingFactor = D_GGX(dotProduct, a_orig);
+	if (outHalfway != NULL) *outHalfway = orientedSample;
+	return normalize(2*dot(orientedSample, L)*orientedSample - L);
+}
+
+float3 beckmannWeightedImportanceDirection(float3 normal, float3 incidenceVector,
+	const __global float* invTransform,
+	float a_orig,
+	randStream* randomStream,
+	float* outScalingFactor,
+	float3* outHalfway)
+{
+	// Apply the normal transform (top level BVH)
+	float3 L = -incidenceVector;
+	float3 orientedSample = beckmannWeightedHalfway(normal, incidenceVector, invTransform, a_orig, randomStream);
+	if (outScalingFactor != NULL) *outScalingFactor = D_Beckmann(dot(orientedSample, normal), a_orig);
+	if (outHalfway != NULL) *outHalfway = orientedSample;
+	return normalize(2*dot(orientedSample, L)*orientedSample - L);
 }
 
 // http://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
