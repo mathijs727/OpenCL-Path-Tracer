@@ -284,7 +284,7 @@ __kernel void shade(
 			randCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 		} else if (scene.cubemapTextureIndices[0] != -1) {
 			// We missed the scene, but have a skybox to fall back to
-			float3 c = 40.0f *  readCubeMap(normalize(rayData->ray.direction), textures, &scene);
+			float3 c = 500.0f *  readCubeMap(normalize(rayData->ray.direction), textures, &scene);
 			outputPixels[rayData->outputPixel] += rayData->multiplier * c;
 		}
 	}

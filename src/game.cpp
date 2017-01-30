@@ -75,8 +75,7 @@ void Game::Init()
 			//Material::Refractive(0.8f, 1.5f, glm::vec3(1, 0, 0), 3.f));
 			//Material::PBRDielectric(
 			//	glm::vec3(1.0f, 1.0f, 1.0f),
-			//	0.9f));
-			//Material::Diffuse(glm::vec3(1.0f, 1.0f, 1.0f)));
+			//	0.8f));
 #else
 		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba.obj");
 #endif
@@ -153,7 +152,7 @@ void Game::Init()
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
-	//_ray_tracer->SetCubemap("assets/cubemap/xxx_c%02d.bmp");
+	_ray_tracer->SetCubemap("assets/cubemap/xxx_c%02d.bmp");
 	_ray_tracer->SetScene(_scene);
 	_ray_tracer->SetTarget(_out.GetGLTexture());
 }
