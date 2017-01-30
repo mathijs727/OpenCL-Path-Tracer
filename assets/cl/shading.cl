@@ -6,7 +6,7 @@
 #include "pbr_brdf.cl"
 #include "refract.cl"
 
-#define MAXSMOOTHNESS 0.95f
+#define MAXSMOOTHNESS 0.94f
 
 enum {
 	SHADINGFLAGS_HASFINISHED = 1,
@@ -355,10 +355,10 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 			BRDF = brdfOnlyNoFresnelNoNDF(V, halfway, reflection, shadingNormal, material);
 			if (material->pbr.smoothness > MAXSMOOTHNESS) dospecular = true;
 		}
-		/*if (material->pbr.metallic) 
+		if (material->pbr.metallic) 
 		{
 			BRDF *= F;
-		}*/
+		}
 	} else if (material->type == BASIC_REFRACTIVE)
 	{
 		// Slide 34

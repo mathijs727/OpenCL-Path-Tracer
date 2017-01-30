@@ -35,7 +35,7 @@ float convertEV100toExposure(float EV100)
 	// = 78 / ( S * q ) * 2^ EV_100
 	// = 78 / (100 * 0.65) * 2^ EV_100
 	// = 1.2 * 2^ EV
-	// Reference : http :// en. wikipedia . org / wiki / Film_speed
+	// Reference : http://en.wikipedia.org/wiki/Film_speed
 	float maxLuminance = 1.2f * pow (2.0f, EV100);
 	return 1.0f / maxLuminance;
 }

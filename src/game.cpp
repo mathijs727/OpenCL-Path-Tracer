@@ -69,13 +69,14 @@ void Game::Init()
 		auto testObject = std::make_shared<Mesh>();
 #if TRUE
 		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba-sphere.obj",
-			//Material::PBRMetal(
-			//	glm::vec3(0.672411f, 0.637331f, 0.585456f), // Platinum
-			//	0.8f));
-			//Material::Refractive(0.8f, 1.5f, glm::vec3(1, 0, 0), 3.f));
-			Material::PBRDielectric(
-				glm::vec3(1.0f, 1.0f, 1.0f),
+			Material::PBRMetal(
+				glm::vec3(0.672411f, 0.637331f, 0.585456f), // Platinum
 				0.8f));
+			//Material::Refractive(0.8f, 1.5f, glm::vec3(1, 0, 0), 3.f));
+			//Material::PBRDielectric(
+			//	glm::vec3(1.0f, 1.0f, 1.0f),
+			//	0.9f));
+			//Material::Diffuse(glm::vec3(1.0f, 1.0f, 1.0f)));
 #else
 		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba.obj");
 #endif
