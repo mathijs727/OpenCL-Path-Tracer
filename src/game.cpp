@@ -135,7 +135,9 @@ void Game::Init()
 		transform.scale = glm::vec3(1, 1, 0.3f);
 		transform.orientation = glm::quat(glm::vec3(PI, 0, 0));// Flip upside down
 		auto lightPlane = std::make_shared<Mesh>();
-		lightPlane->loadFromFile("assets/3dmodels/plane/plane.obj", Material::Emissive(glm::vec3(0.8f, 0.8f, 0.8f) * 15.0f));
+		lightPlane->loadFromFile("assets/3dmodels/plane/plane.obj",
+			Material::Emissive(5500.0f, 1000.0f));
+			//Material::Emissive(glm::vec3(0.8f, 0.8f, 0.8f), 500.0f));
 		_scene->add_node(lightPlane, transform);
 	}
 	{
@@ -150,7 +152,7 @@ void Game::Init()
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
-	_ray_tracer->SetCubemap("assets/cubemap/xxx_c%02d.bmp");
+	//_ray_tracer->SetCubemap("assets/cubemap/xxx_c%02d.bmp");
 	_ray_tracer->SetScene(_scene);
 	_ray_tracer->SetTarget(_out.GetGLTexture());
 }

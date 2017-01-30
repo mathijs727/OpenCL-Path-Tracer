@@ -151,36 +151,59 @@ struct Material
 		return result;
 	}
 
-	static Material Emissive(const glm::vec3& colour) {
+	static Material Emissive(const glm::vec3& colour, float intensityLumen = 500.0f)
+	{
 		// Cornell box is not defined in physical units so multiply by 5 to make it brighter
 		Material result;
 		result.type = Type::EMISSIVE;
-		result.emissive.emissiveColour = colour * 500.0f;
+		result.emissive.emissiveColour = colour * intensityLumen;
 		return result;
 	}
 
-	/*static Material Reflective(const glm::vec3& colour) {
-		Material result;
-		result.type = Type::Reflective;
-		result.colour = colour;
-		return result;
-	}
+	static Material Emissive(float colourTemperature, float intensityLumen)
+	{
+		// http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code/
+		// Approximate colour temp -> RGB
+		colourTemperature /= 100;
+		float red;
+		if (colourTemperature <= 66) {
+			red = 1.0f;
+		} else {
+			red = colourTemperature - 60;
+			red = 329.698727446f * powf(red, -0.1332047592f);
+			red /= 255.0f;
+			red = std::min(1.0f, std::max(0.0f, red));
+		}
 
-	static Material Glossy(const glm::vec3& colour, float specularity) {
-		Material result;
-		result.type = Type::Glossy;
-		result.colour = colour;
-		result.glossy.specularity = std::min(std::max(specularity, 0.0f), 1.0f);
-		return result;
-	}
+		float green;
+		if (colourTemperature <= 66) {
+			green = colourTemperature;
+			green = 99.4708025861f * log(green) - 161.1195681661f;
+		} else {
+			green = colourTemperature - 60;
+			green = 288.1221695283f * powf(green, -0.0755148492f);
+		}
+		green /= 255.0f;
+		green = std::min(1.0f, std::max(0.0f, green));
 
-	static Material Fresnel(const glm::vec3& colour, float refractive_index, glm::vec3 absorption) {
-		Material result;
-		result.type = Type::Fresnel;
-		result.colour = colour;
-		result.fresnel.refractive_index = std::max(refractive_index, 1.f);
-		result.fresnel.absorption = absorption;
-		return result;
-	}*/
+		float blue;
+		if (colourTemperature >= 66) {
+			blue = 1.0f;
+		} else {
+			if (colourTemperature <= 19) {
+				blue = 0.0f;
+			}
+			else {
+				blue = colourTemperature - 10;
+				blue = 138.5177312231f * log(blue) - 305.0447927307f;
+				blue /= 255.0f;
+				blue = std::min(1.0f, std::max(0.0f, blue));
+			}
+		}
+
+		glm::vec3 rgb = glm::vec3(red, green, blue);
+		rgb = glm::pow(rgb, glm::vec3(2.2f));// Gamma corrected to linear
+		return Emissive(rgb, intensityLumen);
+	}
 };
 }
