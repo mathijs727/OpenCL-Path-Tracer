@@ -6,7 +6,7 @@
 #include "pbr_brdf.cl"
 #include "refract.cl"
 
-#define MAXSMOOTHNESS 0.95f
+#define MAXSMOOTHNESS 0.99f
 
 enum {
 	SHADINGFLAGS_HASFINISHED = 1,
@@ -364,6 +364,8 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		}
 	}
 
+
+
 	float dospecular = false;
 	float PDF;
 	float cosineTerm;
@@ -392,9 +394,10 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		{
 			float3 c = material->pbr.baseColour;
 			reflection = cosineWeightedDiffuseReflection(shadingNormal, edge1, invTransform, randomStream);
+			//reflection = 0.0f;
 			PDF = INVPI;
 			cosineTerm = 1.0f; // simplification
-			BRDF = c;//diffuseOnly(V, halfway, reflection, shadingNormal, material);
+			BRDF = diffuseOnly(V, halfway, reflection, shadingNormal, material);
 		} else {
 			//float HdotN = dot(halfway, shadingNormal);
 			PDF = 1.0f;//D_Beckmann(HdotN, roughness) / D_GGX(HdotN, roughness); //already accounted by making D = 1.0f;
