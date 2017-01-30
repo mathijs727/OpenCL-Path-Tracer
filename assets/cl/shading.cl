@@ -6,7 +6,7 @@
 #include "pbr_brdf.cl"
 #include "refract.cl"
 
-#define MAXSMOOTHNESS 0.99f
+#define MAXSMOOTHNESS 0.95f
 
 enum {
 	SHADINGFLAGS_HASFINISHED = 1,
@@ -28,48 +28,6 @@ typedef struct {
 	// Aligned to 16 bytes so struct has size of 80 bytes
 } RayData;
 
-
-/*float3 v[3];
-for (int i = 0; i < 3; ++i) v[i] = vertices[i].vertex;
-float lightArea = triangleArea(v);
-float3 distV = intersection - inData->ray.origin;
-float dist2 = dot(distV, distV);
-float solidAngle = (dot(realNormal, -rayDirection) * lightArea) / dist2;
-solidAngle = min(2 * PI, solidAngle);
-float pdf1 = 1 / solidAngle;
-float pdf2 = inData->pdf;
-float weight = pdf2 / (pdf1 + pdf2);
-return inData->multiplier * material->emissive.emissiveColour * weight;*/
-
-
-/*float3 f0;
-if (material->pbr.metallic) {
-f0 = material->pbr.reflectance;
-}
-else {
-f0 = material->pbr.f0NonMetal;
-}
-float f90 = 1.0f;
-float3 H = normalize(-rayDirection + L);
-float LdotH = saturate(dot(L, H));
-float3 F = F_Schlick(f0, f90, LdotH);
-float rand01 = randRandomU01(randomStream);
-if (material->pbr.metallic || rand01 < F.x) {
-float a = 1 - material->pbr.smoothness;
-float dotProduct = dot(H, realNormal);
-float denom = dotProduct*dotProduct*(a*a - 1) + 1;
-pdf2 = a*a / (PI*denom*denom);
-}
-else {
-pdf2 = dot(realNormal, L) / PI;
-}			*/
-
-//float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
-//solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
-//float pdf1 = 0;
-//if (solidAngle > EPSILON) {
-//	pdf1 = 1 / solidAngle;
-//}
 
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
@@ -230,16 +188,6 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 		else {
 			BRDF = brdfOnly(V, halfway, reflection, shadingNormal, material);
 		}
-
-
-		/*reflection = ggxWeightedImportanceDirection(edge1, edge2, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF);
-		float LdotH = saturate(dot(-rayDirection, realNormal));
-		float3 F = F_Schlick(f0, f90, LdotH);
-		if (!material->pbr.metallic && choiceValue > F.x) {
-		reflection = cosineWeightedDiffuseReflection(shadingNormal, edge2, invTransform, randomStream);
-		PDF = dot(realNormal, reflection) / PI;
-		}
-		BRDF = pbrBrdfChoice(normalize(-rayDirection), reflection, shadingNormal, material, choiceValue);*/
 	}
 	else if (material->type == DIFFUSE) {
 		reflection = cosineWeightedDiffuseReflection(shadingNormal, edge1, invTransform, randomStream);
@@ -336,7 +284,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		if (dot(shadingNormal, L) > EPSILON && dot(realNormal, L) > EPSILON && dot(lightNormal, -L) > EPSILON)// dot(realNormal, L) may be <0.0f for transparent materials?
 		{
 			if (material->type == PBR) {
-				BRDF = pbrBrdfChoice(-rayDirection, L, shadingNormal, material, material->pbr.smoothness > MAXSMOOTHNESS);
+				BRDF = pbrBrdfWithDiffuse(-rayDirection, L, shadingNormal, material, material->pbr.smoothness > MAXSMOOTHNESS);
 			} else if (material->type == DIFFUSE)
 			{
 
@@ -381,7 +329,7 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float3 V = -rayDirection;
 		float f90 = 1.0f;
 		float3 halfway;
-		reflection = ggxWeightedImportanceDirection(shadingNormal, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, NULL, &halfway);
+		reflection = ggxWeightedImportanceDirection(shadingNormal, rayDirection, invTransform, 1 - material->pbr.smoothness, randomStream, &PDF, &halfway);
 		cosineTerm = dot(shadingNormal, reflection);
 		if (cosineTerm < 0.05f || dot(realNormal, reflection) < EPSILON) {
 			outData->flags = SHADINGFLAGS_HASFINISHED;
@@ -392,22 +340,20 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		float rand01 = randRandomU01(randomStream);
 		if (!material->pbr.metallic && rand01 > F.x)
 		{
-			float3 c = material->pbr.baseColour;
 			reflection = cosineWeightedDiffuseReflection(shadingNormal, edge1, invTransform, randomStream);
-			//reflection = 0.0f;
-			PDF = INVPI;
-			cosineTerm = 1.0f; // simplification
-			BRDF = diffuseOnly(V, halfway, reflection, shadingNormal, material);
+			PDF = dot(reflection, shadingNormal) / PI;
+			//cosineTerm = dot(reflection, shadingNormal);// Already set (line 333)
+			BRDF = diffuseOnly(V, halfway, reflection, shadingNormal, material) / PI;
 		} else {
-			//float HdotN = dot(halfway, shadingNormal);
-			PDF = 1.0f;//D_Beckmann(HdotN, roughness) / D_GGX(HdotN, roughness); //already accounted by making D = 1.0f;
+			//PDF = INVPI;// PDF set by the ggx sampling function (line 332)
+			//cosineTerm = dot(reflection, shadingNormal);// Already set (line 333)
 			BRDF = brdfOnly(V, halfway, reflection, shadingNormal, material);
 			if (material->pbr.smoothness > MAXSMOOTHNESS) dospecular = true;
 		}
-		if (material->pbr.metallic) 
+		/*if (material->pbr.metallic) 
 		{
 			BRDF *= F;
-		}
+		}*/
 	} else if (material->type == BASIC_REFRACTIVE)
 	{
 		// Slide 34

@@ -161,30 +161,30 @@ float3 beckmannWeightedHalfway(
 
 float3 ggxWeightedImportanceDirection(float3 normal, float3 incidenceVector,
 	const __global float* invTransform,
-	float a_orig,
+	float alpha,
 	randStream* randomStream,
-	float* outScalingFactor,
+	float* outPDF,
 	float3* outHalfway)
 {
-	float3 orientedSample = ggxWeightedHalfway(normal, incidenceVector, invTransform, a_orig, randomStream);
+	float3 orientedSample = ggxWeightedHalfway(normal, incidenceVector, invTransform, alpha, randomStream);
 	float3 L = -incidenceVector;
-    float dotProduct = dot(orientedSample, normal);
-	if (outScalingFactor != NULL) *outScalingFactor = D_GGX(dotProduct, a_orig);
+    float NdotH = dot(orientedSample, normal);
+	if (outPDF != NULL) *outPDF = D_GGX(NdotH, alpha);
 	if (outHalfway != NULL) *outHalfway = orientedSample;
 	return normalize(2*dot(orientedSample, L)*orientedSample - L);
 }
 
 float3 beckmannWeightedImportanceDirection(float3 normal, float3 incidenceVector,
 	const __global float* invTransform,
-	float a_orig,
+	float alpha,
 	randStream* randomStream,
-	float* outScalingFactor,
+	float* outPDF,
 	float3* outHalfway)
 {
 	// Apply the normal transform (top level BVH)
 	float3 L = -incidenceVector;
-	float3 orientedSample = beckmannWeightedHalfway(normal, incidenceVector, invTransform, a_orig, randomStream);
-	if (outScalingFactor != NULL) *outScalingFactor = D_Beckmann(dot(orientedSample, normal), a_orig);
+	float3 orientedSample = beckmannWeightedHalfway(normal, incidenceVector, invTransform, alpha, randomStream);
+	if (outPDF != NULL) *outPDF = D_Beckmann(dot(orientedSample, normal), alpha);
 	if (outHalfway != NULL) *outHalfway = orientedSample;
 	return normalize(2*dot(orientedSample, L)*orientedSample - L);
 }

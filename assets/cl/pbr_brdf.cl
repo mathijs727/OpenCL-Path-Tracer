@@ -17,7 +17,7 @@
 // G = Geometry factor (height correlated Smith)
 // D = Normal distribution (GGX)
 
-float3 F_Schlick(float3 f0, float f90, float u)// u = NdotL
+float3 F_Schlick(float3 f0, float f90, float u)
 {
 	return f0 + (f90 - f0) * pow (1.0f - u, 5.0f);
 }
@@ -53,7 +53,6 @@ float G_SmithGGXCorrelated(float NdotL, float NdotV, float alpha)
 	float lambda_v = (-1 + sqrt(1 + alpha2 * (1 - NdotV2) / NdotV2)) / 2.0f;
 	float lambda_l = (-1 + sqrt(1 + alpha2 * (1 - NdotL2) / NdotL2)) / 2.0f;
 	float G_SmithGGXCorrelated = 1 / (1 + lambda_v + lambda_l);
-	//float V_SmithGGXCorrelated = G_SmithGGXCorrelated;
 
 	// Heavyside function f(a) = 1 if a > 0 else 0
 	// Last row of table 1 of "Movign Frostbite to PBR"
@@ -61,22 +60,21 @@ float G_SmithGGXCorrelated(float NdotL, float NdotV, float alpha)
 	//if (NdotL <= 0 || NdotV <= 0) {
 	//	return 0.0f;
 	//} else {
-		return G_SmithGGXCorrelated;
+	return G_SmithGGXCorrelated;
 	//}
-
-	
-	/*// This is the optimize version (including divide by 4 * NdotL * NdotV)
-	// Caution : the " NdotL *" and " NdotV *" are explicitely inversed , this is not a mistake .
-	float Lambda_GGXV = NdotL * sqrt((-NdotV * alpha2 + NdotV) * NdotV + alpha2);
-	float Lambda_GGXL = NdotV * sqrt((-NdotL * alpha2 + NdotL) * NdotL + alpha2);
-
-	return 0.5f / (Lambda_GGXV + Lambda_GGXL);*/
 }
 
-float V_SmithGGXCorrelated(float NdotL, float NdotV, float alphaG)
+// Simplification that merges the bottom part of the BRDF equation into the G function
+float G_SmithGGXCorrelated_IncludeFraction(float NdotL, float NdotV, float alphaG)
 {
+	// Original formulation of G_SmithGGX Correlated
+	// lambda_v = (-1 + sqrt ( alphaG2 * (1 - NdotL2 ) / NdotL2 + 1)) * 0.5f;
+	// lambda_l = (-1 + sqrt ( alphaG2 * (1 - NdotV2 ) / NdotV2 + 1)) * 0.5f;
+	// G_SmithGGXCorrelated = 1 / (1 + lambda_v + lambda_l );
+	// V_SmithGGXCorrelated = G_SmithGGXCorrelated / (4.0 f * NdotL * NdotV);
+
 	// This is the optimize version
-	float alphaG2 = alphaG * alphaG ;
+	float alphaG2 = alphaG * alphaG;
 	// Caution : the " NdotL *" and " NdotV *" are explicitely inversed , this is not a mistake .
 	float Lambda_GGXV = NdotL * sqrt (( - NdotV * alphaG2 + NdotV ) * NdotV + alphaG2 );
 	float Lambda_GGXL = NdotV * sqrt (( - NdotL * alphaG2 + NdotL ) * NdotL + alphaG2 );
@@ -130,7 +128,7 @@ float Fr_DisneyDiffuse(float NdotV, float NdotL, float LdotH, float linearRoughn
 //
 // Tells us linear roughness is sqrt of roughness (and not square):
 // https://seblagarde.wordpress.com/2014/04/14/dontnod-physically-based-rendering-chart-for-unreal-engine-4/
-float3 pbrBrdfChoice(
+float3 pbrBrdfWithDiffuse(
 	float3 V,
 	float3 L,
 	float3 N,
@@ -156,16 +154,14 @@ float3 pbrBrdfChoice(
 
 	// Specular BRDF
 	float3 F = F_Schlick(f0, f90, LdotH);
-	//float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
-	//float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
+	float G = G_SmithGGXCorrelated_IncludeFraction(NdotL, NdotV, roughness);
 	float D = D_GGX (NdotH , roughness);
-	//float D = D_Beckmann (NdotH, roughness);
+
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
-	float Vis = V_SmithGGXCorrelated(NdotL, NdotV, roughness);
-	Vis = fmin(Vis, 10.0f);
-	float3 Fr = D * F * Vis;
+	//G = fmin(G, 10.0f);
+	float3 Fr = D * G * F;
 
 	// Diffuse BRDF (called BRDF because it assumes light enters and exists at the same point,
 	//  but it tries to approximate diffuse scatering so maybe this should be called BTDF and
@@ -189,9 +185,12 @@ float3 pbrBrdf(
 	float3 L,
 	float3 N,
 	const __global Material* material) {
-	return pbrBrdfChoice(V,L,N,material,false);
+	return pbrBrdfWithDiffuse(V,L,N,material,false);
 }
 
+// This is the microfacet BRDF formula without the fresnel term:
+// (D * G) / (4 * (n.l) * (n.v))
+// Assumes the shading chooses between diffuse/reflection using the Fresnel term (Fresnel for reflection)
 float3 brdfOnly(
 	float3 V,
 	float3 H,
@@ -199,44 +198,22 @@ float3 brdfOnly(
 	float3 N,
 	const __global Material* material)
 {
-	//float3 f0;
-	//if (material->pbr.metallic) {
-	//	f0 = material->pbr.reflectance;
-	//} else {
-	//	f0 = material->pbr.f0NonMetal;
-	//}
-	//float f90 = 1.0f;
 	float roughness = 1.0f - material->pbr.smoothness;
 	float NdotV = fabs(dot(N, V)) + 1e-5f; // avoid artifact
-	//float LdotH = saturate(dot(L, H));
-	//float NdotH = saturate(dot(N, H));
 	float NdotL = saturate(dot(N, L));
-	//float VdotH = saturate(dot(V, H));
-	// Specular BRDF
-	//float3 F = F_Schlick(f0, f90, LdotH);
-	//float G = G_SmithGGXCorrelated(NdotL, NdotV, roughness);
-	//float G = G_SmithBeckmannCorrelated(VdotH, NdotV, roughness)*G_SmithBeckmannCorrelated(LdotH, NdotL, roughness);
-	//G = fmax(fmin(G,4.0f),0.f); // theoretically guaranteed to never clamp according to paper
-	//float D = D_GGX (NdotH , roughness);
-	//float D = D_Beckmann (NdotH, roughness);
-	//float D = 1.0f;
+	float NdotH = saturate(dot(N, H));
+	
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
-	float Vis = V_SmithGGXCorrelated(NdotL, NdotV, roughness);
-	Vis = fmin(Vis, 10.0f);
-	//float3 Fr;
-	//float denom = NdotL * NdotV;
-	//if (denom > EPSILON)
-	//{
-		//denom = fmax(0.05f, denom);
-		return Vis;
-	//}
-	//else {
-	//	return BLACK;
-	//}
+	float D = D_GGX(NdotH, roughness);
+	float G = G_SmithGGXCorrelated_IncludeFraction(NdotL, NdotV, roughness);
+	G = fmin(G, 10.0f);
+	return D * G;
 }
 
+// Disney diffuse without fresnel term.
+// Assumes the shading chooses between diffuse/reflection using the Fresnel term (1 - Fresnel for diffuse)
 float3 diffuseOnly(
 	float3 V,
 	float3 H,
@@ -255,7 +232,7 @@ float3 diffuseOnly(
 	// Diffuse BRDF (called BRDF because it assumes light enters and exists at the same point,
 	//  but it tries to approximate diffuse scatering so maybe this should be called BTDF and
 	//  call the whole function BSDF (which is BRDF + BTDF))
-	float Fd = Fr_DisneyDiffuse(NdotV, NdotL, LdotH, linearRoughness) / PI;
+	float Fd = Fr_DisneyDiffuse(NdotV, NdotL, LdotH, linearRoughness);
 	return Fd * material->pbr.baseColour;
 }
 
