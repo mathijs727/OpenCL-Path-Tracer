@@ -233,7 +233,7 @@ float3 diffuseOnly(
 	//  but it tries to approximate diffuse scatering so maybe this should be called BTDF and
 	//  call the whole function BSDF (which is BRDF + BTDF))
 	float Fd = Fr_DisneyDiffuse(NdotV, NdotL, LdotH, linearRoughness);
-	return Fd * material->pbr.baseColour;
+	return Fd * material->pbr.baseColour / PI;
 }
 
 

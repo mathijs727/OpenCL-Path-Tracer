@@ -152,7 +152,7 @@ void Game::Init()
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
-	//_ray_tracer->SetCubemap("assets/cubemap/xxx_c%02d.bmp");
+	_ray_tracer->SetCubemap("assets/cubemap/xxx_c%02d.bmp");
 	_ray_tracer->SetScene(_scene);
 	_ray_tracer->SetTarget(_out.GetGLTexture());
 }

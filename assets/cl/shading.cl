@@ -341,23 +341,24 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		if (!material->pbr.metallic && rand01 > F.x)
 		{
 			reflection = cosineWeightedDiffuseReflection(shadingNormal, edge1, invTransform, randomStream);
-			PDF = INVPI; // simplification of cosine term
-			cosineTerm = 1;
-			BRDF = diffuseOnly(V, halfway, reflection, shadingNormal, material) / PI;
-		} else {
-			// PDF set by the ggx sampling function (line 332)
 			//cosineTerm = dot(reflection, shadingNormal);// Already set (line 333)
-			PDF = 1.0f; // We set the PDF to 1 so that we do not have to calculate it in the BRDF function
+			PDF = INVPI; // cosine simplification
+			cosineTerm = 1.0f;
+			BRDF = diffuseOnly(V, halfway, reflection, shadingNormal, material);
+		} else {
+			//cosineTerm = dot(reflection, shadingNormal);// Already set (line 333)
+			//PDF = ...GGX_NDF...;// PDF set by the ggx sampling function (line 332)
+			PDF = 1.0f;// We set the PDF to 1 so that we do not have to calculate the NDF in the BRDF function
 			// This not only saves operations, but more importantly, it reduces floating point arithmatic errors.
 			BRDF = brdfOnlyNoFresnelNoNDF(V, halfway, reflection, shadingNormal, material);
+			if (material->pbr.metallic) 
+			{	
+				// since we are sampling the reflections every time for metallics, 
+				// they're not weighted based on the sampling rate. We need to multiply by the fresnel term
+				BRDF *= F;
+			}
 			if (material->pbr.smoothness > MAXSMOOTHNESS) dospecular = true;
-		}
-		if (material->pbr.metallic) 
-		{	
-			// since we are sampling the reflections every time for metallics, 
-			// they're not weighted based on the sampling rate. We need to multiply by the fresnel term
-			BRDF *= F;
-		}
+		}		
 	} else if (material->type == BASIC_REFRACTIVE)
 	{
 		// Slide 34
