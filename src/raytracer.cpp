@@ -20,13 +20,13 @@
 #include <clRNG\lfsr113.h>
 
 //#define PROFILE_OPENCL
-#define OPENCL_GL_INTEROP
+//#define OPENCL_GL_INTEROP
 //#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 20000000
 #define MAX_NUM_LIGHTS 256
 
-#define RANDOM_XOR32
-//#define RANDOM_LFSR113
+//#define RANDOM_XOR32
+#define RANDOM_LFSR113
 
 #define MAX_ACTIVE_RAYS 1280*720// Number of rays per pass (top performance = all pixels in 1 pass but very large buffer sizes at 4K?)
 

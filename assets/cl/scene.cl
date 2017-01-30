@@ -58,8 +58,13 @@ void loadScene(
 	scene->topLevelBvh = topLevelBvh;
 	scene->topLevelBvhRoot = topLevelBvhRoot;
 
-	for (int i = 0; i < 6; i++)
-		scene->cubemapTextureIndices[i] = cubemapTextureIndices[i];
+	if (cubemapTextureIndices != NULL)
+	{
+		for (int i = 0; i < 6; i++)
+			scene->cubemapTextureIndices[i] = cubemapTextureIndices[i];
+	} else {
+		scene->cubemapTextureIndices[0] = -1;
+	}
 }
 
 bool traceRay(
