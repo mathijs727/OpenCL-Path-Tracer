@@ -186,7 +186,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 			BRDF = diffuseOnly(V, halfway, reflection, shadingNormal, material);
 		}
 		else {
-			BRDF = brdfOnly(V, halfway, reflection, shadingNormal, material);
+			BRDF = brdfOnlyNoFresnelNoNDF(V, halfway, reflection, shadingNormal, material);
 		}
 	}
 	else if (material->type == DIFFUSE) {
@@ -347,7 +347,9 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		} else {
 			//PDF = INVPI;// PDF set by the ggx sampling function (line 332)
 			//cosineTerm = dot(reflection, shadingNormal);// Already set (line 333)
-			BRDF = brdfOnly(V, halfway, reflection, shadingNormal, material);
+			PDF = 1.0f;// We set the PDF to 1 so that we do not have to calculate it in the BRDF function
+			// This not only saves operations, but more importantly, it reduces floating point arithmatic errors.
+			BRDF = brdfOnlyNoFresnelNoNDF(V, halfway, reflection, shadingNormal, material);
 			if (material->pbr.smoothness > MAXSMOOTHNESS) dospecular = true;
 		}
 		/*if (material->pbr.metallic) 

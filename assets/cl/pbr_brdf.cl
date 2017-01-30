@@ -191,7 +191,7 @@ float3 pbrBrdf(
 // This is the microfacet BRDF formula without the fresnel term:
 // (D * G) / (4 * (n.l) * (n.v))
 // Assumes the shading chooses between diffuse/reflection using the Fresnel term (Fresnel for reflection)
-float3 brdfOnly(
+float3 brdfOnlyNoFresnelNoNDF(
 	float3 V,
 	float3 H,
 	float3 L,
@@ -206,10 +206,10 @@ float3 brdfOnly(
 	// The G function might return 0.0f because of the heavyside function.
 	// Since OpenCL math is not that strict (and we dont want it to be for performance reasons),
 	//  multiplying by 0.0f (which G may return) does not mean that Fr will actually become 0.0f.
-	float D = D_GGX(NdotH, roughness);
+	//float D = D_GGX(NdotH, roughness);
 	float G = G_SmithGGXCorrelated_IncludeFraction(NdotL, NdotV, roughness);
 	G = fmin(G, 10.0f);
-	return D * G;
+	return G;// * G;
 }
 
 // Disney diffuse without fresnel term.
