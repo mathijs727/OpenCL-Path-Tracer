@@ -341,13 +341,16 @@ float3 neeIsShading(// Next Event Estimation + Importance Sampling
 		if (!material->pbr.metallic && rand01 > F.x)
 		{
 			reflection = cosineWeightedDiffuseReflection(shadingNormal, edge1, invTransform, randomStream);
-			PDF = dot(reflection, shadingNormal) / PI;
+			// Simplification:
+			//PDF = dot(reflection, shadingNormal) / PI;
 			//cosineTerm = dot(reflection, shadingNormal);// Already set (line 333)
-			BRDF = diffuseOnly(V, halfway, reflection, shadingNormal, material) / PI;
+			PDF = INVPI;
+			cosineTerm = 1.0f;
+			BRDF = diffuseOnly(V, halfway, reflection, shadingNormal, material);
 		} else {
-			//PDF = INVPI;// PDF set by the ggx sampling function (line 332)
 			//cosineTerm = dot(reflection, shadingNormal);// Already set (line 333)
-			PDF = 1.0f;// We set the PDF to 1 so that we do not have to calculate it in the BRDF function
+			//PDF = ...GGX_NDF...;// PDF set by the ggx sampling function (line 332)
+			PDF = 1.0f;// We set the PDF to 1 so that we do not have to calculate the NDF in the BRDF function
 			// This not only saves operations, but more importantly, it reduces floating point arithmatic errors.
 			BRDF = brdfOnlyNoFresnelNoNDF(V, halfway, reflection, shadingNormal, material);
 			if (material->pbr.smoothness > MAXSMOOTHNESS) dospecular = true;
