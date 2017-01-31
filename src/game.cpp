@@ -36,96 +36,27 @@ void Game::Init()
 	//camera_transform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.0f);
 
+	auto planeMaterial = Material::PBRDielectric(glm::vec3(1.0f, 1.0f, 1.0f), 0.5f);
+	auto plane = std::make_shared<Mesh>("assets/3dmodels/plane/plane.obj");
+	_scene->add_node(plane);
 
-	{
-		auto cornell = std::make_shared<Mesh>();
-		cornell->loadFromFile("assets/3dmodels/cornel/CornellBox-Empty-RG.obj");
-		//_scene->add_node(cornell);
-	}
+	auto roughMetal = Material::PBRMetal(glm::vec3(0.672411f, 0.637331f, 0.585456f) /* Platinum */, 0.7f);
+	auto mirror = Material::PBRMetal(glm::vec3(0.672411f, 0.637331f, 0.585456f) /* Platinum */, 0.977f);
+	auto roughGlass = Material::Refractive(0.7f, 1.5f, glm::vec3(1, 0, 0), 3.f);
+	auto clearGlass = Material::Refractive(0.977f, 1.5f, glm::vec3(1, 0, 0), 3.f);
+	auto redRubber = Material::PBRDielectric(glm::vec3(1.0f, 0.2f, 0.2f), 0.6f);
+	auto ceramic = Material::PBRDielectric(glm::vec3(1.0f, 0.9f, 0.6f), 0.977f);
 
-	/*{
-		Transform transform;
-		transform.scale = glm::vec3(4.0f);
-		//transform.scale = glm::vec3(0.0001f);
-		//transform.orientation = glm::quat(glm::vec3(0, -1, 0));
+	auto sphereScale = glm::vec3(0.25f);
+	auto metalSphere = std::make_shared<Mesh>("assets/3dmodels/mitsuba/mitsuba-sphere.obj", roughMetal);
 
-		auto sphere = std::make_shared<Mesh>();
-		sphere->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply",
-			//Material::PBRMetal(
-			//	glm::vec3(0.955f, 0.638f, 0.538f), // Copper
-			//	0.8f));
-			Material::Refractive(0.8f, 1.5f, glm::vec3(1,0,0), 3.f));
-			//Material::BasicRefractive(1.5f, glm::vec3(1,0,0), 3.0f));
-		_scene->add_node(sphere, transform);
-	}*/
+	auto bunnyScale = glm::vec3(4.0f);
+	auto rubberBunny = std::make_shared<Mesh>("assets/3dmodels/stanford/bunny/bun_zipper.ply", redRubber);
+	auto glassBunny = std::make_shared<Mesh>("assets/3dmodels/stanford/bunny/bun_zipper.ply", roughGlass);
 
-	// Mitsuba Test Object:
-	// http://graphics.cs.williams.edu/data/meshes.xml
-	{
-		Transform transform;
-		transform.scale = glm::vec3(0.25f);
-		//transform.location = glm::vec3(0, 0.5f, 0);
-		//transform.orientation = glm::quat(glm::vec3(0, 1, 0));
-		auto testObject = std::make_shared<Mesh>();
-#if TRUE
-		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba-sphere.obj",
-			Material::PBRMetal(
-				glm::vec3(0.672411f, 0.637331f, 0.585456f), // Platinum
-				0.8f));
-			//Material::Refractive(0.8f, 1.5f, glm::vec3(1, 0, 0), 3.f));
-			//Material::PBRDielectric(
-			//	glm::vec3(1.0f, 1.0f, 1.0f),
-			//	0.8f));
-#else
-		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba.obj");
-#endif
-		_scene->add_node(testObject, transform);
-	}
-
-	/*{
-		Transform transform;
-		transform.scale = glm::vec3(4.0f);
-		//transform.location = glm::vec3(0, 0.5f, 0);
-		//transform.orientation = glm::quat(glm::vec3(0, 1, 0));
-		auto bunny = std::make_shared<Mesh>();
-#if TRUE
-		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply",
-			Material::Refractive(0.5f, 0.04f, 1.517));
-			//Material::PBRMetal(
-			//	glm::vec3(0.955f, 0.638f, 0.538f), // Copper
-			//	0.8f));
-			//Material::PBRDielectric(
-			//	glm::vec3(1.0f, 0.1f, 0.1f),
-			//	0.8f,
-			//	0.08f));
-#else
-		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
-#endif
-		_scene->add_node(bunny, transform);
-	}*/
-
-	/*{
-		Transform transform;
-		transform.scale = glm::vec3(0.5f);
-		transform.location = glm::vec3(0, 0.5f, 0);
-		transform.orientation = glm::quat(glm::vec3(0, 1, 0));
-		auto cube = std::make_shared<Mesh>();
-#if TRUE
-		cube->loadFromFile("assets/3dmodels/cube/cube.obj",
-			Material::PBR(
-				glm::vec3(0, 0, 0),
-				glm::vec3(0.955f, 0.638f, 0.538f), // Copper
-				0.3f,
-				1.0f));
-#else
-		cube->loadFromFile("assets/3dmodels/cube/cube.obj");
-#endif
-		_cube_scene_node = &_scene->add_node(cube, transform);
-	}*/
-	
-
-
-
+	_scene->add_node(metalSphere, Transform(glm::vec3(), glm::quat(), sphereScale));
+	_scene->add_node(rubberBunny, Transform(glm::vec3(1.0f, -.1f, 0.0f), glm::quat(), bunnyScale));
+	_scene->add_node(glassBunny, Transform(glm::vec3(-1.0f, -.1f, 0.0f), glm::quat(), bunnyScale));
 
 	
 	// Sponza
