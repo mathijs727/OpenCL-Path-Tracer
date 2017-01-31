@@ -126,6 +126,27 @@ void Game::Init()
 
 
 
+	/*auto planeMaterial = Material::PBRDielectric(glm::vec3(1.0f, 1.0f, 1.0f), 0.5f);
+	auto plane = std::make_shared<Mesh>("assets/3dmodels/plane/plane.obj");
+	_scene->add_node(plane);
+
+	auto roughMetal = Material::PBRMetal(glm::vec3(0.672411f, 0.637331f, 0.585456f), 0.7f);
+	auto mirror = Material::PBRMetal(glm::vec3(0.672411f, 0.637331f, 0.585456f), 0.977f);
+	auto roughGlass = Material::Refractive(0.7f, 1.5f, glm::vec3(1, 0, 0), 3.f);
+	auto clearGlass = Material::Refractive(0.977f, 1.5f, glm::vec3(1, 0, 0), 3.f);
+	auto redRubber = Material::PBRDielectric(glm::vec3(1.0f, 0.2f, 0.2f), 0.6f);
+	auto ceramic = Material::PBRDielectric(glm::vec3(1.0f, 0.9f, 0.6f), 0.977f);
+
+	auto sphereScale = glm::vec3(0.25f);
+	auto metalSphere = std::make_shared<Mesh>("assets/3dmodels/mitsuba/mitsuba-sphere.obj", roughMetal);
+
+	auto bunnyScale = glm::vec3(4.0f);
+	auto rubberBunny = std::make_shared<Mesh>("assets/3dmodels/stanford/bunny/bun_zipper.ply", redRubber);
+	auto glassBunny = std::make_shared<Mesh>("assets/3dmodels/stanford/bunny/bun_zipper.ply", roughGlass);
+
+	_scene->add_node(metalSphere, Transform(glm::vec3(), glm::quat(), sphereScale));
+	_scene->add_node(rubberBunny, Transform(glm::vec3(1.0f, -.1f, 0.0f), glm::quat(), bunnyScale));
+	_scene->add_node(glassBunny, Transform(glm::vec3(-1.0f, -.1f, 0.0f), glm::quat(), bunnyScale));*/
 
 	
 	// Sponza

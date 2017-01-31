@@ -20,9 +20,20 @@ public:
 	Mesh() {}
 	~Mesh() { }
 	
+	Mesh(const char* file, const Material& overrideMaterial, const Transform& offset = Transform())
+	{
+		loadFromFile(file, overrideMaterial, offset);
+	}
+
+	Mesh(const char* file, const Transform& offset = Transform())
+	{
+		loadFromFile(file, offset);
+	}
+
 	void loadFromFile(
 		const char* file,
 		const Transform& offset = Transform());
+
 	void loadFromFile(
 		const char* file,
 		const Material& overrideMaterial,
