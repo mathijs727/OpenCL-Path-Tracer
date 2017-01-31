@@ -17,7 +17,8 @@
 #include "camera.cl"
 #include "atomic.cl"
 #include "kernel_data.cl"
-#include "cubemap.cl"
+//#include "cubemap.cl"
+#include "skydome.cl"
 
 
 __kernel void generatePrimaryRays(
@@ -200,7 +201,7 @@ __kernel void shade(
 	__global EmissiveTriangle* emissiveTriangles,
 	__global Material* materials,
 	__read_only image2d_array_t textures,
-	__read_only image2d_array_t cubemapTextures,
+	__read_only image2d_t skydomeTexture,
 	__global randHostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
@@ -263,7 +264,7 @@ __kernel void shade(
 			} else
 #endif
 			{
-				outputPixels[rayData->outputPixel] += neeMisShading(
+				outputPixels[rayData->outputPixel] += neeIsShading(
 					&scene,
 					shadingData->triangleIndex,
 					intersection,
@@ -281,9 +282,9 @@ __kernel void shade(
 			active = true;
 			// Store random streams
 			randCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
-		} else if (inputData->hasCubemap) {
-			// We missed the scene, but have a skybox to fall back to
-			float3 c = 250.0f * readCubeMap(normalize(rayData->ray.direction), cubemapTextures, &scene);
+		} else if (inputData->hasSkydome) {
+			// We missed the scene, but have a skydome to fall back to
+			float3 c = readSkydome(normalize(rayData->ray.direction), skydomeTexture);
 			outputPixels[rayData->outputPixel] += rayData->multiplier * c;
 		}
 	}

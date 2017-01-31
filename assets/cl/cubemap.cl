@@ -30,7 +30,7 @@ float3 sampleTex(image2d_array_t textures, float x, float y, int texId)
 
 // https://www.ics.uci.edu/~gopi/CS211B/RayTracing%20tutorial.pdf
 // Page 20
-float3 readCubeMap(float3 dir, image2d_array_t textures, __local Scene* scene)
+float3 readCubeMap(float3 dir, image2d_array_t textures)
 {
 	float3 c = (float3)(0,0,0);
 
