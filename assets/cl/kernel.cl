@@ -301,6 +301,12 @@ __kernel void shade(
 __kernel void updateKernelData(
 	volatile __global KernelData* data)
 {
+	// This is executed in its own kernel to prevent race conditions.
+	// If we were to set a variable to 0 from thread 0 and then increment;
+	//  then a race condition would occur between work groups. If workgroup 1
+	//  would start execution before the counter is reset by workgroup 0, than
+	//  the results of workgroup 1 are incorrect. This cannot be fixed by
+	//  using barriers since those are only valid within a work group.
 	data->numInRays = data->numOutRays;
 	data->numOutRays = 0;
 	data->numShadowRays = 0;
