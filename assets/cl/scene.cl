@@ -42,7 +42,6 @@ void loadScene(
 	const __global SubBvhNode* subBvh,
 	uint topLevelBvhRoot,
 	const __global TopBvhNode* topLevelBvh,
-	volatile __global int* cubemapTextureIndices,
 	__local Scene* scene) {
 	scene->refractiveIndex =  1.000277f;
 	
@@ -57,14 +56,6 @@ void loadScene(
 	scene->subBvh = subBvh;
 	scene->topLevelBvh = topLevelBvh;
 	scene->topLevelBvhRoot = topLevelBvhRoot;
-
-	if (cubemapTextureIndices != NULL)
-	{
-		for (int i = 0; i < 6; i++)
-			scene->cubemapTextureIndices[i] = cubemapTextureIndices[i];
-	} else {
-		scene->cubemapTextureIndices[0] = -1;
-	}
 }
 
 bool traceRay(

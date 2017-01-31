@@ -3,6 +3,8 @@
 #include "camera.h"
 #include "scene.h"
 #include "template/surface.h"
+#include "texture.h"
+#include "hdrtexture.h"
 #include "ray.h"
 #include "pixel.h"
 #include "Texture.h"
@@ -50,7 +52,7 @@ struct KernelData
 	uint maxRays;
 	uint newRays;
 
-	cl_int _cubemapTextureIndices[6];
+	bool hasCubemap;
 };
 
 #ifdef WIN32
@@ -190,8 +192,9 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 	_num_emissive_triangles[0] = 0;
 	_num_emissive_triangles[1] = 0;
 
-	for (int i = 0; i < 6; i++)
-		_cubemap_tex_indices[i] = -1;
+	_has_cubemap = false;
+	//for (int i = 0; i < 6; i++)
+	//	_cubemap_tex_indices[i] = -1;
 }
 
 raytracer::RayTracer::~RayTracer()
@@ -206,9 +209,27 @@ void raytracer::RayTracer::SetCubemap(const char* filePathFormat)
 	for (int i = 0; i < 6; i++)
 	{
 		sprintf(fileNameBuffer.get(), filePathFormat, i);
-		Texture tex = Texture(fileNameBuffer.get(), true);
-		_cubemap_tex_indices[i] = tex.getId();
+		HDRTexture tex = HDRTexture(fileNameBuffer.get(), true);
+		
+		// Origin (o) and region (r)
+		cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = i;
+
+		cl::size_t<3> r;
+		r[0] = HDRTexture::HDR_TEXTURE_WIDTH;
+		r[1] = HDRTexture::HDR_TEXTURE_HEIGHT;
+		r[2] = 1;// r[2] must be 1?
+		cl_int err = _queue.enqueueWriteImage(
+			_cubemap_textures,
+			CL_TRUE,
+			o,
+			r,
+			0,
+			0,
+			tex.getData(tex.getId()));
+		checkClErr(err, "CommandQueue::enqueueWriteImage");
 	}
+
+	_has_cubemap = true;
 }
 
 void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
@@ -450,8 +471,9 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	data.maxRays = MAX_ACTIVE_RAYS;
 	data.newRays = 0;
 
-	for (int i = 0; i < 6; i++)
-		data._cubemapTextureIndices[i] = _cubemap_tex_indices[i];
+	//for (int i = 0; i < 6; i++)
+	//	data._cubemapTextureIndices[i] = _cubemap_tex_indices[i];
+	data.hasCubemap = _has_cubemap;
 
 	cl_int err = _queue.enqueueWriteBuffer(
 		_ray_kernel_data,
@@ -518,7 +540,8 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		_shading_kernel.setArg(8, _emissive_trangles[_active_buffers]);
 		_shading_kernel.setArg(9, _materials[_active_buffers]);
 		_shading_kernel.setArg(10, _material_textures);
-		_shading_kernel.setArg(11, _random_streams);
+		_shading_kernel.setArg(11, _cubemap_textures);
+		_shading_kernel.setArg(12, _random_streams);
 
 		err = _queue.enqueueNDRangeKernel(
 			_shading_kernel,
@@ -1037,6 +1060,8 @@ void raytracer::RayTracer::InitBuffers(
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
+
+
 	// https://www.khronos.org/registry/cl/specs/opencl-cplusplus-1.2.pdf
 	_material_textures = cl::Image2DArray(_context,
 		CL_MEM_READ_ONLY,
@@ -1047,6 +1072,17 @@ void raytracer::RayTracer::InitBuffers(
 		0, 0, NULL,// Unused host_ptr
 		&err);
 	checkClErr(err, "cl::Image2DArray");
+
+	_cubemap_textures = cl::Image2DArray(_context,
+		CL_MEM_READ_ONLY,
+		cl::ImageFormat(CL_RGBA, CL_FLOAT),
+		6,
+		HDRTexture::HDR_TEXTURE_WIDTH,
+		HDRTexture::HDR_TEXTURE_HEIGHT,
+		0, 0, NULL,// Unused host_ptr
+		&err);
+	checkClErr(err, "cl::Image2DArray");
+
 
 
 	_ray_traversal_buffer = cl::Buffer(_context,

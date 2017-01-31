@@ -22,7 +22,7 @@ typedef struct
 	uint maxRays;
 	uint newRays;
 
-	int cubemapTextureIndices[6];
+	bool hasCubemap;
 } KernelData;
 
 typedef struct

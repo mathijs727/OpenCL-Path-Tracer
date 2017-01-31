@@ -107,7 +107,6 @@ __kernel void intersectShadows(
 			subBvh,
 			inputData->topLevelBvhRoot,
 			topLevelBvh,
-			NULL,
 			&scene);
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
@@ -161,7 +160,6 @@ __kernel void intersectWalk(
 			subBvh,
 			inputData->topLevelBvhRoot,
 			topLevelBvh,
-			NULL,
 			&scene);
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
@@ -202,6 +200,7 @@ __kernel void shade(
 	__global EmissiveTriangle* emissiveTriangles,
 	__global Material* materials,
 	__read_only image2d_array_t textures,
+	__read_only image2d_array_t cubemapTextures,
 	__global randHostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
@@ -223,7 +222,6 @@ __kernel void shade(
 			NULL,
 			0,
 			NULL,
-			inputData->cubemapTextureIndices,
 			&scene);
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
@@ -282,9 +280,9 @@ __kernel void shade(
 			active = true;
 			// Store random streams
 			randCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
-		} else if (scene.cubemapTextureIndices[0] != -1) {
+		} else if (inputData->hasCubemap) {
 			// We missed the scene, but have a skybox to fall back to
-			float3 c = 500.0f *  readCubeMap(normalize(rayData->ray.direction), textures, &scene);
+			float3 c = 250.0f * readCubeMap(normalize(rayData->ray.direction), cubemapTextures, &scene);
 			outputPixels[rayData->outputPixel] += rayData->multiplier * c;
 		}
 	}

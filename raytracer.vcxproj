@@ -22,6 +22,7 @@
     <ClCompile Include="src\binned_bvh.cpp" />
     <ClCompile Include="src\bvh_test.cpp" />
     <ClCompile Include="src\fast_binned_bvh.cpp" />
+    <ClCompile Include="src\hdrtexture.cpp" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
     <ClCompile Include="src\imgui\imgui_draw.cpp" />
@@ -47,6 +48,7 @@
     <ClInclude Include="src\binned_bvh.h" />
     <ClInclude Include="src\bvh_test.h" />
     <ClInclude Include="src\fast_binned_bvh.h" />
+    <ClInclude Include="src\hdrtexture.h" />
     <ClInclude Include="src\imesh.h" />
     <ClInclude Include="src\imgui\imconfig.h" />
     <ClInclude Include="src\imgui\imgui.h" />

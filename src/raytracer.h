@@ -57,8 +57,8 @@ private:
 private:
 	std::shared_ptr<Scene> _scene;
 
+	bool _has_cubemap;
 	cl_uint _scr_width, _scr_height;
-	cl_int _cubemap_tex_indices[6];
 
 	cl::Context _context;
 	cl::Device _device;
@@ -105,6 +105,7 @@ private:
 	cl::Buffer _materials[2];
 	cl::Buffer _sub_bvh[2];
 	
+	cl::Image2DArray _cubemap_textures;
 	cl::Image2DArray _material_textures;
 
 	std::vector<TopBvhNode> _top_bvh_nodes_host;

@@ -33,7 +33,6 @@ float3 sampleTex(image2d_array_t textures, float x, float y, int texId)
 float3 readCubeMap(float3 dir, image2d_array_t textures, __local Scene* scene)
 {
 	float3 c = (float3)(0,0,0);
-	
 
 	if (fabs(dir.x) >= fabs(dir.y) &&
 		fabs(dir.x) >= fabs(dir.z))
@@ -43,14 +42,14 @@ float3 readCubeMap(float3 dir, image2d_array_t textures, __local Scene* scene)
 			// Right
 			c = sampleTex(textures,
 				1.0f - (dir.y / dir.x + 1.0f) * 0.5f,
-				1.0f - (dir.z / dir.x + 1.0f) * 0.5f,
-				scene->cubemapTextureIndices[CUBEMAP_RIGHT]);
+				(dir.z / dir.x + 1.0f) * 0.5f,
+				CUBEMAP_RIGHT);
 		} else if (dir.x > 0.0f) {
 			// Left
 			c = sampleTex(textures,
 				(dir.y / dir.x + 1.0f) * 0.5f,
-				1.0f - (dir.z / dir.x + 1.0f) * 0.5f,
-				scene->cubemapTextureIndices[CUBEMAP_LEFT]);
+				(dir.z / dir.x + 1.0f) * 0.5f,
+				CUBEMAP_LEFT);
 		}
 	} else if (fabs(dir.y) >= fabs(dir.x)  && fabs(dir.y) >= fabs(dir.z))
 	{
@@ -59,15 +58,15 @@ float3 readCubeMap(float3 dir, image2d_array_t textures, __local Scene* scene)
 			// Top
 			c = sampleTex(textures,
 				(dir.z / dir.y + 1.0f) * 0.5f,
-				1.0f - (dir.x / dir.y + 1.0f) * 0.5f,
-				scene->cubemapTextureIndices[CUBEMAP_TOP]);
+				(dir.x / dir.y + 1.0f) * 0.5f,
+				CUBEMAP_TOP);
 		} else if (dir.y < 0.0f)
 		{
 			// Bottom
 			c = sampleTex(textures,
 				(dir.z / dir.y + 1.0f) * 0.5f,
-				(dir.x / dir.y + 1.0f) * 0.5f,
-				scene->cubemapTextureIndices[CUBEMAP_BOTTOM]);
+				1.0f - (dir.x / dir.y + 1.0f) * 0.5f,
+				CUBEMAP_BOTTOM);
 		}
 	} else if (fabs(dir.z) >= fabs(dir.x) && fabs(dir.z) >= fabs(dir.y))
 	{
@@ -76,15 +75,15 @@ float3 readCubeMap(float3 dir, image2d_array_t textures, __local Scene* scene)
 			// Front
 			c = sampleTex(textures,
 				1.0f - (dir.y / dir.z + 1.0f) * 0.5f,
-				(dir.x / dir.z + 1.0f) * 0.5f,
-				scene->cubemapTextureIndices[CUBEMAP_FRONT]);
+				1.0f - (dir.x / dir.z + 1.0f) * 0.5f,
+				CUBEMAP_FRONT);
 		} else if (dir.z > 0.0f)
 		{
 			// Back
 			c = sampleTex(textures,
 				1.0f - (dir.y / dir.z + 1.0f) * 0.5f,
-				1.0f - (dir.x / dir.z + 1.0f) * 0.5f,
-				scene->cubemapTextureIndices[CUBEMAP_BACK]);
+				(dir.x / dir.z + 1.0f) * 0.5f,
+				CUBEMAP_BACK);
 		}
 	}
 
