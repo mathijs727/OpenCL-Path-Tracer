@@ -83,6 +83,7 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 			if (solidAngle > EPSILON) {
 				pdf1 = 1 / solidAngle;
 			}
+			else return BLACK;
 			float pdf2 = inData->pdf;
 			if (pdf2 < EPSILON) return BLACK;
 			float weight = pdf2 / (pdf1 + pdf2);
@@ -154,7 +155,6 @@ float3 neeMisShading(// Next Event Estimation + Multiple Importance Sampling
 				solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
 				solidAngle = clamp(solidAngle, 0.0f, 2*PI);// Prevents white dots when dist is really small
 			}
-			solidAngle = min(2 * PI, solidAngle);// Prevents white dots when dist is really small
 			float pdf1 = 1 / solidAngle;
 
 			//float solidAngle = (dot(lightNormal, -L) * lightArea) / dist2;
