@@ -37,11 +37,11 @@ void Game::Init()
 	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.0f);
 
 
-	{
-		auto cornell = std::make_shared<Mesh>();
-		cornell->loadFromFile("assets/3dmodels/cornel/CornellBox-Empty-RG.obj");
-		_scene->add_node(cornell);
-	}
+	//{
+	//	auto cornell = std::make_shared<Mesh>();
+	//	cornell->loadFromFile("assets/3dmodels/cornel/CornellBox-Empty-RG.obj");
+	//	_scene->add_node(cornell);
+	//}
 
 	/*{
 		Transform transform;
@@ -59,29 +59,29 @@ void Game::Init()
 		_scene->add_node(sphere, transform);
 	}*/
 
-	// Mitsuba Test Object:
-	// http://graphics.cs.williams.edu/data/meshes.xml
-	{
-		Transform transform;
-		transform.scale = glm::vec3(0.25f);
-		//transform.location = glm::vec3(0, 0.5f, 0);
-		//transform.orientation = glm::quat(glm::vec3(0, 1, 0));
-		auto testObject = std::make_shared<Mesh>();
-#if TRUE
-		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba-sphere.obj",
-			Material::PBRMetal(
-				glm::vec3(0.672411f, 0.637331f, 0.585456f), // Platinum
-				0.8f));
-			//Material::Refractive(0.8f, 1.5f, glm::vec3(1, 0, 0), 3.f));
-			//Material::PBRDielectric(
-			//	glm::vec3(1.0f, 1.0f, 1.0f),
-			//	0.8f));
-#else
-		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba.obj");
-#endif
-		_scene->add_node(testObject, transform);
-	}
-
+//	// Mitsuba Test Object:
+//	// http://graphics.cs.williams.edu/data/meshes.xml
+//	{
+//		Transform transform;
+//		transform.scale = glm::vec3(0.25f);
+//		//transform.location = glm::vec3(0, 0.5f, 0);
+//		//transform.orientation = glm::quat(glm::vec3(0, 1, 0));
+//		auto testObject = std::make_shared<Mesh>();
+//#if TRUE
+//		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba-sphere.obj",
+//			Material::PBRMetal(
+//				glm::vec3(0.672411f, 0.637331f, 0.585456f), // Platinum
+//				0.8f));
+//			//Material::Refractive(0.8f, 1.5f, glm::vec3(1, 0, 0), 3.f));
+//			//Material::PBRDielectric(
+//			//	glm::vec3(1.0f, 1.0f, 1.0f),
+//			//	0.8f));
+//#else
+//		testObject->loadFromFile("assets/3dmodels/mitsuba/mitsuba.obj");
+//#endif
+//		_scene->add_node(testObject, transform);
+//	}
+//
 	/*{
 		Transform transform;
 		transform.scale = glm::vec3(4.0f);
@@ -126,7 +126,7 @@ void Game::Init()
 
 
 
-	/*auto planeMaterial = Material::PBRDielectric(glm::vec3(1.0f, 1.0f, 1.0f), 0.5f);
+	auto planeMaterial = Material::PBRDielectric(glm::vec3(1.0f, 1.0f, 1.0f), 0.5f);
 	auto plane = std::make_shared<Mesh>("assets/3dmodels/plane/plane.obj");
 	_scene->add_node(plane);
 
@@ -149,7 +149,7 @@ void Game::Init()
 	_scene->add_node(cornellBox, Transform(glm::vec3(0.0f, -.01f, 0.0f), glm::quat(), glm::vec3(2.0f)));
 	_scene->add_node(metalSphere, Transform(glm::vec3(), glm::quat(), sphereScale));
 	_scene->add_node(rubberBunny, Transform(glm::vec3(1.0f, -.1f, 0.0f), glm::quat(), bunnyScale));
-	_scene->add_node(glassBunny, Transform(glm::vec3(-1.0f, -.1f, 0.0f), glm::quat(), bunnyScale));*/
+	_scene->add_node(glassBunny, Transform(glm::vec3(-1.0f, -.1f, 0.0f), glm::quat(), bunnyScale));
 
 	
 	// Sponza
@@ -177,7 +177,7 @@ void Game::Init()
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer->SetScene(_scene);
-	//_ray_tracer->SetSkydome("assets/skydome/DF360_005_Ref.hdr", true, 75.0f);
+	_ray_tracer->SetSkydome("assets/skydome/DF360_005_Ref.hdr", true, 75.0f);
 	_ray_tracer->SetTarget(_out.GetGLTexture());
 }
 
