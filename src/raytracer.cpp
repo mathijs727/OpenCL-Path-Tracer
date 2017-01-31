@@ -52,7 +52,7 @@ struct KernelData
 	uint maxRays;
 	uint newRays;
 
-	bool hasCubemap;
+	bool hasSkydome;
 };
 
 #ifdef WIN32
@@ -192,44 +192,47 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 	_num_emissive_triangles[0] = 0;
 	_num_emissive_triangles[1] = 0;
 
-	_has_cubemap = false;
-	//for (int i = 0; i < 6; i++)
-	//	_cubemap_tex_indices[i] = -1;
+	_skydome_loaded = false;
 }
 
 raytracer::RayTracer::~RayTracer()
 {
 }
 
-void raytracer::RayTracer::SetCubemap(const char* filePathFormat)
+void raytracer::RayTracer::SetSkydome(const char* fileName, bool isLinear, float multiplier)
 {
-	auto fileNameBuffer = std::make_unique<char[]>(strlen(filePathFormat) + 20);
+	_skydome = std::make_unique<HDRTexture>(fileName, isLinear, multiplier);
+	
+	// Allocate space on the GPU for the skydome
+	cl_int err;
+	_skydome_texture = cl::Image2D(_context,
+		CL_MEM_READ_ONLY,
+		cl::ImageFormat(CL_RGBA, CL_FLOAT),
+		_skydome->getWidth(),
+		_skydome->getHeight(),
+		0,
+		NULL,// Unused host_ptr
+		&err);
+	checkClErr(err, "cl::Image2DArray");
 
-	// For each side of the cube
-	for (int i = 0; i < 6; i++)
-	{
-		sprintf(fileNameBuffer.get(), filePathFormat, i);
-		HDRTexture tex = HDRTexture(fileNameBuffer.get(), true);
-		
-		// Origin (o) and region (r)
-		cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = i;
+	// Origin (o), o[2] must be 0 (see OpenCL docs)
+	cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = 0;
 
-		cl::size_t<3> r;
-		r[0] = HDRTexture::HDR_TEXTURE_WIDTH;
-		r[1] = HDRTexture::HDR_TEXTURE_HEIGHT;
-		r[2] = 1;// r[2] must be 1?
-		cl_int err = _queue.enqueueWriteImage(
-			_cubemap_textures,
-			CL_TRUE,
-			o,
-			r,
-			0,
-			0,
-			tex.getData(tex.getId()));
-		checkClErr(err, "CommandQueue::enqueueWriteImage");
-	}
+	cl::size_t<3> r;
+	r[0] = _skydome->getWidth();
+	r[1] = _skydome->getHeight();
+	r[2] = 1;// r[2] must be 1 (see OpenCL docs)
+	err = _queue.enqueueWriteImage(
+		_skydome_texture,
+		CL_TRUE,
+		o,
+		r,
+		0,
+		0,
+		HDRTexture::getData(_skydome->getId()));
+	checkClErr(err, "CommandQueue::enqueueWriteImage");
 
-	_has_cubemap = true;
+	_skydome_loaded = true;
 }
 
 void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
@@ -472,8 +475,8 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	data.newRays = 0;
 
 	//for (int i = 0; i < 6; i++)
-	//	data._cubemapTextureIndices[i] = _cubemap_tex_indices[i];
-	data.hasCubemap = _has_cubemap;
+	//	data._skydomeTextureIndices[i] = _skydome_tex_indices[i];
+	data.hasSkydome = _skydome_loaded;
 
 	cl_int err = _queue.enqueueWriteBuffer(
 		_ray_kernel_data,
@@ -540,7 +543,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		_shading_kernel.setArg(8, _emissive_trangles[_active_buffers]);
 		_shading_kernel.setArg(9, _materials[_active_buffers]);
 		_shading_kernel.setArg(10, _material_textures);
-		_shading_kernel.setArg(11, _cubemap_textures);
+		_shading_kernel.setArg(11, _skydome_texture);
 		_shading_kernel.setArg(12, _random_streams);
 
 		err = _queue.enqueueNDRangeKernel(
@@ -1069,16 +1072,6 @@ void raytracer::RayTracer::InitBuffers(
 		std::max((u32)1u, (u32)Texture::getNumUniqueSurfaces()),
 		Texture::TEXTURE_WIDTH,
 		Texture::TEXTURE_HEIGHT,
-		0, 0, NULL,// Unused host_ptr
-		&err);
-	checkClErr(err, "cl::Image2DArray");
-
-	_cubemap_textures = cl::Image2DArray(_context,
-		CL_MEM_READ_ONLY,
-		cl::ImageFormat(CL_RGBA, CL_FLOAT),
-		6,
-		HDRTexture::HDR_TEXTURE_WIDTH,
-		HDRTexture::HDR_TEXTURE_HEIGHT,
 		0, 0, NULL,// Unused host_ptr
 		&err);
 	checkClErr(err, "cl::Image2DArray");

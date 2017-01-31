@@ -22,7 +22,7 @@ typedef struct
 	uint maxRays;
 	uint newRays;
 
-	bool hasCubemap;
+	bool hasSkydome;
 } KernelData;
 
 typedef struct

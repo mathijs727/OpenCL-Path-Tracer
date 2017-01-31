@@ -40,7 +40,7 @@ void Game::Init()
 	{
 		auto cornell = std::make_shared<Mesh>();
 		cornell->loadFromFile("assets/3dmodels/cornel/CornellBox-Empty-RG.obj");
-		_scene->add_node(cornell);
+		//_scene->add_node(cornell);
 	}
 
 	/*{
@@ -153,7 +153,7 @@ void Game::Init()
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer->SetScene(_scene);
-	_ray_tracer->SetCubemap("assets/cubemap/xxx_c%02d.bmp");
+	_ray_tracer->SetSkydome("assets/skydome/DF360_005_Ref.hdr", true, 75.0f);
 	_ray_tracer->SetTarget(_out.GetGLTexture());
 }
 
@@ -209,7 +209,7 @@ void Tmpl8::Game::UpdateGui()
 
 	ImGui::Separator();
 
-	ImGui::Text("Rendered %d / %d frames", _ray_tracer->GetNumPasses(), _ray_tracer->GetMaxPasses());
+	ImGui::Text("%d / %d rays per pixel", _ray_tracer->GetNumPasses(), _ray_tracer->GetMaxPasses());
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 	ImGui::End();

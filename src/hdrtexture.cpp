@@ -10,10 +10,10 @@ std::unordered_map<std::string, int> raytracer::HDRTexture::s_texturesMap =
 std::vector<std::unique_ptr<float[]>> raytracer::HDRTexture::s_textures =
 	std::vector<std::unique_ptr<float[]>>();
 
-const uint raytracer::HDRTexture::HDR_TEXTURE_WIDTH;// = 1024;
-const uint raytracer::HDRTexture::HDR_TEXTURE_HEIGHT;// = 1024;
+//const uint raytracer::HDRTexture::HDR_TEXTURE_WIDTH;// = 1024;
+//const uint raytracer::HDRTexture::HDR_TEXTURE_HEIGHT;// = 1024;
 
-raytracer::HDRTexture::HDRTexture(const char* fileName, bool isLinear)
+raytracer::HDRTexture::HDRTexture(const char* fileName, bool isLinear, float multiplier)
 {
 	int texId;
 	auto res = s_texturesMap.find(fileName);
@@ -30,36 +30,37 @@ raytracer::HDRTexture::HDRTexture(const char* fileName, bool isLinear)
 		FIBITMAP* dib = FreeImage_ConvertToRGBF(tmp);
 		FreeImage_Unload(tmp);
 
-		if (FreeImage_GetWidth(dib) != HDR_TEXTURE_WIDTH ||
+		/*if (FreeImage_GetWidth(dib) != HDR_TEXTURE_WIDTH ||
 			FreeImage_GetHeight(dib) != HDR_TEXTURE_HEIGHT)
 		{
 			dib = FreeImage_Rescale(dib, HDR_TEXTURE_WIDTH, HDR_TEXTURE_HEIGHT, FILTER_LANCZOS3);
-		}
+		}*/
+		_width = FreeImage_GetWidth(dib);
+		_height = FreeImage_GetHeight(dib);
 
 		if (!isLinear)
 			FreeImage_AdjustGamma(dib, 1.0f / 2.2f);
 
 		
-		size_t memSize = HDR_TEXTURE_WIDTH * HDR_TEXTURE_HEIGHT * sizeof(float) * 4;
-		s_textures.emplace_back(new float[HDR_TEXTURE_WIDTH * HDR_TEXTURE_HEIGHT * 4]);
+		size_t memSize = _width * _height * sizeof(float) * 4;
+		s_textures.emplace_back(new float[_width * _height * 4]);
 
 		int w = FreeImage_GetWidth(dib);
 		int h = FreeImage_GetHeight(dib);
 		std::cout << "dims: (" << w << ", " << h << ")" << std::endl;
 		
 		// Store and add alpha channel
-		//FreeImage_ConvertToRawBits((byte*)data, dib, FreeImage_GetPitch(dib), 4 * sizeof(float), FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, true);
-		//memcpy(data, FreeImage_GetBits(dib), memSize);
+		// We need to do this because OpenCL (at least on AMD) does not support RGB float textures, just RGBA float textures
 		float* inData = (float*)FreeImage_GetBits(dib);
 		float* outData = s_textures[texId].get();
-		for (int y = 0; y < HDR_TEXTURE_HEIGHT; y++)
+		for (int y = 0; y < _height; y++)
 		{
-			for (int x = 0; x < HDR_TEXTURE_WIDTH; x++)
+			for (int x = 0; x < _width; x++)
 			{
-				outData[(y * HDR_TEXTURE_WIDTH + x) * 4 + 0] = inData[(y * HDR_TEXTURE_WIDTH + x) * 3 + 0];
-				outData[(y * HDR_TEXTURE_WIDTH + x) * 4 + 1] = inData[(y * HDR_TEXTURE_WIDTH + x) * 3 + 1];
-				outData[(y * HDR_TEXTURE_WIDTH + x) * 4 + 2] = inData[(y * HDR_TEXTURE_WIDTH + x) * 3 + 2];
-				outData[(y * HDR_TEXTURE_WIDTH + x) * 4 + 3] = 1.0f;
+				outData[(y * _width + x) * 4 + 0] = inData[(y * _width + x) * 3 + 0] * multiplier;
+				outData[(y * _width + x) * 4 + 1] = inData[(y * _width + x) * 3 + 1] * multiplier;
+				outData[(y * _width + x) * 4 + 2] = inData[(y * _width + x) * 3 + 2] * multiplier;
+				outData[(y * _width + x) * 4 + 3] = 1.0f;
 			}
 		}
 		FreeImage_Unload(dib);
