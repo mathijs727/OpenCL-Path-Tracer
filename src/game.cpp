@@ -54,6 +54,9 @@ void Game::Init()
 	auto rubberBunny = std::make_shared<Mesh>("assets/3dmodels/stanford/bunny/bun_zipper.ply", redRubber);
 	auto glassBunny = std::make_shared<Mesh>("assets/3dmodels/stanford/bunny/bun_zipper.ply", roughGlass);
 
+	auto cornellBox = std::make_shared<Mesh>("assets/3dmodels/cornel/CornellBox-Empty-RG.obj");
+
+	_scene->add_node(cornellBox, Transform(glm::vec3(0.0f, -.01f, 0.0f), glm::quat(), glm::vec3(2.0f)));
 	_scene->add_node(metalSphere, Transform(glm::vec3(), glm::quat(), sphereScale));
 	_scene->add_node(rubberBunny, Transform(glm::vec3(1.0f, -.1f, 0.0f), glm::quat(), bunnyScale));
 	_scene->add_node(glassBunny, Transform(glm::vec3(-1.0f, -.1f, 0.0f), glm::quat(), bunnyScale));
