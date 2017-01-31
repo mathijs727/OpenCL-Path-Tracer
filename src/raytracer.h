@@ -108,6 +108,7 @@ private:
 	cl::Buffer _materials[2];
 	cl::Buffer _sub_bvh[2];
 	
+	cl::Image2D _no_texture;
 	cl::Image2D _skydome_texture;
 	cl::Image2DArray _material_textures;
 

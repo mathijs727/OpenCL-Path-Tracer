@@ -193,6 +193,19 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 	_num_emissive_triangles[1] = 0;
 
 	_skydome_loaded = false;
+
+	// Allocate space on the GPU for the skydome
+	cl_int err;
+	_no_texture = cl::Image2D(_context,
+		CL_MEM_READ_ONLY,
+		cl::ImageFormat(CL_RGBA, CL_FLOAT),
+		256,
+		256,
+		0,
+		NULL,// Unused host_ptr
+		&err);
+	checkClErr(err, "cl::Image2DArray");
+
 }
 
 raytracer::RayTracer::~RayTracer()
@@ -543,7 +556,10 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		_shading_kernel.setArg(8, _emissive_trangles[_active_buffers]);
 		_shading_kernel.setArg(9, _materials[_active_buffers]);
 		_shading_kernel.setArg(10, _material_textures);
-		_shading_kernel.setArg(11, _skydome_texture);
+		if (_skydome_loaded)
+			_shading_kernel.setArg(11, _skydome_texture);
+		else
+			_shading_kernel.setArg(11, _no_texture);
 		_shading_kernel.setArg(12, _random_streams);
 
 		err = _queue.enqueueNDRangeKernel(
