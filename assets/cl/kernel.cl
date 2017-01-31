@@ -236,6 +236,7 @@ __kernel void shade(
 			outRayData.flags = 0;
 			outShadowRayData.flags = 0;
 			outRayData.numBounces = rayData->numBounces + 1;
+			outRayData.pdf = 0;
 
 			float3 intersection = rayData->ray.origin + shadingData->t * rayData->ray.direction;
 
@@ -246,7 +247,7 @@ __kernel void shade(
 #ifdef COMPARE_SHADING
 			if ((rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2)
 			{
-				outputPixels[rayData->outputPixel] += neeIsShading(
+				outputPixels[rayData->outputPixel] += neeMisShading(
 					&scene,
 					shadingData->triangleIndex,
 					intersection,
@@ -262,7 +263,7 @@ __kernel void shade(
 			} else
 #endif
 			{
-				outputPixels[rayData->outputPixel] += neeIsShading(
+				outputPixels[rayData->outputPixel] += neeMisShading(
 					&scene,
 					shadingData->triangleIndex,
 					intersection,
