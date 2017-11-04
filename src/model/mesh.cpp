@@ -7,9 +7,9 @@
 #include <iostream>
 #include "template/includes.h"// Includes opencl
 #include "template/surface.h"
-#include "sbvh.h"
-#include "binned_bvh.h"
-#include "fast_binned_bvh.h"
+#include "bvh/sbvh.h"
+#include "bvh/binned_bvh.h"
+#include "bvh/fast_binned_bvh.h"
 #include <string>
 #include <fstream>
 

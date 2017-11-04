@@ -3,9 +3,9 @@
 #include <memory>
 #include "shapes.h"
 #include "ray.h"
-#include "material.h"
 #include "light.h"
-#include "mesh.h"
+#include "model/mesh.h"
+#include "model/material.h"
 
 #define MAX_TRACE_DEPTH 6
 

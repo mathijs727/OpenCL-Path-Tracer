@@ -5,7 +5,7 @@
 #include "shapes.h"
 #include "transform.h"
 #include "material.h"
-#include "binned_bvh.h"
+#include "bvh/binned_bvh.h"
 #include "vertices.h"
 #include "imesh.h"
 

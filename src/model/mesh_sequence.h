@@ -3,7 +3,7 @@
 #include "transform.h"
 #include "vertices.h"
 #include "imesh.h"
-#include "bvh_nodes.h"
+#include "bvh/bvh_nodes.h"
 #include <vector>
 
 struct aiMesh;

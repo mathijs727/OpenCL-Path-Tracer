@@ -6,9 +6,10 @@
 #include "raytracer.h"
 #include "timer.h"
 #include "gloutput.h"
-#include "mesh.h"
-#include "mesh_sequence.h"
-#include "bvh_test.h"
+#include "model/mesh.h"
+#include "model/mesh_sequence.h"
+#include "bvh/bvh_test.h"
+
 #include <iostream>
 #include <glm\gtx\euler_angles.hpp>
 
@@ -206,7 +207,7 @@ void Tmpl8::Game::UpdateGui()
 
 	ImGui::Separator();
 
-	ImGui::Text("%d / %d rays per pixel", _ray_tracer->GetNumPasses(), _ray_tracer->GetMaxPasses());
+	ImGui::Text("%d / %d samples per pixel", _ray_tracer->GetNumPasses(), _ray_tracer->GetMaxPasses());
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 	ImGui::End();

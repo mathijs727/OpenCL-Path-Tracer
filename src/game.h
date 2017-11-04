@@ -4,7 +4,8 @@
 #include "raytracer.h"
 #include "gloutput.h"
 #include "imgui/imgui.h"
-#include "mesh_sequence.h"
+#include "model/mesh_sequence.h"
+
 #include <memory>
 #include <unordered_map>
 

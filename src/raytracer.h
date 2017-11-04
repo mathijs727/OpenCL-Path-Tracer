@@ -1,9 +1,9 @@
 #pragma once
 //#include "template/template.h"// Includes template/cl.hpp
 #include "template/includes.h"
-#include "top_bvh.h"
+#include "bvh/top_bvh.h"
 #include "vertices.h"
-#include "material.h"
+#include "model/material.h"
 #include <memory>
 #include <vector>
 #include "hdrtexture.h"

@@ -3,7 +3,7 @@
 #include "bvh_nodes.h"
 #include "vertices.h"
 #include "types.h"
-#include "mesh.h"
+#include "model/mesh.h"
 
 namespace raytracer
 {

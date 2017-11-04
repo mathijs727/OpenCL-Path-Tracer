@@ -1,6 +1,6 @@
 #pragma once
 #include "types.h"
-#include "material.h"
+#include "model/material.h"
 #include <glm.hpp>
 
 namespace raytracer

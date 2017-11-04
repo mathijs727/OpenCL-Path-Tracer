@@ -1,6 +1,6 @@
 #pragma once
 #include"vertices.h"
-#include "bvh_nodes.h"
+#include "bvh/bvh_nodes.h"
 #include "material.h"
 #include "types.h"
 

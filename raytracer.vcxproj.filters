@@ -30,31 +30,7 @@
     <ClCompile Include="src\raytracer.cpp" />
     <ClCompile Include="src\light.cpp" />
     <ClCompile Include="src\gloutput.cpp" />
-    <ClCompile Include="src\mesh.cpp">
-      <Filter>model</Filter>
-    </ClCompile>
-    <ClCompile Include="src\top_bvh.cpp">
-      <Filter>bvh</Filter>
-    </ClCompile>
-    <ClCompile Include="src\binned_bvh.cpp">
-      <Filter>bvh</Filter>
-    </ClCompile>
-    <ClCompile Include="src\mesh_sequence.cpp">
-      <Filter>model</Filter>
-    </ClCompile>
-    <ClCompile Include="src\bvh_test.cpp">
-      <Filter>bvh</Filter>
-    </ClCompile>
-    <ClCompile Include="src\sbvh.cpp">
-      <Filter>bvh</Filter>
-    </ClCompile>
     <ClCompile Include="src\texture.cpp" />
-    <ClCompile Include="src\refit_bvh.cpp">
-      <Filter>bvh</Filter>
-    </ClCompile>
-    <ClCompile Include="src\fast_binned_bvh.cpp">
-      <Filter>bvh</Filter>
-    </ClCompile>
     <ClCompile Include="src\imgui\imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
@@ -68,6 +44,30 @@
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\hdrtexture.cpp" />
+    <ClCompile Include="src\bvh\binned_bvh.cpp">
+      <Filter>bvh</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bvh\bvh_test.cpp">
+      <Filter>bvh</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bvh\fast_binned_bvh.cpp">
+      <Filter>bvh</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bvh\refit_bvh.cpp">
+      <Filter>bvh</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bvh\sbvh.cpp">
+      <Filter>bvh</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bvh\top_bvh.cpp">
+      <Filter>bvh</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model\mesh.cpp">
+      <Filter>model</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model\mesh_sequence.cpp">
+      <Filter>model</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game.h" />
@@ -93,46 +93,7 @@
     <ClInclude Include="src\template\includes.h">
       <Filter>template code</Filter>
     </ClInclude>
-    <ClInclude Include="src\mesh.h">
-      <Filter>model</Filter>
-    </ClInclude>
-    <ClInclude Include="src\aabb.h">
-      <Filter>bvh</Filter>
-    </ClInclude>
-    <ClInclude Include="src\bvh_nodes.h">
-      <Filter>bvh</Filter>
-    </ClInclude>
-    <ClInclude Include="src\top_bvh.h">
-      <Filter>bvh</Filter>
-    </ClInclude>
-    <ClInclude Include="src\binned_bvh.h">
-      <Filter>bvh</Filter>
-    </ClInclude>
-    <ClInclude Include="src\material.h">
-      <Filter>model</Filter>
-    </ClInclude>
-    <ClInclude Include="src\vertices.h">
-      <Filter>model</Filter>
-    </ClInclude>
-    <ClInclude Include="src\imesh.h">
-      <Filter>model</Filter>
-    </ClInclude>
-    <ClInclude Include="src\mesh_sequence.h">
-      <Filter>model</Filter>
-    </ClInclude>
-    <ClInclude Include="src\bvh_test.h">
-      <Filter>bvh</Filter>
-    </ClInclude>
-    <ClInclude Include="src\sbvh.h">
-      <Filter>bvh</Filter>
-    </ClInclude>
     <ClInclude Include="src\texture.h" />
-    <ClInclude Include="src\refit_bvh.h">
-      <Filter>bvh</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fast_binned_bvh.h">
-      <Filter>bvh</Filter>
-    </ClInclude>
     <ClInclude Include="src\template\cl12.hpp">
       <Filter>template code</Filter>
     </ClInclude>
@@ -158,5 +119,41 @@
       <Filter>imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\hdrtexture.h" />
+    <ClInclude Include="src\bvh\aabb.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bvh\binned_bvh.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bvh\bvh_nodes.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bvh\bvh_test.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bvh\fast_binned_bvh.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bvh\refit_bvh.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bvh\sbvh.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bvh\top_bvh.h">
+      <Filter>bvh</Filter>
+    </ClInclude>
+    <ClInclude Include="src\model\imesh.h">
+      <Filter>model</Filter>
+    </ClInclude>
+    <ClInclude Include="src\model\material.h">
+      <Filter>model</Filter>
+    </ClInclude>
+    <ClInclude Include="src\model\mesh.h">
+      <Filter>model</Filter>
+    </ClInclude>
+    <ClInclude Include="src\model\mesh_sequence.h">
+      <Filter>model</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -19,23 +19,23 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\binned_bvh.cpp" />
-    <ClCompile Include="src\bvh_test.cpp" />
-    <ClCompile Include="src\fast_binned_bvh.cpp" />
+    <ClCompile Include="src\bvh\binned_bvh.cpp" />
+    <ClCompile Include="src\bvh\bvh_test.cpp" />
+    <ClCompile Include="src\bvh\fast_binned_bvh.cpp" />
+    <ClCompile Include="src\bvh\refit_bvh.cpp" />
+    <ClCompile Include="src\bvh\sbvh.cpp" />
+    <ClCompile Include="src\bvh\top_bvh.cpp" />
     <ClCompile Include="src\hdrtexture.cpp" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
     <ClCompile Include="src\imgui\imgui_draw.cpp" />
     <ClCompile Include="src\imgui\imgui_impl_sdl_gl3.cpp" />
-    <ClCompile Include="src\mesh_sequence.cpp" />
-    <ClCompile Include="src\refit_bvh.cpp" />
-    <ClCompile Include="src\sbvh.cpp" />
-    <ClCompile Include="src\top_bvh.cpp" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\game.cpp" />
     <ClCompile Include="src\gloutput.cpp" />
     <ClCompile Include="src\light.cpp" />
-    <ClCompile Include="src\mesh.cpp" />
+    <ClCompile Include="src\model\mesh.cpp" />
+    <ClCompile Include="src\model\mesh_sequence.cpp" />
     <ClCompile Include="src\raytracer.cpp" />
     <ClCompile Include="src\scene.cpp" />
     <ClCompile Include="src\template\surface.cpp" />
@@ -44,12 +44,15 @@
     <ClCompile Include="src\texture.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\aabb.h" />
-    <ClInclude Include="src\binned_bvh.h" />
-    <ClInclude Include="src\bvh_test.h" />
-    <ClInclude Include="src\fast_binned_bvh.h" />
+    <ClInclude Include="src\bvh\aabb.h" />
+    <ClInclude Include="src\bvh\binned_bvh.h" />
+    <ClInclude Include="src\bvh\bvh_nodes.h" />
+    <ClInclude Include="src\bvh\bvh_test.h" />
+    <ClInclude Include="src\bvh\fast_binned_bvh.h" />
+    <ClInclude Include="src\bvh\refit_bvh.h" />
+    <ClInclude Include="src\bvh\sbvh.h" />
+    <ClInclude Include="src\bvh\top_bvh.h" />
     <ClInclude Include="src\hdrtexture.h" />
-    <ClInclude Include="src\imesh.h" />
     <ClInclude Include="src\imgui\imconfig.h" />
     <ClInclude Include="src\imgui\imgui.h" />
     <ClInclude Include="src\imgui\imgui_impl_sdl_gl3.h" />
@@ -57,17 +60,14 @@
     <ClInclude Include="src\imgui\stb_rect_pack.h" />
     <ClInclude Include="src\imgui\stb_textedit.h" />
     <ClInclude Include="src\imgui\stb_truetype.h" />
-    <ClInclude Include="src\mesh_sequence.h" />
-    <ClInclude Include="src\refit_bvh.h" />
-    <ClInclude Include="src\sbvh.h" />
-    <ClInclude Include="src\top_bvh.h" />
-    <ClInclude Include="src\bvh_nodes.h" />
     <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\game.h" />
     <ClInclude Include="src\gloutput.h" />
     <ClInclude Include="src\light.h" />
-    <ClInclude Include="src\material.h" />
-    <ClInclude Include="src\mesh.h" />
+    <ClInclude Include="src\model\imesh.h" />
+    <ClInclude Include="src\model\material.h" />
+    <ClInclude Include="src\model\mesh.h" />
+    <ClInclude Include="src\model\mesh_sequence.h" />
     <ClInclude Include="src\pixel.h" />
     <ClInclude Include="src\ray.h" />
     <ClInclude Include="src\raytracer.h" />
@@ -81,7 +81,6 @@
     <ClInclude Include="src\texture.h" />
     <ClInclude Include="src\transform.h" />
     <ClInclude Include="src\types.h" />
-    <ClInclude Include="src\vertices.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectName>Template</ProjectName>
@@ -156,7 +155,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>include;include\clRNG;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\clRNG;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include;$(ProjectDir)/src/</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -195,7 +194,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(INTELOCLSDKROOT)/include;include;include\clRNG;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(INTELOCLSDKROOT)/include;include;include\clRNG;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include;$(ProjectDir)/src/</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -236,7 +235,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>include;include\clRNG;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;include\clRNG;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include;$(ProjectDir)/src/</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -281,7 +280,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>$(INTELOCLSDKROOT)/include;include;include\clRNG;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(INTELOCLSDKROOT)/include;include;include\clRNG;include\SDL2;include\freeimage;include\glm;$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include;$(ProjectDir)/src/</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>

@@ -8,9 +8,9 @@
 #include <string>
 #include "template/includes.h"// Includes opencl
 #include "template/surface.h"
-#include "binned_bvh.h"
-#include "sbvh.h"
-#include "refit_bvh.h"
+#include "bvh/binned_bvh.h"
+#include "bvh/sbvh.h"
+#include "bvh/refit_bvh.h"
 
 using namespace raytracer;
 
