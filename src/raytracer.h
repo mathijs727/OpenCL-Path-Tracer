@@ -117,19 +117,5 @@ private:
 	cl::Buffer _top_bvh[2];
 };
 
-
-
-
-#ifdef _DEBUG
-#define checkClErr(ERROR_CODE, NAME) \
-	if ((ERROR_CODE) != CL_SUCCESS) { \
-		std::cout << "OpenCL ERROR: " << NAME << " " << (ERROR_CODE) << " (" << __FILE__ << ":" << __LINE__ << ")" << std::endl; \
-		system("PAUSE"); \
-		exit(EXIT_FAILURE); \
-	}
-#else
-#define checkClErr(ERROR_CODE, NAME)
-#endif
-
 }
 

@@ -21,4 +21,6 @@
 // Find CGLGetCurrentContext on macOS
 #include <OpenGL/OpenGL.h>
 #include <OpenCL/cl_gl_ext.h>
+#elif __linux__
+#include <GL/glxew.h>
 #endif

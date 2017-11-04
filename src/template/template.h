@@ -30,11 +30,7 @@ typedef unsigned char byte;
 #include <chrono>
 #include <stdlib.h>
 #include <cassert>
-#ifdef __linux__
-#include <FreeImage.h>
-#else
-#include <freeimage.h>
-#endif
+
 /*
 #ifdef _WIN32
 extern "C" 

@@ -1,6 +1,18 @@
 #include "hdrtexture.h"
-#include "types.h"
+
+#ifdef __linux__
+// https://stackoverflow.com/questions/7047013/using-c-with-objective-c-how-can-i-fix-conflicting-declaration-typedef-int
+// FreeImage contains typedefs for BYTE and BOOL which are also in X11
 #include <FreeImage.h>
+#ifndef CARD8
+#define BYTE CARD8
+#define BOOL CARD8
+#endif
+#else
+#include <freeimage.h>
+#endif
+
+#include "types.h"
 #include <vector>
 #include <unordered_map>
 #include <iostream>

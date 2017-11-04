@@ -5,7 +5,7 @@
 struct Timer
 {
 	typedef std::chrono::high_resolution_clock Clock;
-	typedef std::chrono::steady_clock::time_point TimePoint;
+	typedef std::chrono::high_resolution_clock::time_point TimePoint;
 	typedef std::chrono::microseconds MicroSeconds;
 
 	TimePoint start;

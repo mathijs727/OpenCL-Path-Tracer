@@ -11,7 +11,7 @@
 #include "bvh/bvh_test.h"
 
 #include <iostream>
-#include <glm\gtx\euler_angles.hpp>
+#include <glm/gtx/euler_angles.hpp>
 
 using namespace raytracer;
 using namespace Tmpl8;

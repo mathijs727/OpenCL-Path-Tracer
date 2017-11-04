@@ -1,7 +1,6 @@
 #include "scene.h"
 #include <algorithm>
 #include <iostream>
-#include <crtdbg.h>
 
 using namespace raytracer;
 

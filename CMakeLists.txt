@@ -19,14 +19,18 @@ add_executable(raytracer "")
 include(src/CMakeLists.txt)
 
 target_include_directories(raytracer PRIVATE ${OpenCL_INCLUDE_DIRS})
-target_include_directories(raytracer PRIVATE ${OPENGL_INCLUDE_DIRS})
+target_include_directories(raytracer PRIVATE ${OPENGL_INCLUDE_DIR})
 target_include_directories(raytracer PRIVATE ${GLEW_INCLUDE_DIRS})
 target_include_directories(raytracer PRIVATE ${SDL2_INCLUDE_DIRS})
 target_include_directories(raytracer PRIVATE ${FREEIMAGE_INCLUDE_DIRS})
 target_include_directories(raytracer PRIVATE ${ASSIMP_INCLUDE_DIRS})
 target_include_directories(raytracer PRIVATE ${GLM_INCLUDE_DIRS})
 
-message(STATUS "OpenCL libs: ${OpenCL_LIBRARIES}")
+target_include_directories(raytracer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/libraries/include/)
+
+message(STATUS "OpenCL_INCLUDE_DIRS: ${OpenCL_INCLUDE_DIRS}")
+message(STATUS "OpenGL_INCLUDE_DIRS: ${OPENGL_INCLUDE_DIR}")
+
 target_link_libraries(raytracer ${OpenCL_LIBRARIES})
 target_link_libraries(raytracer ${OPENGL_LIBRARIES})
 target_link_libraries(raytracer ${GLEW_LIBRARIES})
@@ -38,7 +42,7 @@ target_link_libraries(raytracer ${ASSIMP_LIBRARY})
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-msse4.1") 
 
 set_target_properties(raytracer PROPERTIES
-    CXX_STANDARD 11# Require C++ 14
+    CXX_STANDARD 14# Require C++ 14
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
 )

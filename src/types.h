@@ -18,5 +18,5 @@ typedef unsigned char byte;
 	}
 #define UNION_STRUCT_FUNCTIONS(CLASSNAME) \
 	CLASSNAME() { } \
-	CLASSNAME(CLASSNAME& other) { memcpy(this, &other, sizeof(CLASSNAME)); } \
-	CLASSNAME& operator=(CLASSNAME& other) { memcpy(this, &other, sizeof(CLASSNAME)); return *this; }
+	CLASSNAME(const CLASSNAME& other) { memcpy(this, &other, sizeof(CLASSNAME)); } \
+	CLASSNAME& operator=(const CLASSNAME& other) { memcpy(this, &other, sizeof(CLASSNAME)); return *this; }

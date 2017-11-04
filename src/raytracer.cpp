@@ -19,7 +19,8 @@
 #include <stdlib.h>
 #include <chrono>
 #include <random>
-#include <clRNG\lfsr113.h>
+
+#include "clRNG/lfsr113.h"
 
 //#define PROFILE_OPENCL
 #define OPENCL_GL_INTEROP
@@ -403,7 +404,8 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 
 	// Easier than setting dirty flag all the time, bit more work intensive but not a big deal
 	static CameraData prevFrameCamData = { };
-	if (memcmp(&camera.get_camera_data(), &prevFrameCamData, sizeof(CameraData)) != 0)
+	CameraData newCameraData = camera.get_camera_data();
+	if (memcmp(&newCameraData, &prevFrameCamData, sizeof(CameraData)) != 0)
 	{
 		prevFrameCamData = camera.get_camera_data();
 		ClearAccumulationBuffer();
@@ -650,7 +652,7 @@ void raytracer::RayTracer::Accumulate(const Camera& camera)
 
 void raytracer::RayTracer::ClearAccumulationBuffer()
 {
-	cl_float3 zero; zero.x = 0.0f, zero.y = 0.0f, zero.z = 0.0f, zero.w = 0.0f;
+	cl_float3 zero = { };
 	_queue.enqueueFillBuffer(
 		_accumulation_buffer,
 		zero,
@@ -794,7 +796,7 @@ void raytracer::RayTracer::CopyNextAnimationFrameData()
 
 void raytracer::RayTracer::CollectTransformedLights(const SceneNode* node, const glm::mat4& transform)
 {
-	auto& newTransform = transform * node->transform.matrix();
+	auto newTransform = transform * node->transform.matrix();
 	if (node->mesh != -1)
 	{
 		auto& mesh = _scene->get_meshes()[node->mesh];
@@ -811,7 +813,6 @@ void raytracer::RayTracer::CollectTransformedLights(const SceneNode* node, const
 			result.vertices[1] = newTransform * vertices[triangle.indices[1]].vertex;
 			result.vertices[2] = newTransform * vertices[triangle.indices[2]].vertex;
 			result.material = materials[triangle.material_index];
-			result.material.emissive.emissiveColour;
 			_emissive_triangles_host.push_back(result);
 		}
 	}

@@ -1,5 +1,5 @@
 #include "camera.h"
-#include "detail/func_trigonometric.hpp"
+#include <glm/detail/func_trigonometric.hpp>
 
 using namespace raytracer;
 
