@@ -20,7 +20,7 @@
 #include <chrono>
 #include <random>
 
-#include "clRNG/lfsr113.h"
+#include <clRNG/lfsr113.h>
 
 //#define PROFILE_OPENCL
 #define OPENCL_GL_INTEROP

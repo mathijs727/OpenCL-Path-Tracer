@@ -1,5 +1,7 @@
 include(${CMAKE_CURRENT_LIST_DIR}/bvh/CMakeLists.txt)
 include(${CMAKE_CURRENT_LIST_DIR}/model/CMakeLists.txt)
+include(${CMAKE_CURRENT_LIST_DIR}/imgui/CMakeLists.txt)
+include(${CMAKE_CURRENT_LIST_DIR}/template/CMakeLists.txt)
 
 target_sources(raytracer
 	PRIVATE
