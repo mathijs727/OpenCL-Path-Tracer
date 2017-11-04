@@ -61,7 +61,7 @@ void Game::Init()
 		//transform.location = glm::vec3(0, 0.5f, 0);
 		//transform.orientation = glm::quat(glm::vec3(0, 1, 0));
 		auto bunny = std::make_shared<Mesh>();
-#if TRUE
+#if 1
 		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply",
 			//Material::Refractive(0.5f, 0.04f, 1.517));
 			Material::PBRMetal(
@@ -83,7 +83,7 @@ void Game::Init()
 		transform.location = glm::vec3(0, 0.5f, 0);
 		transform.orientation = glm::quat(glm::vec3(0, 1, 0));
 		auto cube = std::make_shared<Mesh>();
-#if TRUE
+#if 1
 		cube->loadFromFile("assets/3dmodels/cube/cube.obj",
 			Material::PBR(
 				glm::vec3(0, 0, 0),

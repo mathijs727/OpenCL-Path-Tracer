@@ -407,7 +407,7 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
 	CameraData newCameraData = camera.get_camera_data();
 	if (memcmp(&newCameraData, &prevFrameCamData, sizeof(CameraData)) != 0)
 	{
-		prevFrameCamData = camera.get_camera_data();
+		prevFrameCamData = newCameraData;
 		ClearAccumulationBuffer();
 		_rays_per_pixel = 0;
 	}
