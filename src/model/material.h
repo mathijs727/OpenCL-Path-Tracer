@@ -1,10 +1,10 @@
 #pragma once
 
-#include <glm.hpp>
+#include <glm/glm.hpp>
 #include "template/includes.h"
 #include "template/surface.h"
 #include "types.h"
-#include "Texture.h"
+#include "texture.h"
 #include "light.h"
 #include <algorithm>
 #include <vector>

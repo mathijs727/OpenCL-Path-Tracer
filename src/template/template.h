@@ -29,7 +29,7 @@ typedef unsigned char byte;
 #include <vector>
 #include <chrono>
 #include <stdlib.h>
-#include <assert.h>
+#include <cassert>
 #ifdef __linux__
 #include <FreeImage.h>
 #else

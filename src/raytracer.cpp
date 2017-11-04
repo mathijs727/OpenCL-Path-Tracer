@@ -7,7 +7,7 @@
 #include "hdrtexture.h"
 #include "ray.h"
 #include "pixel.h"
-#include "Texture.h"
+#include "texture.h"
 #include "template/includes.h"
 #include <algorithm>
 #include <iostream>

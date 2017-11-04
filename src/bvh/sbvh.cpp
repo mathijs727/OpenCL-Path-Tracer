@@ -1,10 +1,12 @@
 #include "sbvh.h"
+#include "bvh_nodes.h"
+//#include <xutility>
+#include "aabb.h"
+
 #include <numeric>
 #include <array>
 #include <stack>
-#include "bvh_nodes.h"
-#include <xutility>
-#include "aabb.h"
+#include <cassert>
 #include <glm/gtx/norm.hpp>
 
 #define BVH_SPLITS 8
@@ -16,7 +18,7 @@
 
 template<typename Itr>
 bool checkRange(Itr begin, uint count) {
-	std::unordered_set<Itr::value_type> test_set(begin, begin + count);
+	std::unordered_set<typename Itr::value_type> test_set(begin, begin + count);
 	return test_set.size() == count;
 }
 
@@ -25,6 +27,7 @@ raytracer::AABB clipBounds(raytracer::AABB clipper, raytracer::AABB clippee) {
 	for (u32 ax = 0; ax < 3; ++ax) {
 		result.min[ax] = glm::max(clipper.min[ax], clippee.min[ax]);
 		result.max[ax] = glm::min(clipper.max[ax], clippee.max[ax]);
+		std::assert((ax==0));
 	}
 	return result;
 }

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <glm.hpp>
-#include <gtc/quaternion.hpp>
-#include <gtc/matrix_transform.hpp>
-#include <gtx/matrix_operation.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/matrix_operation.hpp>
 
 namespace raytracer {
 

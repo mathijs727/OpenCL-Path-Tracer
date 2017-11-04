@@ -1,13 +1,14 @@
 #pragma once
-#include "glm.hpp"
 #include "types.h"
-#include <vector>
 #include "shapes.h"
 #include "transform.h"
 #include "material.h"
 #include "bvh/binned_bvh.h"
 #include "vertices.h"
 #include "imesh.h"
+
+#include <glm/glm.hpp>
+#include <vector>
 
 struct aiMesh;
 struct aiScene;

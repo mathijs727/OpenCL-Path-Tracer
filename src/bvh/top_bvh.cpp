@@ -4,7 +4,7 @@
 #include <numeric>
 #include <array>
 #include <algorithm>
-#include <crtdbg.h>
+//#include <crtdbg.h>
 
 using namespace raytracer;
 

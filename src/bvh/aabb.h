@@ -1,7 +1,7 @@
 #pragma once
-#include <glm.hpp>
 #include "types.h"
 #include "template/includes.h"
+#include <glm/glm.hpp>
 
 namespace raytracer {
 	struct AABB
