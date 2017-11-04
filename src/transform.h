@@ -29,7 +29,7 @@ struct Transform
 
 	Transform() { }
 
-	Transform(const glm::vec3& location, const glm::quat& orientation = glm::quat(), const glm::vec3& scale = glm::vec3(1.f)) : location(location), orientation(orientation) {}
+	Transform(const glm::vec3& location, const glm::quat& orientation = glm::quat(), const glm::vec3& scale = glm::vec3(1.f)) : location(location), orientation(orientation), scale(scale) {}
 
 	glm::vec3 transform(glm::vec3 vector) {
 		return glm::vec3(matrix() * glm::vec4(vector, 1));

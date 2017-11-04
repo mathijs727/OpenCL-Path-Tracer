@@ -57,7 +57,7 @@ float lerp(float x, float y, float a)
 
 float saturate(float a)
 {
-	return min(1.0f, max(0.0f, a));
+	return clamp(a, 0.0f, 1.0f);
 }
 
 #endif// __math_cl

@@ -13,7 +13,8 @@ float computeEV100(float aperture, float shutterTime, float ISO)
 	// EV_100 + log2 (S /100) = log2 (N^2 / t)
 	// EV_100 = log2 (N^2 / t) - log2 (S /100)
 	// EV_100 = log2 (N^2 / t . 100 / S)
-	return log2(sqrt(aperture) / shutterTime * 100 / ISO);
+	float aperture2 = aperture * aperture;
+	return log2(aperture2 / shutterTime * 100 / ISO);
 }
 
 float computeEV100FromAvgLuminance(float avgLuminance )
@@ -34,7 +35,7 @@ float convertEV100toExposure(float EV100)
 	// = 78 / ( S * q ) * 2^ EV_100
 	// = 78 / (100 * 0.65) * 2^ EV_100
 	// = 1.2 * 2^ EV
-	// Reference : http :// en. wikipedia . org / wiki / Film_speed
+	// Reference : http://en.wikipedia.org/wiki/Film_speed
 	float maxLuminance = 1.2f * pow (2.0f, EV100);
 	return 1.0f / maxLuminance;
 }

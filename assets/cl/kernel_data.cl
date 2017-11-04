@@ -21,6 +21,8 @@ typedef struct
 	uint numShadowRays;
 	uint maxRays;
 	uint newRays;
+
+	bool hasSkydome;
 } KernelData;
 
 typedef struct

@@ -1,6 +1,6 @@
 ﻿#ifndef __SHADER_HELPER_CL
 #define __SHADER_HELPER_CL
-#include <clRNG/lfsr113.clh>
+#include "random.cl"
 #include "math.cl"
 #include "shapes.cl"
 #include "scene.cl"
@@ -14,6 +14,8 @@
 
 #define EPSILON 0.0001f
 
+#include "pbr_brdf.cl"
+
 __constant sampler_t sampler =
 	CLK_NORMALIZED_COORDS_TRUE |
 	CLK_ADDRESS_REPEAT |
@@ -22,9 +24,9 @@ __constant sampler_t sampler =
 
 
 // Random int between start (inclusive) and stop (exclusive)
-int randInt(clrngLfsr113Stream* randomStream, int start, int stop)
+int randInt(randStream* randomStream, int start, int stop)
 {
-	float u = min((float)clrngLfsr113RandomU01(randomStream), 1.0f - FLT_MAX);
+	float u = min((float)randRandomU01(randomStream), 1.0f - FLT_MAX);
 	float range = stop - start;
 	return start + (int)(u * range);
 }
@@ -34,10 +36,10 @@ float3 diffuseReflection(
 	float3 edge1,
 	float3 edge2,
 	const __global float* invTransform,
-	clrngLfsr113Stream* randomStream)
+	randStream* randomStream)
 {
-	float u1 = clrngLfsr113RandomU01(randomStream);
-	float u2 = clrngLfsr113RandomU01(randomStream);
+	float u1 = randRandomU01(randomStream);
+	float u2 = randRandomU01(randomStream);
 	const float r = sqrt(1.0f - u1 * u1);
 	const float phi = 2 * PI * u2;
 	float3 sample = (float3)(cos(phi) * r, sin(phi) * r, u1);
@@ -58,23 +60,23 @@ float3 diffuseReflection(
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2008%20-%20variance%20reduction.pdf
 // Slide 41
 float3 cosineWeightedDiffuseReflection(
+	float3 normal,
 	float3 edge1,
-	float3 edge2,
 	const __global float* invTransform,
-	clrngLfsr113Stream* randomStream)
+	randStream* randomStream)
 {
 
 	// A cosine-weither random distribution is obtained by generating points on the unit
 	// disc, and projecting the disc on the unit hemisphere.
-	float r0 = clrngLfsr113RandomU01(randomStream);
-	float r1 = clrngLfsr113RandomU01(randomStream);
+	float r0 = randRandomU01(randomStream);
+	float r1 = randRandomU01(randomStream);
 	float r = sqrt(r0);
 	float theta = 2 * PI * r1;
 	float x = r * cos(theta);
 	float y = r * sin(theta);
 	float3 sample = (float3)(x, y, sqrt(1 - r0));
 
-	float3 normal = normalize(cross(edge1, edge2));
+	//float3 normal = normalize(cross(edge1, edge2));
 	float3 tangent = normalize(cross(normal, edge1));
 	float3 bitangent = cross(normal, tangent);
 
@@ -87,68 +89,19 @@ float3 cosineWeightedDiffuseReflection(
 	return normalize(orientedSample);
 }
 
-float3 ggxWeightedImportanceDirection(float3 edge1, float3 edge2, float3 incidenceVector,
-	const __global float* invTransform,
-	float a,
-	clrngLfsr113Stream* randomStream,
-	float* outScalingFactor) {
-	
-	float3 normal = normalize(cross(edge1, edge2));
-	a = (1.2f - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*a;
-
-	float r0 = clrngLfsr113RandomU01(randomStream);	
-	float phi = 2.0f * PI * r0;
-	float theta;
-	float r1 = clrngLfsr113RandomU01(randomStream);
-	theta = acos(sqrt((1.0f - r1) / ((a*a - 1.0f) * r1 + 1.0f)));
-
-	float r = sqrt(r1);
-	float cosTheta = cos(theta);
-	float sinTheta = sin(theta);
-	float x = r * cos(phi) * cos(PI/2 - theta);
-	float y = r * sin(phi) * cos(PI/2 - theta);
-	float z = sin(PI/2 - theta);
-	/*
-	float t = pow(r0, 2 / (a + 1));
-	x = cos(2 * PI*r1)*sqrt(1 - t);
-	y = sin(2 * PI*r1)*sqrt(1 - t);
-	z = sqrt(t);
-	*/
-	float3 sample = (float3)(x,y,z);
-	
-	float3 tangent = normalize(cross(normal, edge1));
-	float3 bitangent = cross(normal, tangent);
-
-	// Transform hemisphere to normal of the surface (of the static model)
-	// [tangent, bitangent, normal]
-	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
-	
-	// Apply the normal transform (top level BVH)
-	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
-	
-	float3 L = -incidenceVector;
-	float dotProduct = dot(orientedSample, normal);
-	float denom = dotProduct*dotProduct*(a*a-1) + 1;
-	//*outScalingFactor = (a + 2) / (2 * PI)*dot(normal,orientedSample); 
-	*outScalingFactor = a*a / (PI*denom*denom);
-	return normalize(2*dot(orientedSample, L)*orientedSample - L);
-}
-
 float3 ggxWeightedHalfway(
-	float3 edge1,
-	float3 edge2,
-	float3 incidenceVector,
 	float3 normal,
+	float3 incidenceVector,
 	const __global float* invTransform,
 	float alpha,
-	clrngLfsr113Stream* randomStream)
+	randStream* randomStream)
 {
-	alpha = (1.2f - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*alpha;
+	//alpha = (1.5f - 0.5f * sqrt(fabs(dot(incidenceVector,normal))))*alpha;
 
 	// http://blog.tobias-franke.eu/2014/03/30/notes_on_importance_sampling.html
-	float r0 = clrngLfsr113RandomU01(randomStream);	
-	float r1 = clrngLfsr113RandomU01(randomStream);
+	float r0 = randRandomU01(randomStream);	
 	float phi = 2.0f * PI * r0;
+	float r1 = randRandomU01(randomStream);
 	float theta = acos(sqrt((1.0f - r1) / ((alpha*alpha - 1.0f) * r1 + 1.0f)));
 
 	float x = cos(phi) * cos(PI/2 - theta);
@@ -158,7 +111,7 @@ float3 ggxWeightedHalfway(
 	float3 sample = (float3)(x,y,z);
 
 	//float3 normal = normalize(cross(edge1, edge2));
-	float3 tangent = normalize(cross(normal, edge1));
+	float3 tangent = normalize(cross(normal, (float3)(1.0f, 0.0f, 0.0f)));
 	float3 bitangent = cross(normal, tangent);
 
 	// Transform hemisphere to normal of the surface (of the static model)
@@ -171,14 +124,79 @@ float3 ggxWeightedHalfway(
 	return orientedSample;
 }
 
+float3 beckmannWeightedHalfway(
+	float3 normal,
+	float3 incidenceVector,
+	const __global float* invTransform,
+	float alpha,
+	randStream* randomStream)
+{
+	alpha = (1.2f - 0.2f * sqrt(fabs(dot(incidenceVector,normal))))*alpha;
+
+	// http://blog.tobias-franke.eu/2014/03/30/notes_on_importance_sampling.html
+	float r0 = randRandomU01(randomStream);	
+	float r1 = randRandomU01(randomStream);
+	float phi = 2.0f * PI * r0;
+	float theta = atan(-alpha * alpha * log1p(-r1));
+
+	float x = cos(phi) * cos(PI/2 - theta);
+	float y = sin(phi) * cos(PI/2 - theta);
+	float z = sin(PI/2 - theta);
+
+	float3 sample = (float3)(x,y,z);
+
+	//float3 normal = normalize(cross(edge1, edge2));
+	float3 tangent = normalize(cross(normal, (float3)(1.0f, 0.0f, 0.0f)));
+	float3 bitangent = cross(normal, tangent);
+
+	// Transform hemisphere to normal of the surface (of the static model)
+	// [tangent, bitangent, normal]
+	float3 orientedSample = sample.x * tangent + sample.y * bitangent + sample.z * normal;
+	
+	// Apply the normal transform (top level BVH)
+	orientedSample = normalize(matrixMultiplyTranspose(invTransform, orientedSample));
+
+	return orientedSample;
+}
+
+float3 ggxWeightedImportanceDirection(float3 normal, float3 incidenceVector,
+	const __global float* invTransform,
+	float alpha,
+	randStream* randomStream,
+	float* outPDF,
+	float3* outHalfway)
+{
+	float3 orientedSample = ggxWeightedHalfway(normal, incidenceVector, invTransform, alpha, randomStream);
+	float3 L = -incidenceVector;
+    float NdotH = dot(orientedSample, normal);
+	if (outPDF != NULL) *outPDF = D_GGX(NdotH, alpha);
+	if (outHalfway != NULL) *outHalfway = orientedSample;
+	return normalize(2*dot(orientedSample, L)*orientedSample - L);
+}
+
+float3 beckmannWeightedImportanceDirection(float3 normal, float3 incidenceVector,
+	const __global float* invTransform,
+	float alpha,
+	randStream* randomStream,
+	float* outPDF,
+	float3* outHalfway)
+{
+	// Apply the normal transform (top level BVH)
+	float3 L = -incidenceVector;
+	float3 orientedSample = beckmannWeightedHalfway(normal, incidenceVector, invTransform, alpha, randomStream);
+	if (outPDF != NULL) *outPDF = D_Beckmann(dot(orientedSample, normal), alpha);
+	if (outHalfway != NULL) *outHalfway = orientedSample;
+	return normalize(2*dot(orientedSample, L)*orientedSample - L);
+}
+
 // http://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
-float3 uniformSampleTriangle(const float3* vertices, clrngLfsr113Stream* randomStream)
+float3 uniformSampleTriangle(const float3* vertices, randStream* randomStream)
 {
 	float3 A = vertices[0];
 	float3 B = vertices[1];
 	float3 C = vertices[2];
-	float u1 = clrngLfsr113RandomU01(randomStream);
-	float u2 = clrngLfsr113RandomU01(randomStream);
+	float u1 = randRandomU01(randomStream);
+	float u2 = randRandomU01(randomStream);
 	return (1 - sqrt(u1)) * A + (sqrt(u1) * (1 - u2)) * B + (sqrt(u1) * u2) * C;
 }
 
@@ -198,7 +216,7 @@ float triangleArea(float3* vertices)
 void weightedRandomPointOnLight(
 	const __local Scene* scene,
 	float3 intersection,
-	clrngLfsr113Stream* randomStream,
+	randStream* randomStream,
 	float3* outPoint,
 	float3* outLightNormal,
 	float3* outLightColour,
@@ -224,7 +242,7 @@ void weightedRandomPointOnLight(
 		_lightWeights[i] = solidAngle;
 		weightTotal += _lightWeights[i];
 	}
-	float randomValue = clrngLfsr113RandomU01(randomStream) * weightTotal;
+	float randomValue = randRandomU01(randomStream) * weightTotal;
 	int lightIndex;
 	for (lightIndex = 0; lightIndex < numLights; ++lightIndex) {
 		randomValue -= _lightWeights[lightIndex];
@@ -242,14 +260,14 @@ void weightedRandomPointOnLight(
 
 void randomPointOnLight(
 	const __local Scene* scene,
-	clrngLfsr113Stream* randomStream,
+	randStream* randomStream,
 	float3* outPoint,
 	float3* outLightNormal,
 	float3* outLightColour,
 	float* outLightArea)
 {
 	// Construct vector to random point on light
-	int lightIndex = clrngLfsr113RandomInteger(randomStream, 0, scene->numEmissiveTriangles-1);
+	int lightIndex = randRandomInteger(randomStream, 0, scene->numEmissiveTriangles-1);
 	EmissiveTriangle lightTriangle = scene->emissiveTriangles[lightIndex];
 	*outLightNormal = normalize(cross(
 		lightTriangle.vertices[1] - lightTriangle.vertices[0],
@@ -279,7 +297,12 @@ float3 diffuseColour(
 			textures,
 			sampler,
 			texCoords3d);
-		return colourWithAlpha.xyz;
+		if (colourWithAlpha.w == 0.0f)
+		{
+			return (float3)(-1.0f, -1.0f, -1.0f);
+		} else {
+			return colourWithAlpha.xyz;
+		}
 	}
 }
 

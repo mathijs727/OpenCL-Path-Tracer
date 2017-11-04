@@ -23,6 +23,8 @@ typedef struct
 	uint topLevelBvhRoot;
 
 	float refractiveIndex;
+
+	int cubemapTextureIndices[6];
 } Scene;
 
 void getVertices(VertexData* out_vertices, uint* indices, const __local Scene* scene) {
@@ -50,7 +52,7 @@ void loadScene(
 	scene->meshMaterials = materials;
 	
 	scene->emissiveTriangles = emissiveTriangles;
-
+ 
 	scene->subBvh = subBvh;
 	scene->topLevelBvh = topLevelBvh;
 	scene->topLevelBvhRoot = topLevelBvhRoot;

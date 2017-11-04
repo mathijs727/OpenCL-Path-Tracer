@@ -3,6 +3,8 @@
 #include "camera.h"
 #include "scene.h"
 #include "template/surface.h"
+#include "texture.h"
+#include "hdrtexture.h"
 #include "ray.h"
 #include "pixel.h"
 #include "Texture.h"
@@ -16,6 +18,7 @@
 #include <thread>
 #include <stdlib.h>
 #include <chrono>
+#include <random>
 #include <clRNG\lfsr113.h>
 
 //#define PROFILE_OPENCL
@@ -23,6 +26,9 @@
 //#define OUTPUT_AVERAGE_GRAYSCALE
 #define MAX_RAYS_PER_PIXEL 20000000
 #define MAX_NUM_LIGHTS 256
+
+//#define RANDOM_XOR32
+#define RANDOM_LFSR113
 
 #define MAX_ACTIVE_RAYS 1280*720// Number of rays per pass (top performance = all pixels in 1 pass but very large buffer sizes at 4K?)
 
@@ -45,6 +51,8 @@ struct KernelData
 	uint numShadowRays;
 	uint maxRays;
 	uint newRays;
+
+	bool hasSkydome;
 };
 
 #ifdef WIN32
@@ -183,10 +191,61 @@ raytracer::RayTracer::RayTracer(int width, int height) : _rays_per_pixel(0)
 
 	_num_emissive_triangles[0] = 0;
 	_num_emissive_triangles[1] = 0;
+
+	_skydome_loaded = false;
+
+	// Allocate space on the GPU for the skydome
+	cl_int err;
+	_no_texture = cl::Image2D(_context,
+		CL_MEM_READ_ONLY,
+		cl::ImageFormat(CL_RGBA, CL_FLOAT),
+		256,
+		256,
+		0,
+		NULL,// Unused host_ptr
+		&err);
+	checkClErr(err, "cl::Image2DArray");
+
 }
 
 raytracer::RayTracer::~RayTracer()
 {
+}
+
+void raytracer::RayTracer::SetSkydome(const char* fileName, bool isLinear, float multiplier)
+{
+	_skydome = std::make_unique<HDRTexture>(fileName, isLinear, multiplier);
+	
+	// Allocate space on the GPU for the skydome
+	cl_int err;
+	_skydome_texture = cl::Image2D(_context,
+		CL_MEM_READ_ONLY,
+		cl::ImageFormat(CL_RGBA, CL_FLOAT),
+		_skydome->getWidth(),
+		_skydome->getHeight(),
+		0,
+		NULL,// Unused host_ptr
+		&err);
+	checkClErr(err, "cl::Image2DArray");
+
+	// Origin (o), o[2] must be 0 (see OpenCL docs)
+	cl::size_t<3> o; o[0] = 0; o[1] = 0; o[2] = 0;
+
+	cl::size_t<3> r;
+	r[0] = _skydome->getWidth();
+	r[1] = _skydome->getHeight();
+	r[2] = 1;// r[2] must be 1 (see OpenCL docs)
+	err = _queue.enqueueWriteImage(
+		_skydome_texture,
+		CL_TRUE,
+		o,
+		r,
+		0,
+		0,
+		HDRTexture::getData(_skydome->getId()));
+	checkClErr(err, "CommandQueue::enqueueWriteImage");
+
+	_skydome_loaded = true;
 }
 
 void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
@@ -398,6 +457,16 @@ void raytracer::RayTracer::FrameTick()
 	_active_buffers = (_active_buffers + 1) % 2;
 }
 
+int raytracer::RayTracer::GetNumPasses()
+{
+	return _rays_per_pixel;
+}
+
+int raytracer::RayTracer::GetMaxPasses()
+{
+	return MAX_RAYS_PER_PIXEL;
+}
+
 void raytracer::RayTracer::TraceRays(const Camera& camera)
 {
 	// Copy camera (and scene) data to the device using a struct so we dont use 20 kernel arguments
@@ -417,6 +486,10 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 	data.numShadowRays = 0;
 	data.maxRays = MAX_ACTIVE_RAYS;
 	data.newRays = 0;
+
+	//for (int i = 0; i < 6; i++)
+	//	data._skydomeTextureIndices[i] = _skydome_tex_indices[i];
+	data.hasSkydome = _skydome_loaded;
 
 	cl_int err = _queue.enqueueWriteBuffer(
 		_ray_kernel_data,
@@ -483,7 +556,11 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 		_shading_kernel.setArg(8, _emissive_trangles[_active_buffers]);
 		_shading_kernel.setArg(9, _materials[_active_buffers]);
 		_shading_kernel.setArg(10, _material_textures);
-		_shading_kernel.setArg(11, _random_streams);
+		if (_skydome_loaded)
+			_shading_kernel.setArg(11, _skydome_texture);
+		else
+			_shading_kernel.setArg(11, _no_texture);
+		_shading_kernel.setArg(12, _random_streams);
 
 		err = _queue.enqueueNDRangeKernel(
 			_shading_kernel,
@@ -1002,6 +1079,8 @@ void raytracer::RayTracer::InitBuffers(
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 
+
+
 	// https://www.khronos.org/registry/cl/specs/opencl-cplusplus-1.2.pdf
 	_material_textures = cl::Image2DArray(_context,
 		CL_MEM_READ_ONLY,
@@ -1012,6 +1091,7 @@ void raytracer::RayTracer::InitBuffers(
 		0, 0, NULL,// Unused host_ptr
 		&err);
 	checkClErr(err, "cl::Image2DArray");
+
 
 
 	_ray_traversal_buffer = cl::Buffer(_context,
@@ -1031,6 +1111,24 @@ void raytracer::RayTracer::InitBuffers(
 
 	// Create random streams and copy them to the GPU
 	size_t numWorkItems = _scr_width * _scr_height;
+#ifdef RANDOM_XOR32
+	size_t streamBufferSize = numWorkItems * sizeof(u32);
+	auto streams = std::make_unique<u32[]>(numWorkItems);
+
+	// Generate random uints the C++11 way
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<u32> dis;
+	for (size_t i = 0; i < numWorkItems; i++)
+		streams[i] = dis(gen);
+
+	_random_streams = cl::Buffer(_context,
+		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+		streamBufferSize,
+		streams.get(),
+		&err);
+	checkClErr(err, "Buffer::Buffer()");
+#elif defined(RANDOM_LFSR113)
 	size_t streamBufferSize;
 	clrngLfsr113Stream* streams = clrngLfsr113CreateStreams(
 		NULL, numWorkItems, &streamBufferSize, (clrngStatus*)&err);
@@ -1042,6 +1140,7 @@ void raytracer::RayTracer::InitBuffers(
 		&err);
 	checkClErr(err, "Buffer::Buffer()");
 	clrngLfsr113DestroyStreams(streams);
+#endif
 
 
 
@@ -1103,9 +1202,18 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 	sources.push_back(std::make_pair(prog.c_str(), prog.length()));
 	cl::Program program(_context, sources);
 	std::string opts = "-I assets/cl/ -I assets/cl/clRNG/ ";
-	/*opts += "-g -s \"D:/Documents/Development/UU/INFMAGR/infmagr-assignment1/";
-	opts += fileName;
-	opts += "\"";*/
+#ifdef RANDOM_XOR32
+	opts += "-D RANDOM_XOR32 ";
+#elif defined(RANDOM_LFSR113)
+	opts += "-D RANDOM_LFSR113 ";
+#endif
+
+#if defined(_DEBUG)
+	opts += "-cl-std=CL1.2 -g -O0";// -g is not supported on all compilers. If you have problems, remove this option
+#else
+	opts += "-cl-mad-enable -cl-unsafe-math-optimizations -cl-finite-math-only -cl-fast-relaxed-math -cl-single-precision-constant";
+#endif
+
 	err = program.build(devices, opts.c_str());
 	{
 		if (err != CL_SUCCESS)

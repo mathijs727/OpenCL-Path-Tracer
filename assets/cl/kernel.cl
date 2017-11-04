@@ -1,12 +1,12 @@
 #define NO_PARALLEL_RAYS// When a ray is parallel to axis, the intersection tests are really slow
 #define USE_BVH
 //#define COUNT_TRAVERSAL// Define here so it can be accessed by include files
-#define MAX_ITERATIONS 256
+#define MAX_ITERATIONS 4
 
 //#define COMPARE_SHADING
 #define CLRNG_SINGLE_PRECISION
 
-#include <clRNG/lfsr113.clh>
+#include "random.cl"
 #include "shapes.cl"
 #include "material.cl"
 #include "scene.cl"
@@ -17,12 +17,14 @@
 #include "camera.cl"
 #include "atomic.cl"
 #include "kernel_data.cl"
+//#include "cubemap.cl"
+#include "skydome.cl"
 
 
 __kernel void generatePrimaryRays(
 	__global RayData* outRays,
 	volatile __global KernelData* inputData,
-	__global clrngLfsr113HostStream* randomStreams)
+	__global randHostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
 	uint rayIndex = inputData->rayOffset + gid;
@@ -37,8 +39,8 @@ __kernel void generatePrimaryRays(
 	if (gid >= newRays)
 		return;
 
-	clrngLfsr113Stream randomStream;
-	clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+	randStream randomStream;
+	randCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
 	uint x = rayIndex % inputData->scrWidth;
 	uint y = rayIndex / inputData->scrWidth;
@@ -72,7 +74,7 @@ __kernel void generatePrimaryRays(
 	outRays[outIndex].numBounces = 0;
 
 	// Store random streams
-	clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+	randCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 
 	if (gid == 0)
 	{
@@ -180,7 +182,7 @@ __kernel void intersectWalk(
 			&shadingData.t,
 			&shadingData.uv,
 			&shadingData.invTransform);
-	} 
+	}
 
 	outShadingData[gid] = shadingData;
 }
@@ -199,7 +201,8 @@ __kernel void shade(
 	__global EmissiveTriangle* emissiveTriangles,
 	__global Material* materials,
 	__read_only image2d_array_t textures,
-	__global clrngLfsr113HostStream* randomStreams)
+	__read_only image2d_t skydomeTexture,
+	__global randHostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
 	RayData outRayData;
@@ -225,56 +228,65 @@ __kernel void shade(
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	if (gid < (inputData->numInRays + inputData->newRays) &&
-		!(rayData->flags & SHADINGFLAGS_HASFINISHED) &&
-		shadingData->hit)
-	{		
-		outRayData.outputPixel = rayData->outputPixel;
-		outShadowRayData.outputPixel = rayData->outputPixel;
-		outRayData.flags = 0;
-		outShadowRayData.flags = 0;
-		outRayData.numBounces = rayData->numBounces + 1;
+		!(rayData->flags & SHADINGFLAGS_HASFINISHED))
+	{
+		if (shadingData->hit)
+		{
+			outRayData.outputPixel = rayData->outputPixel;
+			outShadowRayData.outputPixel = rayData->outputPixel;
+			outRayData.flags = 0;
+			outShadowRayData.flags = 0;
+			outRayData.numBounces = rayData->numBounces + 1;
+			outRayData.pdf = 0;
 
-		float3 intersection = rayData->ray.origin + shadingData->t * rayData->ray.direction;
+			float3 intersection = rayData->ray.origin + shadingData->t * rayData->ray.direction;
 
-		// Load random streams
-		clrngLfsr113Stream randomStream;
-		clrngLfsr113CopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
+			// Load random streams
+			randStream randomStream;
+			randCopyOverStreamsFromGlobal(1, &randomStream, &randomStreams[gid]);
 
 #ifdef COMPARE_SHADING
-		if ((rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2)
-		{
-			outputPixels[rayData->outputPixel] += neeIsShading(
-				&scene,
-				shadingData->triangleIndex,
-				intersection,
-				normalize(rayData->ray.direction),
-				shadingData->invTransform,
-				shadingData->uv,
-				textures,
-				&randomStream,
-				rayData,
-				&outRayData,
-				&outShadowRayData);
-		} else
+			if ((rayData->outputPixel % inputData->scrWidth) < inputData->scrWidth / 2)
+			{
+				outputPixels[rayData->outputPixel] += neeMisShading(
+					&scene,
+					shadingData->triangleIndex,
+					intersection,
+					normalize(rayData->ray.direction),
+					shadingData->t,
+					shadingData->invTransform,
+					shadingData->uv,
+					textures,
+					&randomStream,
+					rayData,
+					&outRayData,
+					&outShadowRayData);
+			} else
 #endif
-		{
-			outputPixels[rayData->outputPixel] += neeIsShading(
-				&scene,
-				shadingData->triangleIndex,
-				intersection,
-				normalize(rayData->ray.direction),
-				shadingData->invTransform,
-				shadingData->uv,
-				textures,
-				&randomStream,
-				rayData,
-				&outRayData,
-				&outShadowRayData);
-		}
+			{
+				outputPixels[rayData->outputPixel] += neeIsShading(
+					&scene,
+					shadingData->triangleIndex,
+					intersection,
+					normalize(rayData->ray.direction),
+					shadingData->t,
+					shadingData->invTransform,
+					shadingData->uv,
+					textures,
+					&randomStream,
+					rayData,
+					&outRayData,
+					&outShadowRayData);
+			}
 
-		// Store random streams
-		clrngLfsr113CopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
-		active = true;
+			active = true;
+			// Store random streams
+			randCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
+		} else if (inputData->hasSkydome) {
+			// We missed the scene, but have a skydome to fall back to
+			float3 c = readSkydome(normalize(rayData->ray.direction), skydomeTexture);
+			outputPixels[rayData->outputPixel] += rayData->multiplier * c;
+		}
 	}
 
 	int index = workgroup_counter_inc(&inputData->numOutRays, active);
@@ -291,6 +303,12 @@ __kernel void shade(
 __kernel void updateKernelData(
 	volatile __global KernelData* data)
 {
+	// This is executed in its own kernel to prevent race conditions.
+	// If we were to set a variable to 0 from thread 0 and then increment;
+	//  then a race condition would occur between work groups. If workgroup 1
+	//  would start execution before the counter is reset by workgroup 0, than
+	//  the results of workgroup 1 are incorrect. This cannot be fixed by
+	//  using barriers since those are only valid within a work group.
 	data->numInRays = data->numOutRays;
 	data->numOutRays = 0;
 	data->numShadowRays = 0;

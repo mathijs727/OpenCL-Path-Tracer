@@ -6,6 +6,7 @@
 #include "material.h"
 #include <memory>
 #include <vector>
+#include "hdrtexture.h"
 
 namespace Tmpl8 {
 class Surface;
@@ -23,11 +24,16 @@ public:
 	RayTracer(int width, int height);
 	~RayTracer();
 
+	void SetSkydome(const char* filePathFormat, bool isLinear, float multiplier);
+
 	void SetScene(std::shared_ptr<Scene> scene);
 	void SetTarget(GLuint glTexture);
 	void RayTrace(Camera& camera);
 
 	void FrameTick();// Load next animation frame data
+
+	int GetNumPasses();
+	int GetMaxPasses();
 private:
 	void TraceRays(const Camera& camera);
 
@@ -51,6 +57,9 @@ private:
 	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
 private:
 	std::shared_ptr<Scene> _scene;
+
+	std::unique_ptr<HDRTexture> _skydome;
+	bool _skydome_loaded;
 
 	cl_uint _scr_width, _scr_height;
 
@@ -99,6 +108,8 @@ private:
 	cl::Buffer _materials[2];
 	cl::Buffer _sub_bvh[2];
 	
+	cl::Image2D _no_texture;
+	cl::Image2D _skydome_texture;
 	cl::Image2DArray _material_textures;
 
 	std::vector<TopBvhNode> _top_bvh_nodes_host;
