@@ -1202,19 +1202,17 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
 	sources.push_back(std::make_pair(prog.c_str(), prog.length()));
 	cl::Program program(_context, sources);
 	std::string opts = "-I assets/cl/ -I assets/cl/clRNG/ ";
-	/*opts += "-g -s \"D:/Documents/Development/UU/INFMAGR/infmagr-assignment1/";
-	opts += fileName;
-	opts += "\"";*/
 #ifdef RANDOM_XOR32
 	opts += "-D RANDOM_XOR32 ";
 #elif defined(RANDOM_LFSR113)
 	opts += "-D RANDOM_LFSR113 ";
 #endif
 
-#if !defined(_DEBUG)
-	opts += "-cl-mad-enable -cl-unsafe-math-optimizations -cl-finite-math-only -cl-fast-relaxed-math -cl-single-precision-constant ";
+#if defined(_DEBUG)
+	opts += "-cl-std=CL1.2 -g -O0";// -g is not supported on all compilers. If you have problems, remove this option
+#else
+	opts += "-cl-mad-enable -cl-unsafe-math-optimizations -cl-finite-math-only -cl-fast-relaxed-math -cl-single-precision-constant";
 #endif
-	opts += "-cl-std=CL1.2 ";
 
 	err = program.build(devices, opts.c_str());
 	{

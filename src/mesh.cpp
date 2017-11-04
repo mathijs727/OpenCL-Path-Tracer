@@ -8,6 +8,8 @@
 #include "template/includes.h"// Includes opencl
 #include "template/surface.h"
 #include "sbvh.h"
+#include "binned_bvh.h"
+#include "fast_binned_bvh.h"
 #include <string>
 #include <fstream>
 
@@ -92,7 +94,9 @@ void raytracer::Mesh::addSubMesh(
 	u32 vertexOffset = (u32)_vertices.size();
 	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
 		glm::vec4 position = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
-		glm::vec4 normal = normalMatrix * glm::vec4(ai2glm(in_mesh->mNormals[v]), 0);
+		glm::vec4 normal = glm::vec4(0);
+		if (in_mesh->mNormals != nullptr)
+			normal = normalMatrix * glm::vec4(ai2glm(in_mesh->mNormals[v]), 0);
 		glm::vec2 texCoords;
 		if (in_mesh->HasTextureCoords(0)) {
 			texCoords.x = in_mesh->mTextureCoords[0][v].x;
@@ -112,7 +116,7 @@ void raytracer::Mesh::addSubMesh(
 	for (uint f = 0; f < in_mesh->mNumFaces; ++f) {
 		aiFace* in_face = &in_mesh->mFaces[f];
 		if (in_face->mNumIndices != 3) {
-			std::cout << "found a face which is not a triangle! discarding." << std::endl;
+			//std::cout << "found a face which is not a triangle! discarding." << std::endl;
 			continue;
 		}
 		auto aiIndices = in_face->mIndices;
@@ -170,7 +174,7 @@ void raytracer::Mesh::loadFromFile(
 	std::string path = getPath(file);
 
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
+	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_GenNormals);
 
 	if (scene == nullptr || scene->mRootNode == nullptr)
 		std::cout << "Mesh not found: " << file << std::endl;
@@ -206,7 +210,7 @@ void raytracer::Mesh::loadFromFile(
 	if (buildBvh) {
 		std::cout << "Starting bvh build..." << std::endl;
 		// Create a BVH for the mesh
-		SbvhBuilder bvhBuilder;
+		BinnedBvhBuilder bvhBuilder;
 		_bvh_root_node = bvhBuilder.build(_vertices, _triangles, _bvh_nodes);
 
 		std::cout << "Storing bvh in file: " << bvhFileName << std::endl;

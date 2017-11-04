@@ -108,7 +108,7 @@ bool raytracer::BinnedBvhBuilder::partition(u32 nodeId)
 		{
 			// Calculate the bin ID as described in the paper
 			float x = k1 * (_centres[i][axis] - node->bounds.min[axis]);
-			int bin = static_cast<int>(x);
+			int bin = std::min(static_cast<int>(x), BVH_SPLITS - 1);
 
 			binTriangleCount[axis][bin]++;
 			binAABB[axis][bin].fit(_aabbs[i]);
