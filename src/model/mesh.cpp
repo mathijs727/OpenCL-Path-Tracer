@@ -174,7 +174,7 @@ void raytracer::Mesh::loadFromFile(
 	std::string path = getPath(file);
 
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_GenNormals);
+	const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
 
 	if (scene == nullptr || scene->mRootNode == nullptr)
 		std::cout << "Mesh not found: " << file << std::endl;

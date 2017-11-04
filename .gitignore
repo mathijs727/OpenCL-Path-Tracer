@@ -11,6 +11,9 @@ build_make/
 # Dont include .bvh files (BVH cache) because they might not be cross platform (32 bit vs 64 bit?)
 *.bvh
 
+# Imgui stores this file to save settings for the next run
+imgui.ini
+
 assets/cl/analyze/
 assets/3dmodels/
 assets/skydome/
