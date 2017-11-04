@@ -76,6 +76,7 @@ void raytracer::Mesh::addSubMesh(
 				aiString path;
 				material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
 				std::string textureFile = texturePath;
+				std::cout << "Texture path: " << textureFile << std::endl;
 				textureFile += path.C_Str();
 				//_materials.push_back(Material::Diffuse(ai2glm(colour)));
 				_materials.push_back(Material::Diffuse(Texture(textureFile.c_str()), ai2glm(colour)));

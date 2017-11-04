@@ -11,7 +11,7 @@ namespace raytracer
 	class Texture
 	{
 	public:
-		Texture(const char* fileName, bool isLinear = false);
+		Texture(std::string fileName, bool isLinear = false);
 		~Texture();
 
 		int getId() const { return _tex_id; };
