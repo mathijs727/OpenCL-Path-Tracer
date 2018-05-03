@@ -1,12 +1,12 @@
 #include "raytracer.h"
 
 #include "camera.h"
-#include "hdrtexture.h"
 #include "pixel.h"
 #include "ray.h"
 #include "scene.h"
 #include "template/surface.h"
-#include "texture.h"
+//#include "texture.h"
+#include <Windows.h>
 #include <algorithm>
 #include <chrono>
 #include <emmintrin.h>
@@ -17,7 +17,6 @@
 #include <thread>
 #include <utility>
 #include <vector>
-#include <Windows.h>
 
 #include <clRNG/lfsr113.h>
 
@@ -191,7 +190,7 @@ raytracer::RayTracer::RayTracer(int width, int height)
 
     _skydome_loaded = false;
 
-    // Allocate space on the GPU for the skydome
+    /*// Allocate space on the GPU for the skydome
     cl_int err;
     _no_texture = cl::Image2D(_context,
         CL_MEM_READ_ONLY,
@@ -201,7 +200,7 @@ raytracer::RayTracer::RayTracer(int width, int height)
         0,
         NULL, // Unused host_ptr
         &err);
-    checkClErr(err, "cl::Image2DArray");
+    checkClErr(err, "cl::Image2DArray");*/
 }
 
 raytracer::RayTracer::~RayTracer()
@@ -210,7 +209,11 @@ raytracer::RayTracer::~RayTracer()
 
 void raytracer::RayTracer::SetSkydome(const char* fileName, bool isLinear, float multiplier)
 {
-    _skydome = std::make_unique<HDRTexture>(fileName, isLinear, multiplier);
+    UniqueTextureArray textureArray;
+    textureArray.add(fileName, isLinear);
+    //m_skydomeTextures = std::make_unique<CLTextureArray>(textureArray, m_clContext, 4000, 2000, true);
+
+    /*_skydome = std::make_unique<HDRTexture>(fileName, isLinear, multiplier);
 
     // Allocate space on the GPU for the skydome
     cl_int err;
@@ -242,12 +245,12 @@ void raytracer::RayTracer::SetSkydome(const char* fileName, bool isLinear, float
         0,
         0,
         HDRTexture::getData(_skydome->getId()));
-    checkClErr(err, "CommandQueue::enqueueWriteImage");
+    checkClErr(err, "CommandQueue::enqueueWriteImage");*/
 
     _skydome_loaded = true;
 }
 
-void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
+void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene, const UniqueTextureArray& textureArray)
 {
     _scene = scene;
 
@@ -321,40 +324,43 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene)
         meshBvhPair.bvh_offset = startBvhNode;
     }
 
-    writeToBuffer(_queue, _vertices[0], _vertices_host);
-    writeToBuffer(_queue, _triangles[0], _triangles_host);
-    writeToBuffer(_queue, _materials[0], _materials_host);
-    writeToBuffer(_queue, _sub_bvh[0], _sub_bvh_nodes_host);
+    auto queue = m_clContext.getGraphicsQueue();
+    writeToBuffer(queue, _vertices[0], _vertices_host);
+    writeToBuffer(queue, _triangles[0], _triangles_host);
+    writeToBuffer(queue, _materials[0], _materials_host);
+    writeToBuffer(queue, _sub_bvh[0], _sub_bvh_nodes_host);
 
-    writeToBuffer(_queue, _vertices[1], _vertices_host);
-    writeToBuffer(_queue, _triangles[1], _triangles_host);
-    writeToBuffer(_queue, _materials[1], _materials_host);
-    writeToBuffer(_queue, _sub_bvh[1], _sub_bvh_nodes_host);
+    writeToBuffer(queue, _vertices[1], _vertices_host);
+    writeToBuffer(queue, _triangles[1], _triangles_host);
+    writeToBuffer(queue, _materials[1], _materials_host);
+    writeToBuffer(queue, _sub_bvh[1], _sub_bvh_nodes_host);
 
-    // Copy textures to the GPU
-    for (uint texId = 0; texId < Texture::getNumUniqueSurfaces(); texId++) {
-        Tmpl8::Surface* surface = Texture::getSurface(texId);
+    /*// Copy textures to the GPU
+    for (uint texId = 0; texId < HDRTexture::getNumUniqueSurfaces(); texId++) {
+        Tmpl8::Surface* surface = HDRTexture::getSurface(texId);
 
         // Origin (o) and region (r)
-        cl::size_t<3> o;
-        o[0] = 0;
-        o[1] = 0;
-        o[2] = texId;
+        cl::size_t<3> origin;
+        origin[0] = 0;
+        origin[1] = 0;
+        origin[2] = texId;
 
-        cl::size_t<3> r;
-        r[0] = Texture::TEXTURE_WIDTH;
-        r[1] = Texture::TEXTURE_HEIGHT;
-        r[2] = 1; // r[2] must be 1?
+        cl::size_t<3> region;
+        region[0] = HDRTexture::TEXTURE_WIDTH;
+        region[1] = HDRTexture::TEXTURE_HEIGHT;
+        region[2] = 1; // r[2] must be 1?
         cl_int err = _queue.enqueueWriteImage(
             _material_textures,
             CL_TRUE,
-            o,
-            r,
+            origin,
+            region,
             0,
             0,
             surface->GetBuffer());
         checkClErr(err, "CommandQueue::enqueueWriteImage");
-    }
+    }*/
+
+    m_materialTextures = std::make_unique<CLTextureArray>(textureArray, m_clContext, 1024, 1024, false);
 
     FrameTick();
 }
@@ -379,7 +385,7 @@ void raytracer::RayTracer::SetTarget(GLuint glTexture)
     float* mem = new float[size];
     _output_image_cpu = std::unique_ptr<float[]>(mem); // std::make_unique<float[]>(size);
 #else
-    _output_image = cl::ImageGL(_context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, glTexture, &err);
+    _output_image = cl::ImageGL(m_clContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, glTexture, &err);
     checkClErr(err, "ImageGL");
 #endif
 }
@@ -391,7 +397,7 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
     glFinish();
 
     std::vector<cl::Memory> images = { _output_image };
-    _queue.enqueueAcquireGLObjects(&images);
+    m_clContext.getGraphicsQueue().enqueueAcquireGLObjects(&images);
 #endif
 
     // Easier than setting dirty flag all the time, bit more work intensive but not a big deal
@@ -413,7 +419,8 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
     CalculateAverageGrayscale();
 #endif
 
-    _queue.finish();
+    auto queue = m_clContext.getGraphicsQueue();
+    queue.finish();
 
 #ifndef OPENCL_GL_INTEROP
     // Copy OpenCL image to the CPU
@@ -441,10 +448,10 @@ void raytracer::RayTracer::RayTrace(Camera& camera)
         _output_image_cpu.get());
 #else
     // Before returning the objects to OpenGL, we sync to make sure OpenCL is done.
-    cl_int err = _queue.finish();
+    cl_int err = queue.finish();
     checkClErr(err, "CommandQueue::finish");
 
-    _queue.enqueueReleaseGLObjects(&images);
+    queue.enqueueReleaseGLObjects(&images);
 #endif
 }
 
@@ -468,6 +475,8 @@ int raytracer::RayTracer::GetMaxPasses()
 
 void raytracer::RayTracer::TraceRays(const Camera& camera)
 {
+    auto queue = m_clContext.getGraphicsQueue();
+
     // Copy camera (and scene) data to the device using a struct so we dont use 20 kernel arguments
     KernelData data = {};
 
@@ -490,7 +499,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
     //	data._skydomeTextureIndices[i] = _skydome_tex_indices[i];
     data.hasSkydome = _skydome_loaded;
 
-    cl_int err = _queue.enqueueWriteBuffer(
+    cl_int err = queue.enqueueWriteBuffer(
         _ray_kernel_data,
         CL_TRUE,
         0,
@@ -508,7 +517,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
             _generate_rays_kernel.setArg(0, _rays_buffers[inRayBuffer]);
             _generate_rays_kernel.setArg(1, _ray_kernel_data);
             _generate_rays_kernel.setArg(2, _random_streams);
-            err = _queue.enqueueNDRangeKernel(
+            err = queue.enqueueNDRangeKernel(
                 _generate_rays_kernel,
                 cl::NullRange,
                 cl::NDRange(roundUp(MAX_ACTIVE_RAYS - survivingRays, 32)),
@@ -528,7 +537,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
         _intersect_walk_kernel.setArg(7, _top_bvh[_active_buffers]);
         _intersect_walk_kernel.setArg(8, _accumulation_buffer);
 
-        err = _queue.enqueueNDRangeKernel(
+        err = queue.enqueueNDRangeKernel(
             _intersect_walk_kernel,
             cl::NullRange,
             cl::NDRange(MAX_ACTIVE_RAYS),
@@ -548,14 +557,14 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
         _shading_kernel.setArg(7, _triangles[_active_buffers]);
         _shading_kernel.setArg(8, _emissive_trangles[_active_buffers]);
         _shading_kernel.setArg(9, _materials[_active_buffers]);
-        _shading_kernel.setArg(10, _material_textures);
-        if (_skydome_loaded)
-            _shading_kernel.setArg(11, _skydome_texture);
+        _shading_kernel.setArg(10, m_materialTextures->getImage2DArray());
+        /*if (_skydome_loaded)
+            _shading_kernel.setArg(11, *m_skydomeTextures);
         else
-            _shading_kernel.setArg(11, _no_texture);
-        _shading_kernel.setArg(12, _random_streams);
+            throw std::runtime_error("No skydome texture!");*/
+        _shading_kernel.setArg(11, _random_streams);
 
-        err = _queue.enqueueNDRangeKernel(
+        err = queue.enqueueNDRangeKernel(
             _shading_kernel,
             cl::NullRange,
             cl::NDRange(MAX_ACTIVE_RAYS),
@@ -565,7 +574,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
         // Request the output kernel data so we know the amount of surviving rays
         cl::Event updatedKernelDataEvent;
         KernelData updatedKernelData;
-        err = _queue.enqueueReadBuffer(
+        err = queue.enqueueReadBuffer(
             _ray_kernel_data,
             CL_TRUE,
             0,
@@ -590,7 +599,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
             _intersect_shadows_kernel.setArg(6, _sub_bvh[_active_buffers]);
             _intersect_shadows_kernel.setArg(7, _top_bvh[_active_buffers]);
 
-            err = _queue.enqueueNDRangeKernel(
+            err = queue.enqueueNDRangeKernel(
                 _intersect_shadows_kernel,
                 cl::NullRange,
                 cl::NDRange(roundUp(survivingRays, 64)),
@@ -600,7 +609,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
 
         // Set num input rays to num output rays and set num out rays and num shadow rays to 0
         _update_kernel_data_kernel.setArg(0, _ray_kernel_data);
-        err = _queue.enqueueNDRangeKernel(
+        err = queue.enqueueNDRangeKernel(
             _update_kernel_data_kernel,
             cl::NullRange,
             cl::NDRange(1),
@@ -625,7 +634,7 @@ void raytracer::RayTracer::Accumulate(const Camera& camera)
     _accumulate_kernel.setArg(2, _ray_kernel_data);
     _accumulate_kernel.setArg(3, _rays_per_pixel);
     _accumulate_kernel.setArg(4, _scr_width);
-    _queue.enqueueNDRangeKernel(
+    m_clContext.getGraphicsQueue().enqueueNDRangeKernel(
         _accumulate_kernel,
         cl::NullRange,
         cl::NDRange(_scr_width, _scr_height),
@@ -637,7 +646,7 @@ void raytracer::RayTracer::Accumulate(const Camera& camera)
 void raytracer::RayTracer::ClearAccumulationBuffer()
 {
     cl_float3 zero = {};
-    _queue.enqueueFillBuffer(
+    m_clContext.getGraphicsQueue().enqueueFillBuffer(
         _accumulation_buffer,
         zero,
         0,
@@ -650,7 +659,7 @@ void raytracer::RayTracer::CalculateAverageGrayscale()
 {
     size_t sizeInVecs = _scr_width * _scr_height;
     auto buffer = std::make_unique<glm::vec4[]>(sizeInVecs);
-    _queue.enqueueReadBuffer(
+    m_clContext.getGraphicsQueue().enqueueReadBuffer(
         _accumulation_buffer,
         CL_TRUE,
         0,
@@ -681,12 +690,15 @@ void raytracer::RayTracer::CalculateAverageGrayscale()
 
 void raytracer::RayTracer::CopyNextAnimationFrameData()
 {
+    auto queue = m_clContext.getGraphicsQueue();
+    auto copyQueue = m_clContext.getCopyQueue();
+
     // Manually flush the queue
     // At least on AMD, the queue is flushed after the enqueueWriteBuffer (probably because it thinks
     //  one kernel launch is not enough reason to flush). So it would be executed at _queue.finish(), which
     //  is called after the top lvl bvh construction (which is expensive) has completed. Instead we manually
     //  flush and than calculate the top lvl bvh.
-    _queue.flush();
+    queue.flush();
 
     int copyBuffers = (_active_buffers + 1) % 2;
     std::vector<cl::Event> waitEvents;
@@ -738,21 +750,21 @@ void raytracer::RayTracer::CopyNextAnimationFrameData()
     _emissive_triangles_host.clear();
     CollectTransformedLights(&_scene->get_root_node(), glm::mat4());
     _num_emissive_triangles[copyBuffers] = (u32)_emissive_triangles_host.size();
-    writeToBuffer(_copyQueue, _emissive_trangles[copyBuffers], _emissive_triangles_host, 0, waitEvents);
+    writeToBuffer(copyQueue, _emissive_trangles[copyBuffers], _emissive_triangles_host, 0, waitEvents);
 
     if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices)) // Dont copy if we dont have any dynamic geometry
     {
-        writeToBuffer(_copyQueue, _vertices[copyBuffers], _vertices_host, _num_static_vertices, waitEvents);
-        writeToBuffer(_copyQueue, _triangles[copyBuffers], _triangles_host, _num_static_triangles, waitEvents);
-        writeToBuffer(_copyQueue, _materials[copyBuffers], _materials_host, _num_static_materials, waitEvents);
-        writeToBuffer(_copyQueue, _sub_bvh[copyBuffers], _sub_bvh_nodes_host, _num_static_bvh_nodes, waitEvents);
+        writeToBuffer(copyQueue, _vertices[copyBuffers], _vertices_host, _num_static_vertices, waitEvents);
+        writeToBuffer(copyQueue, _triangles[copyBuffers], _triangles_host, _num_static_triangles, waitEvents);
+        writeToBuffer(copyQueue, _materials[copyBuffers], _materials_host, _num_static_materials, waitEvents);
+        writeToBuffer(copyQueue, _sub_bvh[copyBuffers], _sub_bvh_nodes_host, _num_static_bvh_nodes, waitEvents);
     }
 
     // Update the top level BVH and copy it to the GPU on a seperate copy queue
     _top_bvh_nodes_host.clear();
     auto bvhBuilder = TopLevelBvhBuilder(*_scene.get());
     _top_bvh_root_node[copyBuffers] = bvhBuilder.build(_sub_bvh_nodes_host, _top_bvh_nodes_host);
-    writeToBuffer(_copyQueue, _top_bvh[copyBuffers], _top_bvh_nodes_host, 0, waitEvents);
+    writeToBuffer(copyQueue, _top_bvh[copyBuffers], _top_bvh_nodes_host, 0, waitEvents);
 
     if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices)) {
         timeOpenCL(waitEvents[0], "vertex upload");
@@ -767,7 +779,7 @@ void raytracer::RayTracer::CopyNextAnimationFrameData()
     }
 
     // Make sure the main queue waits for the copy to finish
-    cl_int err = _queue.enqueueBarrierWithWaitList(&waitEvents);
+    cl_int err = queue.enqueueBarrierWithWaitList(&waitEvents);
     checkClErr(err, "CommandQueue::enqueueBarrierWithWaitList");
 }
 
@@ -889,8 +901,8 @@ void raytracer::RayTracer::InitOpenCL()
                 lPlatformId = lPlatformIdToTry;
                 lDeviceId = lDeviceIdToTry;
                 lContext = lContextToTry;
-                _device = cl::Device(lDeviceId);
-                _context = cl::Context(lContext);
+                m_clContext.m_device = cl::Device(lDeviceId);
+                m_clContext.m_context = cl::Context(lContext);
                 break;
             }
         }
@@ -946,7 +958,7 @@ void raytracer::RayTracer::InitOpenCL()
 #endif
 
     std::string openCLVersion;
-    _device.getInfo(CL_DEVICE_VERSION, &openCLVersion);
+    m_clContext.getDevice().getInfo(CL_DEVICE_VERSION, &openCLVersion);
     std::cout << "OpenCL version: " << openCLVersion << std::endl;
 
     // Create a command queue.
@@ -956,9 +968,9 @@ void raytracer::RayTracer::InitOpenCL()
     cl_command_queue_properties props = 0;
 #endif
     checkClErr(lError, "Unable to create an OpenCL command queue.");
-    _queue = cl::CommandQueue(_context, _device, props, &lError);
+    m_clContext.m_queue = cl::CommandQueue(m_clContext.m_context, m_clContext.m_device, props, &lError);
     checkClErr(lError, "Unable to create an OpenCL command queue.");
-    _copyQueue = cl::CommandQueue(_context, _device, props, &lError);
+    m_clContext.m_copyQueue = cl::CommandQueue(m_clContext.m_context, m_clContext.m_device, props, &lError);
     checkClErr(lError, "Unable to create an OpenCL command queue.");
 }
 
@@ -973,81 +985,81 @@ void raytracer::RayTracer::InitBuffers(
 {
     cl_int err;
 
-    _vertices[0] = cl::Buffer(_context,
+    _vertices[0] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
         std::max(1u, numVertices) * sizeof(VertexSceneData),
         NULL,
         &err);
-    _vertices[1] = cl::Buffer(_context,
+    _vertices[1] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
         std::max(1u, numVertices) * sizeof(VertexSceneData),
         NULL,
         &err);
     checkClErr(err, "Buffer::Buffer()");
 
-    _triangles[0] = cl::Buffer(_context,
+    _triangles[0] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
         std::max(1u, numTriangles) * sizeof(TriangleSceneData),
         NULL,
         &err);
-    _triangles[1] = cl::Buffer(_context,
+    _triangles[1] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
         std::max(1u, numTriangles) * sizeof(TriangleSceneData),
         NULL,
         &err);
     checkClErr(err, "Buffer::Buffer()");
 
-    _emissive_trangles[0] = cl::Buffer(_context,
+    _emissive_trangles[0] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
         std::max(1u, numEmissiveTriangles) * sizeof(EmissiveTriangle),
         NULL,
         &err);
-    _emissive_trangles[1] = cl::Buffer(_context,
+    _emissive_trangles[1] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
         std::max(1u, numEmissiveTriangles) * sizeof(EmissiveTriangle),
         NULL,
         &err);
     checkClErr(err, "Buffer::Buffer()");
 
-    _materials[0] = cl::Buffer(_context,
+    _materials[0] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
         std::max(1u, numMaterials) * sizeof(Material),
         NULL,
         &err);
-    _materials[1] = cl::Buffer(_context,
+    _materials[1] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
         std::max(1u, numMaterials) * sizeof(Material),
         NULL,
         &err);
     checkClErr(err, "Buffer::Buffer()");
 
-    _sub_bvh[0] = cl::Buffer(_context,
+    _sub_bvh[0] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
         std::max(1u, numSubBvhNodes) * sizeof(SubBvhNode),
         NULL,
         &err);
-    _sub_bvh[1] = cl::Buffer(_context,
+    _sub_bvh[1] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
         std::max(1u, numSubBvhNodes) * sizeof(SubBvhNode),
         NULL,
         &err);
     checkClErr(err, "Buffer::Buffer()");
 
-    _top_bvh[0] = cl::Buffer(_context,
+    _top_bvh[0] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
         numTopBvhNodes * sizeof(TopBvhNode), // TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
         NULL,
         &err);
     checkClErr(err, "Buffer::Buffer()");
-    _top_bvh[1] = cl::Buffer(_context,
+    _top_bvh[1] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
         numTopBvhNodes * sizeof(TopBvhNode), // TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
         NULL,
         &err);
     checkClErr(err, "Buffer::Buffer()");
 
-    // https://www.khronos.org/registry/cl/specs/opencl-cplusplus-1.2.pdf
-    _material_textures = cl::Image2DArray(_context,
+    /*// https://www.khronos.org/registry/cl/specs/opencl-cplusplus-1.2.pdf
+    _material_textures = cl::Image2DArray(m_clContext,
         CL_MEM_READ_ONLY,
         cl::ImageFormat(CL_BGRA, CL_UNORM_INT8),
         std::max((u32)1u, (u32)Texture::getNumUniqueSurfaces()),
@@ -1055,16 +1067,16 @@ void raytracer::RayTracer::InitBuffers(
         Texture::TEXTURE_HEIGHT,
         0, 0, NULL, // Unused host_ptr
         &err);
-    checkClErr(err, "cl::Image2DArray");
+    checkClErr(err, "cl::Image2DArray");*/
 
-    _ray_traversal_buffer = cl::Buffer(_context,
+    _ray_traversal_buffer = cl::Buffer(m_clContext,
         CL_MEM_READ_WRITE,
         MAX_ACTIVE_RAYS * 32 * sizeof(u32),
         NULL,
         &err);
     checkClErr(err, "Buffer::Buffer()");
 
-    _ray_kernel_data = cl::Buffer(_context,
+    _ray_kernel_data = cl::Buffer(m_clContext,
         CL_MEM_READ_WRITE,
         sizeof(KernelData),
         NULL,
@@ -1095,7 +1107,7 @@ void raytracer::RayTracer::InitBuffers(
     clrngLfsr113Stream* streams = clrngLfsr113CreateStreams(
         NULL, numWorkItems, &streamBufferSize, (clrngStatus*)&err);
     checkClErr(err, "clrngLfsr113CreateStreams");
-    _random_streams = cl::Buffer(_context,
+    _random_streams = cl::Buffer(m_clContext,
         CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
         streamBufferSize,
         streams,
@@ -1104,7 +1116,7 @@ void raytracer::RayTracer::InitBuffers(
     clrngLfsr113DestroyStreams(streams);
 #endif
 
-    _accumulation_buffer = cl::Buffer(_context,
+    _accumulation_buffer = cl::Buffer(m_clContext,
         CL_MEM_READ_WRITE,
         _scr_width * _scr_height * sizeof(cl_float3),
         nullptr,
@@ -1112,20 +1124,20 @@ void raytracer::RayTracer::InitBuffers(
     checkClErr(err, "cl::Buffer");
 
     const int rayDataStructSize = 80;
-    _rays_buffers[0] = cl::Buffer(_context,
+    _rays_buffers[0] = cl::Buffer(m_clContext,
         CL_MEM_READ_WRITE,
         (size_t)MAX_ACTIVE_RAYS * rayDataStructSize,
         nullptr,
         &err);
     checkClErr(err, "cl::Buffer");
-    _rays_buffers[1] = cl::Buffer(_context,
+    _rays_buffers[1] = cl::Buffer(m_clContext,
         CL_MEM_READ_WRITE,
         (size_t)MAX_ACTIVE_RAYS * rayDataStructSize,
         nullptr,
         &err);
     checkClErr(err, "cl::Buffer");
 
-    _shadow_rays_buffer = cl::Buffer(_context,
+    _shadow_rays_buffer = cl::Buffer(m_clContext,
         CL_MEM_READ_WRITE,
         (size_t)MAX_ACTIVE_RAYS * rayDataStructSize,
         nullptr,
@@ -1133,7 +1145,7 @@ void raytracer::RayTracer::InitBuffers(
     checkClErr(err, "cl::Buffer");
 
     const int shadingDataStructSize = 64;
-    _shading_buffer = cl::Buffer(_context,
+    _shading_buffer = cl::Buffer(m_clContext,
         CL_MEM_READ_WRITE,
         (size_t)MAX_ACTIVE_RAYS * shadingDataStructSize,
         nullptr,
@@ -1153,13 +1165,13 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
     }
 
     std::vector<cl::Device> devices;
-    devices.push_back(_device);
+    devices.push_back(m_clContext.getDevice());
 
     std::string prog(std::istreambuf_iterator<char>(file),
         (std::istreambuf_iterator<char>()));
     cl::Program::Sources sources;
     sources.push_back(std::make_pair(prog.c_str(), prog.length()));
-    cl::Program program(_context, sources);
+    cl::Program program(m_clContext, sources);
     std::string opts = "-I ../../assets/cl/ -I ../../assets/cl/clRNG/ ";
 #ifdef RANDOM_XOR32
     opts += "-D RANDOM_XOR32 ";
@@ -1181,7 +1193,7 @@ cl::Kernel raytracer::RayTracer::LoadKernel(const char* fileName, const char* fu
             std::cout << "Cannot build program: " << fileName << std::endl;
 
             std::string error;
-            program.getBuildInfo(_device, CL_PROGRAM_BUILD_LOG, &error);
+            program.getBuildInfo(m_clContext.getDevice(), CL_PROGRAM_BUILD_LOG, &error);
             std::cout << error << std::endl;
 
 #ifdef _WIN32

@@ -1,17 +1,18 @@
 #include "game.h"
-#include "scene.h"
+#include "bvh/bvh_test.h"
 #include "camera.h"
-#include "transform.h"
-#include "raytracer.h"
-#include "timer.h"
 #include "gloutput.h"
 #include "model/mesh.h"
 #include "model/mesh_sequence.h"
-#include "bvh/bvh_test.h"
+#include "raytracer.h"
+#include "scene.h"
+#include "texture.h"
+#include "timer.h"
+#include "transform.h"
 
 #include "SDL2/SDL.h"
-#include <iostream>
 #include <glm/gtx/euler_angles.hpp>
+#include <iostream>
 
 using namespace raytracer;
 using namespace Tmpl8;
@@ -23,210 +24,139 @@ using namespace Tmpl8;
 // -----------------------------------------------------------
 void Game::Init()
 {
-	_scene = std::make_shared<Scene>();
+    _scene = std::make_shared<Scene>();
 
-	Transform camera_transform;
-	_camera_euler.y = PI;
+    Transform camera_transform;
+    _camera_euler.y = PI;
 
-	// Cornell
-	camera_transform.location = glm::vec3(0.15, 1.21, 2.5);
-	camera_transform.orientation = glm::quat(_camera_euler); // identity
+    // Sponza
+    camera_transform.location = glm::vec3(2.5f, 2.0f, 0.01f);
+    camera_transform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
+    _camera = std::make_unique<Camera>(camera_transform, 100.f, (float)SCRHEIGHT / SCRWIDTH, 1.0f);
 
-	// Sponza
-	//camera_transform.location = glm::vec3(2.5f, 2.0f, 0.01f);
-	//camera_transform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
-	_camera = std::make_unique<Camera>(camera_transform, 100.f, (float) SCRHEIGHT / SCRWIDTH, 1.0f);
+    UniqueTextureArray textureArray;
 
-
-	/*{
-		Transform transform;
-		transform.scale = glm::vec3(4.0f);
-		//transform.scale = glm::vec3(0.0001f);
-		//transform.orientation = glm::quat(glm::vec3(0, -1, 0));
-
-		auto sphere = std::make_shared<Mesh>();
-		sphere->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply",
-			//Material::PBRMetal(
-			//	glm::vec3(0.955f, 0.638f, 0.538f), // Copper
-			//	0.8f));
-			Material::Refractive(0.8f, 1.5f, glm::vec3(1,0,0), 3.f));
-			//Material::BasicRefractive(1.5f, glm::vec3(1,0,0), 3.0f));
-		_scene->add_node(sphere, transform);
-	}*/
-
-
-	{
-		Transform transform;
-		transform.scale = glm::vec3(4.0f);
-		//transform.location = glm::vec3(0, 0.5f, 0);
-		//transform.orientation = glm::quat(glm::vec3(0, 1, 0));
-		auto bunny = std::make_shared<Mesh>();
+    {
+        Transform transform;
+        transform.scale = glm::vec3(4.0f);
+        //transform.location = glm::vec3(0, 0.5f, 0);
+        //transform.orientation = glm::quat(glm::vec3(0, 1, 0));
+        auto bunny = std::make_shared<Mesh>();
 #if 1
-		bunny->loadFromFile("../../assets/3dmodels/stanford/bunny/bun_zipper.ply",
-			//Material::Refractive(0.5f, 0.04f, 1.517));
-			Material::PBRMetal(
-				glm::vec3(0.955f, 0.638f, 0.538f), // Copper
-				0.8f));
-			//Material::PBRDielectric(
-			//	glm::vec3(1.0f, 0.1f, 0.1f),
-			//	0.8f,
-			//	0.08f));
-#else
-		bunny->loadFromFile("../../assets/3dmodels/stanford/bunny/bun_zipper.ply");
+        bunny->loadFromFile("../../assets/3dmodels/stanford/bunny/bun_zipper.ply",
+            textureArray,
+            Material::PBRMetal(
+                glm::vec3(0.955f, 0.638f, 0.538f), // Copper
+                0.8f));
 #endif
-		_scene->add_node(bunny, transform);
-	}
+        _scene->add_node(bunny, transform);
+    }
 
-	/*{
-		Transform transform;
-		transform.scale = glm::vec3(0.5f);
-		transform.location = glm::vec3(0, 0.5f, 0);
-		transform.orientation = glm::quat(glm::vec3(0, 1, 0));
-		auto cube = std::make_shared<Mesh>();
-#if 1
-		cube->loadFromFile("assets/3dmodels/cube/cube.obj",
-			Material::PBR(
-				glm::vec3(0, 0, 0),
-				glm::vec3(0.955f, 0.638f, 0.538f), // Copper
-				0.3f,
-				1.0f));
-#else
-		cube->loadFromFile("assets/3dmodels/cube/cube.obj");
-#endif
-		_cube_scene_node = &_scene->add_node(cube, transform);
-	}*/
-	
+    // Sponza
+    {
+        Transform transform;
+        transform.location = glm::vec3(0, 10, -0.5f);
+        transform.scale = glm::vec3(20, 1, 10);
+        transform.orientation = glm::quat(glm::vec3(PI, 0, 0)); // Flip upside down
+        auto lightPlane = std::make_shared<Mesh>();
+        lightPlane->loadFromFile("../../assets/3dmodels/plane/plane.obj",
+            textureArray,
+            Material::Emissive(5500.0f, 1000.0f));
+        //Material::Emissive(glm::vec3(0.8f, 0.8f, 0.8f), 500.0f));
+        _scene->add_node(lightPlane, transform);
+    }
+    {
+        Transform transform;
+        transform.scale = glm::vec3(0.005f);
+        auto sponza = std::make_shared<Mesh>();
+        sponza->loadFromFile("../../assets/3dmodels/sponza-crytek/sponza.obj", textureArray);
+        _scene->add_node(sponza, transform);
+        //BvhTester test = BvhTester(sponza);
+        //test.test();
+    }
 
-
-
-	// Cornel box with the Mitsuba text object and 2 Stanford bunnies
-	/*auto planeMaterial = Material::PBRDielectric(glm::vec3(1.0f, 1.0f, 1.0f), 0.5f);
-	auto plane = std::make_shared<Mesh>("assets/3dmodels/plane/plane.obj");
-	_scene->add_node(plane);
-
-	auto roughMetal = Material::PBRMetal(glm::vec3(0.672411f, 0.637331f, 0.585456f), 0.7f);
-	auto mirror = Material::PBRMetal(glm::vec3(0.672411f, 0.637331f, 0.585456f), 0.977f);
-	auto roughGlass = Material::Refractive(0.7f, 1.5f, glm::vec3(1, 0, 0), 3.f);
-	auto clearGlass = Material::Refractive(0.977f, 1.5f, glm::vec3(1, 0, 0), 3.f);
-	auto redRubber = Material::PBRDielectric(glm::vec3(1.0f, 0.2f, 0.2f), 0.6f);
-	auto ceramic = Material::PBRDielectric(glm::vec3(1.0f, 0.9f, 0.6f), 0.977f);
-
-	auto sphereScale = glm::vec3(0.25f);
-	auto metalSphere = std::make_shared<Mesh>("assets/3dmodels/mitsuba/mitsuba-sphere.obj", roughMetal);
-
-	auto bunnyScale = glm::vec3(4.0f);
-	auto rubberBunny = std::make_shared<Mesh>("assets/3dmodels/stanford/bunny/bun_zipper.ply", redRubber);
-	auto glassBunny = std::make_shared<Mesh>("assets/3dmodels/stanford/bunny/bun_zipper.ply", roughGlass);
-
-	auto cornellBox = std::make_shared<Mesh>("assets/3dmodels/cornel/CornellBox-Empty-RG.obj");
-
-	_scene->add_node(cornellBox, Transform(glm::vec3(0.0f, -.01f, 0.0f), glm::quat(), glm::vec3(2.0f)));
-	_scene->add_node(metalSphere, Transform(glm::vec3(), glm::quat(), sphereScale));
-	_scene->add_node(rubberBunny, Transform(glm::vec3(1.0f, -.1f, 0.0f), glm::quat(), bunnyScale));
-	_scene->add_node(glassBunny, Transform(glm::vec3(-1.0f, -.1f, 0.0f), glm::quat(), bunnyScale));*/
-
-	
-	// Sponza
-	{
-		Transform transform;
-		transform.location = glm::vec3(0, 10, -0.5f);
-		transform.scale = glm::vec3(20, 1, 10);
-		transform.orientation = glm::quat(glm::vec3(PI, 0, 0));// Flip upside down
-		auto lightPlane = std::make_shared<Mesh>();
-		lightPlane->loadFromFile("../../assets/3dmodels/plane/plane.obj",
-			Material::Emissive(5500.0f, 1000.0f));
-			//Material::Emissive(glm::vec3(0.8f, 0.8f, 0.8f), 500.0f));
-		_scene->add_node(lightPlane, transform);
-	}
-	{
-		Transform transform;
-		transform.scale = glm::vec3(0.005f);
-		auto sponza = std::make_shared<Mesh>();
-		sponza->loadFromFile("../../assets/3dmodels/sponza-crytek/sponza.obj");
-		_scene->add_node(sponza , transform);
-		//BvhTester test = BvhTester(sponza);
-		//test.test();
-	}
-
-	_out.Init(SCRWIDTH, SCRHEIGHT);
-	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
-	_ray_tracer->SetScene(_scene);
-	_ray_tracer->SetSkydome("../../assets/skydome/DF360_005_Ref.hdr", true, 75.0f);
-	_ray_tracer->SetTarget(_out.GetGLTexture());
+    _out.Init(SCRWIDTH, SCRHEIGHT);
+    _ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
+    _ray_tracer->SetScene(_scene, textureArray);
+    _ray_tracer->SetSkydome("../../assets/skydome/DF360_005_Ref.hdr", true, 75.0f);
+    _ray_tracer->SetTarget(_out.GetGLTexture());
 }
 
 // -----------------------------------------------------------
 // Input handling
 // -----------------------------------------------------------
-void Game::HandleInput( float dt )
+void Game::HandleInput(float dt)
 {
-	glm::vec3 movement;
-	movement.z += _keys[SDL_SCANCODE_W] ? 1 : 0;
-	movement.z -= _keys[SDL_SCANCODE_S] ? 1 : 0;
-	movement.x += _keys[SDL_SCANCODE_D] ? 1 : 0;
-	movement.x -= _keys[SDL_SCANCODE_A] ? 1 : 0;
-	movement.y += _keys[SDL_SCANCODE_SPACE] ? 1 : 0;
-	movement.y -= _keys[SDL_SCANCODE_C] ? 1 : 0;
+    glm::vec3 movement;
+    movement.z += _keys[SDL_SCANCODE_W] ? 1 : 0;
+    movement.z -= _keys[SDL_SCANCODE_S] ? 1 : 0;
+    movement.x += _keys[SDL_SCANCODE_D] ? 1 : 0;
+    movement.x -= _keys[SDL_SCANCODE_A] ? 1 : 0;
+    movement.y += _keys[SDL_SCANCODE_SPACE] ? 1 : 0;
+    movement.y -= _keys[SDL_SCANCODE_C] ? 1 : 0;
 
-	if (movement != glm::vec3(0))
-		_camera->transform().location += glm::mat3_cast(_camera->transform().orientation) * movement * dt * float(CAMERA_MOVE_SPEED);
+    if (movement != glm::vec3(0))
+        _camera->transform().location += glm::mat3_cast(_camera->transform().orientation) * movement * dt * float(CAMERA_MOVE_SPEED);
 }
 
 // -----------------------------------------------------------
 // Main game tick function
 // -----------------------------------------------------------
-void Game::Tick( float dt )
+void Game::Tick(float dt)
 {
-	HandleInput(dt);
+    HandleInput(dt);
 
-	t += dt;
-	if (t > 2 * PI)
-		t -= 2 * PI;
+    t += dt;
+    if (t > 2 * PI)
+        t -= 2 * PI;
 
-	_ray_tracer->RayTrace(*_camera);
-	_out.Render();
+    _ray_tracer->RayTrace(*_camera);
+    _out.Render();
 }
 
 void Tmpl8::Game::UpdateGui()
 {
-	// Taken from the example code
-	// 1. Show a simple window
-	// Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
-	ImGui::Begin("Camera Widget");
+    // Taken from the example code
+    // 1. Show a simple window
+    // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
+    ImGui::Begin("Camera Widget");
 
-	//ImGui::Text("Hello, world!");
-	ImGui::Checkbox("Thin lens", &_camera->is_thin_lense());
-	if (_camera->is_thin_lense())
-	{
-		ImGui::SliderFloat("Focal distance (m)", &_camera->get_focal_distance(), 0.1f, 5.0f);
-		ImGui::SliderFloat("Focal length (mm)", &_camera->get_focal_length_mm(), 10.0f, 100.0f);
-	}
-	ImGui::SliderFloat("Aperture (f-stops)", &_camera->get_aperture_fstops(), 1.0f, 10.0f);
-	ImGui::SliderFloat("Shutter time (s)", &_camera->get_shutter_time(), 1.0f / 500.0f, 1.0f / 32.0f);
-	ImGui::SliderFloat("Sensitivity (ISO)", &_camera->get_iso(), 100.0f, 3200.0f);
+    //ImGui::Text("Hello, world!");
+    ImGui::Checkbox("Thin lens", &_camera->is_thin_lense());
+    if (_camera->is_thin_lense()) {
+        ImGui::SliderFloat("Focal distance (m)", &_camera->get_focal_distance(), 0.1f, 5.0f);
+        ImGui::SliderFloat("Focal length (mm)", &_camera->get_focal_length_mm(), 10.0f, 100.0f);
+    }
+    ImGui::SliderFloat("Aperture (f-stops)", &_camera->get_aperture_fstops(), 1.0f, 10.0f);
+    ImGui::SliderFloat("Shutter time (s)", &_camera->get_shutter_time(), 1.0f / 500.0f, 1.0f / 32.0f);
+    ImGui::SliderFloat("Sensitivity (ISO)", &_camera->get_iso(), 100.0f, 3200.0f);
 
-	ImGui::Separator();
+    ImGui::Separator();
 
-	ImGui::Text("%d / %d samples per pixel", _ray_tracer->GetNumPasses(), _ray_tracer->GetMaxPasses());
-	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::Text("%d / %d samples per pixel", _ray_tracer->GetNumPasses(), _ray_tracer->GetMaxPasses());
+    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-	ImGui::End();
+    ImGui::End();
 }
 
-void Tmpl8::Game::AxisEvent(int axis, float value) {
+void Tmpl8::Game::AxisEvent(int axis, float value)
+{
 }
 
-void Tmpl8::Game::MouseMove(int _X, int _Y) {
-	_camera_euler.x += glm::radians((float)_Y * CAMERA_VIEW_SPEED);
-	_camera_euler.y += glm::radians((float)_X * CAMERA_VIEW_SPEED);
-	_camera_euler.x = glm::clamp(_camera_euler.x, -glm::half_pi<float>(), glm::half_pi<float>());
-	
-	if (_X != 0 || _Y != 0)
-		_camera->transform().orientation = glm::quat(_camera_euler);
+void Tmpl8::Game::MouseMove(int _X, int _Y)
+{
+    _camera_euler.x += glm::radians((float)_Y * CAMERA_VIEW_SPEED);
+    _camera_euler.y += glm::radians((float)_X * CAMERA_VIEW_SPEED);
+    _camera_euler.x = glm::clamp(_camera_euler.x, -glm::half_pi<float>(), glm::half_pi<float>());
+
+    if (_X != 0 || _Y != 0)
+        _camera->transform().orientation = glm::quat(_camera_euler);
 }
 
-void Tmpl8::Game::KeyUp(int a_Key) {
+void Tmpl8::Game::KeyUp(int a_Key)
+{
 }
 
-void Tmpl8::Game::KeyDown(int a_Key) {
+void Tmpl8::Game::KeyDown(int a_Key)
+{
 }

@@ -1,30 +1,83 @@
 #pragma once
-#include "template/surface.h"
-#include "types.h"
-#include <vector>
-#include <unordered_map>
+#include "template/cl_gl_includes.h"
+#include <gsl/gsl>
 #include <memory>
-#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
 
-namespace raytracer
-{
-	class Texture
-	{
-	public:
-		Texture(std::string fileName, bool isLinear = false);
-		~Texture();
+namespace raytracer {
 
-		int getId() const { return _tex_id; };
-		
-		static Tmpl8::Surface* getSurface(int id) { return s_textures[id].get(); };
-		static size_t getNumUniqueSurfaces() { return s_textures.size(); };
-	public:
-		static const uint TEXTURE_WIDTH = 1024;
-		static const uint TEXTURE_HEIGHT = 1024;
-	private:
-		static std::unordered_map<std::string, int> s_texturesMap;
-		static std::vector<std::unique_ptr<Tmpl8::Surface>> s_textures;
+struct CLContext {
+public:
+    cl::Context getContext() const
+    {
+        return m_context;
+    }
 
-		int _tex_id;
-	};
+    operator cl::Context() const
+    {
+        return m_context;
+    }
+
+    cl::Device getDevice() const
+    {
+        return m_device;
+    }
+
+    cl::CommandQueue getGraphicsQueue() const
+    {
+        return m_queue;
+    }
+
+    cl::CommandQueue getCopyQueue() const
+    {
+        return m_copyQueue;
+    }
+
+public: // TMP
+    cl::Context m_context;
+    cl::Device m_device;
+    cl::CommandQueue m_queue;
+    cl::CommandQueue m_copyQueue;
+};
+
+struct TextureFile {
+    std::string filename;
+    bool isLinear = false;
+};
+
+class UniqueTextureArray {
+public:
+    UniqueTextureArray() = default;
+    ~UniqueTextureArray() = default;
+
+    int add(std::string_view filename, bool isLinear = false);
+    gsl::span<const TextureFile> getTextureFiles() const;
+
+private:
+    std::vector<TextureFile> m_textureFiles;
+    std::unordered_map<std::string, int> m_textureLookupTable;
+};
+
+class CLTextureArray {
+public:
+    CLTextureArray(const UniqueTextureArray& files, CLContext& context, size_t width, size_t height, bool storeAsFloat);
+    ~CLTextureArray();
+
+    operator cl::Image2DArray() const;
+    cl::Image2DArray getImage2DArray() const;
+
+private:
+    void copy(gsl::span<const TextureFile> files, cl::CommandQueue commandQueue);
+    std::unique_ptr<std::byte[]> loadImage(std::string_view filename, bool isLinear);
+
+    static cl::Image2DArray createImageArray(cl::Context context, size_t width, size_t height, size_t arrayLength, bool storeAsFloat);
+
+private:
+    size_t m_width, m_height;
+    bool m_storeAsFloat;
+    cl::Image2DArray m_imageArray;
+};
+
 }

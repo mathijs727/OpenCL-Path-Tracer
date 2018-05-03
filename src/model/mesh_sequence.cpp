@@ -9,6 +9,7 @@
 #include "template/surface.h"
 #include "bvh/binned_bvh.h"
 #include "bvh/sbvh.h"
+#include "hdrtexture.h"
 #include "bvh/refit_bvh.h"
 
 using namespace raytracer;
@@ -160,7 +161,7 @@ void raytracer::MeshSequence::addSubMesh(
 		material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
 		std::string textureFile = texturePath;
 		textureFile += path.C_Str();
-		materials.push_back(Material::Diffuse(Texture(textureFile.c_str()), ai2glm(colour)));
+		materials.push_back(Material::Diffuse(HDRTexture(textureFile.c_str()), ai2glm(colour)));
 	}
 	else {
 		materials.push_back(Material::Diffuse(ai2glm(colour)));

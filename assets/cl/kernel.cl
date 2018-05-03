@@ -201,7 +201,7 @@ __kernel void shade(
 	__global EmissiveTriangle* emissiveTriangles,
 	__global Material* materials,
 	__read_only image2d_array_t textures,
-	__read_only image2d_t skydomeTexture,
+	//__read_only image2d_array_t skydomeTexture,
 	__global randHostStream* randomStreams)
 {
 	size_t gid = get_global_id(0);
@@ -284,7 +284,7 @@ __kernel void shade(
 			randCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
 		} else if (inputData->hasSkydome) {
 			// We missed the scene, but have a skydome to fall back to
-			float3 c = readSkydome(normalize(rayData->ray.direction), skydomeTexture);
+			float3 c = (float3)(0,0,0);// readSkydome(normalize(rayData->ray.direction), skydomeTexture);
 			outputPixels[rayData->outputPixel] += rayData->multiplier * c;
 		}
 	}

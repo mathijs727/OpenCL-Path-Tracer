@@ -50,7 +50,7 @@ target_link_libraries(raytracer PRIVATE clRNG)
 #set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-msse4.1")
 
 set_target_properties(raytracer PROPERTIES
-    CXX_STANDARD 14# Require C++ 14
+    CXX_STANDARD 17# Require C++ 17
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
 )

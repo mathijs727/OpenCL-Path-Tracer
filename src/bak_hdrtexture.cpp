@@ -77,7 +77,6 @@ raytracer::HDRTexture::HDRTexture(const char* fileName, bool isLinear, float mul
 		}
 		FreeImage_Unload(dib);
 
-		//s_textures.push_back(std::make_unique<Tmpl8::Surface>(fileName, HDR_TEXTURE_WIDTH, HDR_TEXTURE_HEIGHT, isLinear));
 		s_texturesMap.insert(std::pair<const char*, int>(fileName, texId));
 	}
 	else {
