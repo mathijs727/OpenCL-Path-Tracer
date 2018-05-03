@@ -66,8 +66,8 @@ void GLOutput::Init(int width, int height)
 	
 	// Load shader
 	{
-		GLuint vertexShader = LoadShader("assets/gl/vs_tex.glsl", GL_VERTEX_SHADER);
-		GLuint fragmentShader = LoadShader("assets/gl/fs_tex.glsl", GL_FRAGMENT_SHADER);
+		GLuint vertexShader = LoadShader("../../assets/gl/vs_tex.glsl", GL_VERTEX_SHADER);
+		GLuint fragmentShader = LoadShader("../../assets/gl/fs_tex.glsl", GL_FRAGMENT_SHADER);
 
 		m_shader = glCreateProgram();
 		glAttachShader(m_shader, vertexShader);

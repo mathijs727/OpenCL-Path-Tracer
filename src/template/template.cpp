@@ -13,25 +13,20 @@
 #include <vector>
 
 #include "template.h"
+#include <SDL2/SDL.h>
 #include "../game.h"
 #include "../imgui/imgui.h"
 #include "../imgui/imgui_impl_sdl_gl3.h"
+
 #ifdef _WIN32
 #include <io.h>
+#include <Windows.h>
+#include <fcntl.h>
 #endif
 
 using namespace Tmpl8;
 
 namespace Tmpl8 { 
-float length( const float3& v ) { return sqrtf( v.x * v.x + v.y * v.y + v.z * v.z ); } 
-float length( const float2& v ) { return sqrtf( v.x * v.x + v.y * v.y ); }
-float3 normalize( const float3& v ) { float l = 1.0f / length( v ); return float3( v.x * l, v.y * l, v.z * l ); }
-float2 normalize( const float2& v ) { float l = 1.0f / length( v ); return float2( v.x * l, v.y * l ); }
-float dot( const float3& a, const float3& b ) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-float dot( const float2& a, const float2& b ) { return a.x * b.x + a.y * b.y; }
-float3 operator * ( const float3& v, const float& s ) { return float3( v.x * s, v.y * s, v.z * s ); }
-float2 operator * ( float2& v, float& s ) { return float2( v.x * s, v.y * s ); }
-
 
 void NotifyUser( char* s )
 {
@@ -97,7 +92,7 @@ void redirectIO()
 #endif
 }
 
-int main( int argc, char **argv ) 
+int main( int argc, char *argv[] ) 
 {
 #ifdef OPENCL
 	//redirectIO();

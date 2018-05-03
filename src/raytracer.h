@@ -1,6 +1,5 @@
 #pragma once
 //#include "template/template.h"// Includes template/cl.hpp
-#include "template/includes.h"
 #include "bvh/top_bvh.h"
 #include "vertices.h"
 #include "model/material.h"

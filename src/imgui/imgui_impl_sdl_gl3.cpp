@@ -10,9 +10,10 @@
 #include "imgui_impl_sdl_gl3.h"
 
 // SDL,GL3W
+#include <Windows.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
-#include "../template/includes.h"
+#include "../template/cl_gl_includes.h"
 
 // Data
 static double       g_Time = 0.0f;

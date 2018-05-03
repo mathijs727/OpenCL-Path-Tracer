@@ -5,7 +5,6 @@
 #include <cassert>
 #include <stack>
 #include <iostream>
-#include "template/includes.h"// Includes opencl
 #include "template/surface.h"
 #include "bvh/sbvh.h"
 #include "bvh/binned_bvh.h"

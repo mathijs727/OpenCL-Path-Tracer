@@ -34,9 +34,9 @@ public:
 	void MouseMove( int _X, int _Y );
 	void KeyUp( int a_Key );
 	void KeyDown( int a_Key );
-	void KeysUpdate(const Uint8* keys) { _keys = keys; }
+	void KeysUpdate(const uint8_t* keys) { _keys = keys; }
 private:
-	const Uint8* _keys;
+	const uint8_t* _keys;
 	Surface* _screen;
 	std::shared_ptr<raytracer::Scene> _scene;
 	std::unique_ptr<raytracer::Camera> _camera;

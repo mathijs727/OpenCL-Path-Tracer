@@ -1,6 +1,6 @@
 #pragma once
+#include "template/cl_gl_includes.h"
 #include "types.h"
-#include "template/includes.h"
 #include <glm/glm.hpp>
 
 namespace raytracer {
@@ -33,6 +33,7 @@ namespace raytracer {
 
 		void fit(const AABB& other)
 		{
+            glm::min(1, 2);
 			min = glm::min(min, other.min);
 			max = glm::max(max, other.max);
 		}

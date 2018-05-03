@@ -1,5 +1,6 @@
 #pragma once
-
+#include "template/cl_gl_includes.h"
+#include <glm/glm.hpp>
 #include <cstdint>
 
 typedef unsigned int uint;

@@ -2,7 +2,6 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include "types.h"
-#include "template/includes.h"
 #include "bvh_nodes.h"
 #include "aabb.h"
 #include "vertices.h"

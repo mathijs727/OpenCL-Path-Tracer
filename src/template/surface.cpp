@@ -8,6 +8,7 @@
 // -----------------------------------------------------------
 
 #include "surface.h"
+#include "template.h"
 
 #ifdef __linux__
 // https://stackoverflow.com/questions/7047013/using-c-with-objective-c-how-can-i-fix-conflicting-declaration-typedef-int
@@ -21,12 +22,11 @@
 #include <freeimage.h>
 #endif
 
-#include "template.h"
 #include <string>
 
 namespace Tmpl8 {
 
-void NotifyUser( char* s );
+void NotifyUser(char* s);
 
 Surface::Surface( int a_Width, int a_Height, Pixel* a_Buffer, int a_Pitch ) :
 	m_Width( a_Width ),

@@ -1,5 +1,4 @@
-#include "template/template.h"
-
+#include "game.h"
 #include "scene.h"
 #include "camera.h"
 #include "transform.h"
@@ -10,6 +9,7 @@
 #include "model/mesh_sequence.h"
 #include "bvh/bvh_test.h"
 
+#include "SDL2/SDL.h"
 #include <iostream>
 #include <glm/gtx/euler_angles.hpp>
 
@@ -62,7 +62,7 @@ void Game::Init()
 		//transform.orientation = glm::quat(glm::vec3(0, 1, 0));
 		auto bunny = std::make_shared<Mesh>();
 #if 1
-		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply",
+		bunny->loadFromFile("../../assets/3dmodels/stanford/bunny/bun_zipper.ply",
 			//Material::Refractive(0.5f, 0.04f, 1.517));
 			Material::PBRMetal(
 				glm::vec3(0.955f, 0.638f, 0.538f), // Copper
@@ -72,7 +72,7 @@ void Game::Init()
 			//	0.8f,
 			//	0.08f));
 #else
-		bunny->loadFromFile("assets/3dmodels/stanford/bunny/bun_zipper.ply");
+		bunny->loadFromFile("../../assets/3dmodels/stanford/bunny/bun_zipper.ply");
 #endif
 		_scene->add_node(bunny, transform);
 	}
@@ -130,10 +130,10 @@ void Game::Init()
 	{
 		Transform transform;
 		transform.location = glm::vec3(0, 10, -0.5f);
-		transform.scale = glm::vec3(1, 1, 0.3f);
+		transform.scale = glm::vec3(20, 1, 10);
 		transform.orientation = glm::quat(glm::vec3(PI, 0, 0));// Flip upside down
 		auto lightPlane = std::make_shared<Mesh>();
-		lightPlane->loadFromFile("assets/3dmodels/plane/plane.obj",
+		lightPlane->loadFromFile("../../assets/3dmodels/plane/plane.obj",
 			Material::Emissive(5500.0f, 1000.0f));
 			//Material::Emissive(glm::vec3(0.8f, 0.8f, 0.8f), 500.0f));
 		_scene->add_node(lightPlane, transform);
@@ -142,16 +142,16 @@ void Game::Init()
 		Transform transform;
 		transform.scale = glm::vec3(0.005f);
 		auto sponza = std::make_shared<Mesh>();
-		sponza->loadFromFile("assets/3dmodels/sponza-crytek/sponza.obj");
+		sponza->loadFromFile("../../assets/3dmodels/sponza-crytek/sponza.obj");
 		_scene->add_node(sponza , transform);
-		BvhTester test = BvhTester(sponza);
-		test.test();
+		//BvhTester test = BvhTester(sponza);
+		//test.test();
 	}
 
 	_out.Init(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer = std::make_unique<RayTracer>(SCRWIDTH, SCRHEIGHT);
 	_ray_tracer->SetScene(_scene);
-	_ray_tracer->SetSkydome("assets/skydome/DF360_005_Ref.hdr", true, 75.0f);
+	_ray_tracer->SetSkydome("../../assets/skydome/DF360_005_Ref.hdr", true, 75.0f);
 	_ray_tracer->SetTarget(_out.GetGLTexture());
 }
 

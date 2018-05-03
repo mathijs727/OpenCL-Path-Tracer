@@ -1,11 +1,9 @@
 #pragma once
-
-#include <glm/glm.hpp>
-#include "template/includes.h"
 #include "template/surface.h"
 #include "types.h"
 #include "texture.h"
 #include "light.h"
+#include <glm/glm.hpp>
 #include <algorithm>
 #include <vector>
 #include <iostream>

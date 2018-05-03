@@ -6,7 +6,6 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "template/includes.h"// Includes opencl
 #include "template/surface.h"
 #include "bvh/binned_bvh.h"
 #include "bvh/sbvh.h"
