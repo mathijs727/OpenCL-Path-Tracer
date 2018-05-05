@@ -390,7 +390,7 @@ void raytracer::RayTracer::SetTarget(GLuint glTexture)
 #endif
 }
 
-void raytracer::RayTracer::RayTrace(Camera& camera)
+void raytracer::RayTracer::RayTrace(const Camera& camera)
 {
 #ifdef OPENCL_GL_INTEROP
     // We must make sure that OpenGL is done with the textures, so we ask to sync.

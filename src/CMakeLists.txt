@@ -1,13 +1,13 @@
 include(${CMAKE_CURRENT_LIST_DIR}/bvh/CMakeLists.txt)
 include(${CMAKE_CURRENT_LIST_DIR}/model/CMakeLists.txt)
-include(${CMAKE_CURRENT_LIST_DIR}/imgui/CMakeLists.txt)
-include(${CMAKE_CURRENT_LIST_DIR}/template/CMakeLists.txt)
+#include(${CMAKE_CURRENT_LIST_DIR}/imgui/CMakeLists.txt)
+include(${CMAKE_CURRENT_LIST_DIR}/ui/CMakeLists.txt)
 
 target_sources(raytracer
 	PRIVATE
 		"${CMAKE_CURRENT_LIST_DIR}/camera.cpp"
-		"${CMAKE_CURRENT_LIST_DIR}/game.cpp"
-		"${CMAKE_CURRENT_LIST_DIR}/gloutput.cpp"
+		#"${CMAKE_CURRENT_LIST_DIR}/game.cpp"
+		#"${CMAKE_CURRENT_LIST_DIR}/gloutput.cpp"
 		#"${CMAKE_CURRENT_LIST_DIR}/hdrtexture.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/texture.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/light.cpp"

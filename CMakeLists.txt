@@ -7,7 +7,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(OpenCL REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
-find_package(sdl2 REQUIRED)
+find_package(glfw3 REQUIRED)
 find_package(FreeImage REQUIRED)
 find_package(Assimp REQUIRED)
 find_package(glm REQUIRED)
@@ -29,8 +29,7 @@ target_link_libraries(raytracer PRIVATE
 	OpenCL::OpenCL
 	OpenGL::GL
 	GLEW::GLEW
-	SDL2::SDL2
-	SDL2::SDL2main
+	glfw
 	FreeImage
 	assimp
 	glm)

@@ -25,7 +25,7 @@ public:
 
     void SetScene(std::shared_ptr<Scene> scene, const UniqueTextureArray& textureArray);
     void SetTarget(GLuint glTexture);
-    void RayTrace(Camera& camera);
+    void RayTrace(const Camera& camera);
 
     void FrameTick(); // Load next animation frame data
 
