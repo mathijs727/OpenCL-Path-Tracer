@@ -5,10 +5,11 @@
 #include "shapes.h"
 #include "texture.h"
 #include "transform.h"
-#include "types.h"
 #include "vertices.h"
 
 #include <glm/glm.hpp>
+#include <optional>
+#include <string_view>
 #include <vector>
 
 struct aiMesh;
@@ -18,70 +19,53 @@ namespace raytracer {
 
 class Mesh : public IMesh {
 public:
-    Mesh() {}
-    ~Mesh() {}
+    Mesh() = delete;
+    ~Mesh() = default;
+    Mesh(std::string_view fileName, const Transform& offset, const Material& overrideMaterial, UniqueTextureArray& textureArray);
+    Mesh(std::string_view fileName, const Transform& offset, UniqueTextureArray& textureArray);
+    Mesh(std::string_view fileName, const Material& overrideMaterial, UniqueTextureArray& textureArray);
+    Mesh(std::string_view fileName, UniqueTextureArray& textureArray);
 
-    Mesh(const char* file, UniqueTextureArray& textureArray, const Material& overrideMaterial, const Transform& offset = Transform())
-    {
-        loadFromFile(file, textureArray, overrideMaterial, offset);
-    }
+    const std::vector<VertexSceneData>& getVertices() const override { return m_vertices; }
+    const std::vector<TriangleSceneData>& getTriangles() const override { return m_triangles; }
+    const std::vector<Material>& getMaterials() const override { return m_materials; }
+    const std::vector<SubBvhNode>& getBvhNodes() const override { return m_bvhNodes; }
+    const std::vector<uint32_t>& getEmissiveTriangles() const override { return m_emissiveTriangles; }
 
-    Mesh(const char* file, UniqueTextureArray& textureArray, const Transform& offset = Transform())
-    {
-        loadFromFile(file, textureArray, offset);
-    }
-
-    void loadFromFile(
-        const char* file,
-        UniqueTextureArray& textureArray,
-        const Transform& offset = Transform());
-
-    void loadFromFile(
-        const char* file,
-        UniqueTextureArray& textureArray,
-        const Material& overrideMaterial,
-        const Transform& offset = Transform());
-
-    const std::vector<VertexSceneData>& getVertices() const override { return _vertices; }
-    const std::vector<TriangleSceneData>& getTriangles() const override { return _triangles; }
-    const std::vector<Material>& getMaterials() const override { return _materials; }
-    const std::vector<SubBvhNode>& getBvhNodes() const override { return _bvh_nodes; }
-    const std::vector<u32>& getEmissiveTriangles() const override { return _emissive_triangles; }
-
-    u32 getBvhRootNode() const override { return _bvh_root_node; };
+    uint32_t getBvhRootNode() const override { return m_bvhRootNode; };
 
     bool isDynamic() const override { return false; };
-    u32 maxNumVertices() const override { return (u32)_vertices.size(); };
-    u32 maxNumTriangles() const override { return (u32)_triangles.size(); };
-    u32 maxNumMaterials() const override { return (u32)_materials.size(); };
-    u32 maxNumBvhNodes() const override { return (u32)_bvh_nodes.size(); };
+    uint32_t maxNumVertices() const override { return (uint32_t)m_vertices.size(); };
+    uint32_t maxNumTriangles() const override { return (uint32_t)m_triangles.size(); };
+    uint32_t maxNumMaterials() const override { return (uint32_t)m_materials.size(); };
+    uint32_t maxNumBvhNodes() const override { return (uint32_t)m_bvhNodes.size(); };
     void buildBvh() override{}; // Only necessary for dynamic objects
 private:
     void loadFromFile(
-        const char* file,
-        UniqueTextureArray& textureArray,
-        const Material* overrideMaterial,
-        const Transform& offset);
+        std::string_view fileName,
+        const Transform& offset,
+        std::optional<Material> overrideMaterial,
+        UniqueTextureArray& textureArray);
 
     void addSubMesh(
         const aiScene* scene,
-        uint mesh_index,
+        unsigned mesh_index,
         const glm::mat4& transform_matrix,
+        std::string_view texturePath,
         UniqueTextureArray& textureArray,
-        const char* texturePath,
-        const Material* overrideMaterial);
+        std::optional<Material> overrideMaterial);
     void collectEmissiveTriangles();
 
     void storeBvh(const char* fileName);
     bool loadBvh(const char* fileName);
 
 private:
-    std::vector<VertexSceneData> _vertices;
-    std::vector<TriangleSceneData> _triangles;
-    std::vector<u32> _emissive_triangles;
-    std::vector<Material> _materials;
-    std::vector<SubBvhNode> _bvh_nodes;
+    std::vector<VertexSceneData> m_vertices;
+    std::vector<TriangleSceneData> m_triangles;
+    std::vector<uint32_t> m_emissiveTriangles;
+    std::vector<Material> m_materials;
+    std::vector<SubBvhNode> m_bvhNodes;
 
-    u32 _bvh_root_node;
+    uint32_t m_bvhRootNode;
 };
 }

@@ -26,21 +26,21 @@ namespace raytracer
 		const std::vector<SubBvhNode>& getBvhNodes() const override { return _bvh_nodes; }
 
 	private:
-		// Cannot directly return std::vector<u32> because then we would have to reference stack memory
-		std::vector<u32> _emmisive_triangles_dummy;
-		const std::vector<u32>& getEmissiveTriangles() const override { return _emmisive_triangles_dummy; }// Not implemented yet
+		// Cannot directly return std::vector<uint32_t> because then we would have to reference stack memory
+		std::vector<uint32_t> _emmisive_triangles_dummy;
+		const std::vector<uint32_t>& getEmissiveTriangles() const override { return _emmisive_triangles_dummy; }// Not implemented yet
 	public:
-		u32 getBvhRootNode() const override { return _bvh_root_node; };
+		uint32_t getBvhRootNode() const override { return _bvh_root_node; };
 
 		bool isDynamic() const override { return true; };
-		u32 maxNumVertices() const override;
-		u32 maxNumTriangles() const override;
-		u32 maxNumMaterials() const override;
-		u32 maxNumBvhNodes() const override;
+		uint32_t maxNumVertices() const override;
+		uint32_t maxNumTriangles() const override;
+		uint32_t maxNumMaterials() const override;
+		uint32_t maxNumBvhNodes() const override;
 		void buildBvh() override;
 	private:
 		void addSubMesh(const aiScene* scene,
-			uint mesh_index,
+			unsigned mesh_index,
 			const glm::mat4& transform_matrix,
 			std::vector<VertexSceneData>& vertices,
 			std::vector<TriangleSceneData>& triangles,
@@ -54,16 +54,16 @@ namespace raytracer
 			std::vector<TriangleSceneData> triangles;
 			std::vector<Material> materials;
 			//std::vector<SubBvhNode> bvh_nodes;
-			//u32 bvh_root_node;
+			//uint32_t bvh_root_node;
 		};
 
 		bool _bvh_needs_update;
 
 		bool _refitting;
 		std::vector<SubBvhNode> _bvh_nodes;
-		u32 _bvh_root_node;
+		uint32_t _bvh_root_node;
 
-		uint _current_frame;
+		unsigned _current_frame;
 		std::vector<MeshFrame> _frames;
 	};
 }

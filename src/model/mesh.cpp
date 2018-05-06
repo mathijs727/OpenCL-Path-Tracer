@@ -12,58 +12,78 @@
 #include <stack>
 #include <string>
 
-using namespace raytracer;
-
-inline glm::mat4 ai2glm(const aiMatrix4x4& t)
+static glm::mat4 ai2glm(const aiMatrix4x4& t)
 {
     return glm::mat4(t.a1, t.a2, t.a3, t.a4, t.b1, t.b2, t.b3, t.b4, t.c1, t.c2, t.c3, t.c4, t.d1, t.d2, t.d3, t.d4);
 }
 
-inline glm::vec3 ai2glm(const aiVector3D& v)
+static glm::vec3 ai2glm(const aiVector3D& v)
 {
     return glm::vec3(v.x, v.y, v.z);
 }
 
-inline glm::vec3 ai2glm(const aiColor3D& c)
+static glm::vec3 ai2glm(const aiColor3D& c)
 {
     return glm::vec3(c.r, c.g, c.b);
 }
 
-inline glm::mat4 normal_matrix(const glm::mat4& mat)
+static glm::mat4 normal_matrix(const glm::mat4& mat)
 {
     return glm::transpose(glm::inverse(mat));
 }
 
 // http://stackoverflow.com/questions/3071665/getting-a-directory-name-from-a-filename
-inline std::string getPath(const std::string& str)
+static std::string getPath(std::string_view str)
 {
     size_t found;
     found = str.find_last_of("/\\");
-    return str.substr(0, found) + "/";
+    return std::string(str.substr(0, found)) + "/";
 }
 
-inline bool fileExists(const std::string& name)
+static bool fileExists(std::string_view name)
 {
-    std::ifstream f(name.c_str());
+    std::ifstream f(name.data());
     return f.good() && f.is_open();
 }
 
-void raytracer::Mesh::addSubMesh(
-    const aiScene* scene,
-    uint mesh_index,
-    const glm::mat4& transform_matrix,
-    UniqueTextureArray& textureArray,
-    const char* texturePath,
-    const Material* overrideMaterial)
+namespace raytracer {
+
+Mesh::Mesh(std::string_view fileName, const Transform& offset, const Material& overrideMaterial, UniqueTextureArray& textureArray)
 {
-    aiMesh* in_mesh = scene->mMeshes[mesh_index];
+    loadFromFile(fileName, offset, overrideMaterial, textureArray);
+}
+
+Mesh::Mesh(std::string_view fileName, const Transform& offset, UniqueTextureArray& textureArray)
+{
+    loadFromFile(fileName, offset, {}, textureArray);
+}
+
+Mesh::Mesh(std::string_view fileName, const Material& overrideMaterial, UniqueTextureArray& textureArray)
+{
+    loadFromFile(fileName, {}, overrideMaterial, textureArray);
+}
+
+Mesh::Mesh(std::string_view fileName, UniqueTextureArray& textureArray)
+{
+    loadFromFile(fileName, {}, {}, textureArray);
+}
+
+void Mesh::addSubMesh(
+    const aiScene* scene,
+    unsigned mesh_index,
+    const glm::mat4& transform_matrix,
+    std::string_view texturePath,
+    UniqueTextureArray& textureArray,
+    std::optional<Material> overrideMaterial)
+{
+    const aiMesh* in_mesh = scene->mMeshes[mesh_index];
 
     if (in_mesh->mNumVertices == 0 || in_mesh->mNumFaces == 0)
         return;
 
     // process the materials
-    u32 materialId = (u32)_materials.size();
-    if (overrideMaterial == nullptr) {
+    uint32_t materialId = (uint32_t)m_materials.size();
+    if (!overrideMaterial) {
         aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
         aiColor3D colour;
         aiColor3D emissiveColour;
@@ -71,27 +91,27 @@ void raytracer::Mesh::addSubMesh(
         material->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveColour);
         bool emissive = emissiveColour.r != 0.0f || emissiveColour.g != 0.0f || emissiveColour.b != 0.0f;
         if (emissive) {
-            _materials.push_back(Material::Emissive(ai2glm(emissiveColour)));
+            m_materials.push_back(Material::Emissive(ai2glm(emissiveColour)));
         } else {
             if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
                 aiString path;
                 material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
-                std::string textureFile = texturePath;
+                std::string textureFile(texturePath);
                 textureFile += path.C_Str();
                 std::cout << "Texture path: " << textureFile << std::endl;
-                _materials.push_back(Material::Diffuse(textureArray.add(textureFile), ai2glm(colour)));
+                m_materials.push_back(Material::Diffuse(textureArray.add(textureFile), ai2glm(colour)));
             } else {
-                _materials.push_back(Material::Diffuse(ai2glm(colour)));
+                m_materials.push_back(Material::Diffuse(ai2glm(colour)));
             }
         }
     } else {
-        _materials.push_back(*overrideMaterial);
+        m_materials.push_back(*overrideMaterial);
     }
 
     // add all of the vertex data
     glm::mat4 normalMatrix = normal_matrix(transform_matrix);
-    u32 vertexOffset = (u32)_vertices.size();
-    for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
+    uint32_t vertexOffset = (uint32_t)m_vertices.size();
+    for (unsigned v = 0; v < in_mesh->mNumVertices; ++v) {
         glm::vec4 position = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
         glm::vec4 normal = glm::vec4(0);
         if (in_mesh->mNormals != nullptr)
@@ -107,15 +127,13 @@ void raytracer::Mesh::addSubMesh(
         vertex.vertex = position;
         vertex.normal = normal;
         vertex.texCoord = texCoords;
-        _vertices.push_back(vertex);
-        //std::cout << "importing vertex: " << position.x << ", " << position.y << ", " << position.z << std::endl;
+        m_vertices.push_back(vertex);
     }
 
     // add all of the faces data
-    for (uint f = 0; f < in_mesh->mNumFaces; ++f) {
+    for (unsigned f = 0; f < in_mesh->mNumFaces; ++f) {
         aiFace* in_face = &in_mesh->mFaces[f];
         if (in_face->mNumIndices != 3) {
-            //std::cout << "found a face which is not a triangle! discarding." << std::endl;
             continue;
         }
         auto aiIndices = in_face->mIndices;
@@ -125,44 +143,34 @@ void raytracer::Mesh::addSubMesh(
         TriangleSceneData triangle;
         triangle.indices = face + vertexOffset;
         triangle.material_index = materialId;
-        _triangles.push_back(triangle);
+        m_triangles.push_back(triangle);
 
         // Doesnt work if SBVH is gonna mess up triangle order anyways
         //if (emissive)
-        //	_emissive_triangles.push_back((u32)_triangles.size() - 1);
+        //	_emissive_triangles.push_back((uint32_t)_triangles.size() - 1);
     }
 }
 
-void raytracer::Mesh::collectEmissiveTriangles()
+void Mesh::collectEmissiveTriangles()
 {
-    _emissive_triangles.clear();
-    for (u32 i = 0; i < _triangles.size(); i++) {
-        auto triangle = _triangles[i];
-        auto material = _materials[triangle.material_index];
+    m_emissiveTriangles.clear();
+    for (uint32_t i = 0; i < (uint32_t)m_triangles.size(); i++) {
+        auto triangle = m_triangles[i];
+        auto material = m_materials[triangle.material_index];
         glm::vec4 vertices[3];
-        vertices[0] = _vertices[triangle.indices.x].vertex;
-        vertices[1] = _vertices[triangle.indices.y].vertex;
-        vertices[2] = _vertices[triangle.indices.z].vertex;
+        vertices[0] = m_vertices[triangle.indices.x].vertex;
+        vertices[1] = m_vertices[triangle.indices.y].vertex;
+        vertices[2] = m_vertices[triangle.indices.z].vertex;
         if (material.type == Material::Type::EMISSIVE)
-            _emissive_triangles.push_back(i);
+            m_emissiveTriangles.push_back(i);
     }
 }
 
-void raytracer::Mesh::loadFromFile(const char* file, UniqueTextureArray& textureArray, const Transform& offset)
-{
-    loadFromFile(file, textureArray, nullptr, offset);
-}
-
-void raytracer::Mesh::loadFromFile(const char* file, UniqueTextureArray& textureArray, const Material& overrideMaterial, const Transform& offset)
-{
-    loadFromFile(file, textureArray, &overrideMaterial, offset);
-}
-
-void raytracer::Mesh::loadFromFile(
-    const char* file,
-    UniqueTextureArray& textureArray,
-    const Material* defaultMaterial,
-    const Transform& offset)
+void Mesh::loadFromFile(
+    std::string_view fileName,
+    const Transform& offset,
+    std::optional<Material> overrideMaterial,
+    UniqueTextureArray& textureArray)
 {
     struct StackElement {
         aiNode* node;
@@ -174,13 +182,13 @@ void raytracer::Mesh::loadFromFile(
         }
     };
 
-    std::string path = getPath(file);
+    std::string path = getPath(fileName);
 
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(file, aiProcessPreset_TargetRealtime_MaxQuality);
+    const aiScene* scene = importer.ReadFile(fileName.data(), aiProcessPreset_TargetRealtime_MaxQuality);
 
     if (scene == nullptr || scene->mRootNode == nullptr)
-        std::cout << "Mesh not found: " << file << std::endl;
+        std::cout << "Mesh not found: " << fileName << std::endl;
 
     if (scene != nullptr && scene->mFlags != AI_SCENE_FLAGS_INCOMPLETE && scene->mRootNode != nullptr) {
         std::stack<StackElement> stack;
@@ -189,19 +197,19 @@ void raytracer::Mesh::loadFromFile(
             auto current = stack.top();
             stack.pop();
             glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
-            for (uint i = 0; i < current.node->mNumMeshes; ++i) {
-                addSubMesh(scene, current.node->mMeshes[i], cur_transform, textureArray, path.c_str(), defaultMaterial);
+            for (unsigned i = 0; i < current.node->mNumMeshes; ++i) {
+                addSubMesh(scene, current.node->mMeshes[i], cur_transform, path, textureArray, overrideMaterial);
                 //if (!success) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
                 //else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
                 //out_vec.push_back(mesh);
             }
-            for (uint i = 0; i < current.node->mNumChildren; ++i) {
+            for (unsigned i = 0; i < current.node->mNumChildren; ++i) {
                 stack.push(StackElement(current.node->mChildren[i], cur_transform));
             }
         }
     }
 
-    std::string bvhFileName = file;
+    std::string bvhFileName(fileName);
     bvhFileName += ".bvh";
     bool buildBvh = true;
     if (fileExists(bvhFileName)) {
@@ -213,7 +221,7 @@ void raytracer::Mesh::loadFromFile(
         std::cout << "Starting bvh build..." << std::endl;
         // Create a BVH for the mesh
         BinnedBvhBuilder bvhBuilder;
-        _bvh_root_node = bvhBuilder.build(_vertices, _triangles, _bvh_nodes);
+        m_bvhRootNode = bvhBuilder.build(m_vertices, m_triangles, m_bvhNodes);
 
         std::cout << "Storing bvh in file: " << bvhFileName << std::endl;
         storeBvh(bvhFileName.c_str());
@@ -222,9 +230,9 @@ void raytracer::Mesh::loadFromFile(
     collectEmissiveTriangles();
 }
 
-const u32 BVH_FILE_FORMAT_VERSION = 1;
+const unsigned BVH_FILE_FORMAT_VERSION = 1;
 
-void raytracer::Mesh::storeBvh(const char* fileName)
+void Mesh::storeBvh(const char* fileName)
 {
     std::ofstream outFile;
     outFile.open(fileName, std::ios::out | std::ios::binary);
@@ -233,23 +241,23 @@ void raytracer::Mesh::storeBvh(const char* fileName)
     outFile.write((char*)&BVH_FILE_FORMAT_VERSION, 4);
 
     // BVH root node index
-    outFile.write((char*)&_bvh_root_node, 4);
+    outFile.write((char*)&m_bvhRootNode, 4);
 
     // BVH nodes
-    u32 numNodes = (u32)_bvh_nodes.size();
+    uint32_t numNodes = (uint32_t)m_bvhNodes.size();
     outFile.write((char*)&numNodes, 4);
-    outFile.write((char*)_bvh_nodes.data(), numNodes * sizeof(SubBvhNode));
+    outFile.write((char*)m_bvhNodes.data(), numNodes * sizeof(SubBvhNode));
 
     // Triangles
-    u32 numTriangles = (u32)_triangles.size();
+    uint32_t numTriangles = (uint32_t)m_triangles.size();
     outFile.write((char*)&numTriangles, 4);
-    outFile.write((char*)_triangles.data(), numTriangles * sizeof(TriangleSceneData));
+    outFile.write((char*)m_triangles.data(), numTriangles * sizeof(TriangleSceneData));
 
     outFile << std::endl;
     outFile.close();
 }
 
-bool raytracer::Mesh::loadBvh(const char* fileName)
+bool Mesh::loadBvh(const char* fileName)
 {
     std::string line;
     std::ifstream inFile;
@@ -261,26 +269,27 @@ bool raytracer::Mesh::loadBvh(const char* fileName)
     }
 
     // Check file format version
-    u32 formatVersion;
+    uint32_t formatVersion;
     inFile.read((char*)&formatVersion, 4);
     if (formatVersion != BVH_FILE_FORMAT_VERSION)
         return false;
 
     // Read root BVH node index
-    inFile.read((char*)&_bvh_root_node, 4);
+    inFile.read((char*)&m_bvhRootNode, 4);
 
     // Read BVH nodes
-    u32 numNodes;
+    uint32_t numNodes;
     inFile.read((char*)&numNodes, 4);
-    _bvh_nodes.resize(numNodes);
-    inFile.read((char*)_bvh_nodes.data(), numNodes * sizeof(SubBvhNode));
+    m_bvhNodes.resize(numNodes);
+    inFile.read((char*)m_bvhNodes.data(), numNodes * sizeof(SubBvhNode));
 
     // Read triangles
-    u32 numTriangles;
+    uint32_t numTriangles;
     inFile.read((char*)&numTriangles, 4);
-    _triangles.resize(numTriangles);
-    inFile.read((char*)_triangles.data(), numTriangles * sizeof(TriangleSceneData));
+    m_triangles.resize(numTriangles);
+    inFile.read((char*)m_triangles.data(), numTriangles * sizeof(TriangleSceneData));
 
     inFile.close();
     return true;
+}
 }

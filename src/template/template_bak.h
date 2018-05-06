@@ -3,7 +3,7 @@
 
 #pragma once
 
-typedef unsigned int uint;
+typedef unsigned int unsigned;
 typedef unsigned char uchar;
 typedef unsigned char byte;
 
@@ -77,6 +77,6 @@ struct Timer {
     }
 };
 
-#define BADFLOAT(x) ((*(uint*)&x & 0x7f000000) == 0x7f000000)
+#define BADFLOAT(x) ((*(unsigned*)&x & 0x7f000000) == 0x7f000000)
 
 }; // namespace Tmpl8

@@ -16,18 +16,18 @@ struct SceneNode
 	SceneNode* parent = nullptr;
 	std::vector<std::unique_ptr<SceneNode>> children;
 	Transform transform;
-	u32 mesh = -1;
+	uint32_t mesh = -1;
 };
 
 struct MeshBvhPair
 {
-	MeshBvhPair(std::shared_ptr<IMesh>& mesh, u32 offset)
+	MeshBvhPair(std::shared_ptr<IMesh>& mesh, uint32_t offset)
 	{
 		this->mesh = mesh;
 		this->bvh_offset = offset;
 	}
 	std::shared_ptr<IMesh> mesh;
-	u32 bvh_offset;// Offset of meshes bvh into the global bvh array
+	uint32_t bvh_offset;// Offset of meshes bvh into the global bvh array
 };
 
 class Scene

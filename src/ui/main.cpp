@@ -82,23 +82,21 @@ int main(int argc, char* argv[])
 
 void createScene(Scene& scene, UniqueTextureArray& textureArray)
 {
-    // Sponza
+    // Light plane
     {
         Transform transform;
         transform.location = glm::vec3(0, 10, -0.5f);
         transform.scale = glm::vec3(20, 1, 10);
         transform.orientation = glm::quat(glm::vec3(Pi<float>::value, 0, 0)); // Flip upside down
-        auto lightPlane = std::make_shared<Mesh>();
-        lightPlane->loadFromFile("../../assets/3dmodels/plane/plane.obj",
-            textureArray,
-            Material::Emissive(5500.0f, 1000.0f));
+        auto lightPlane = std::make_shared<Mesh>("../../assets/3dmodels/plane/plane.obj", Material::Emissive(5500.0f, 1000.0f), textureArray);
         scene.add_node(lightPlane, transform);
     }
+
+    // Sponza
     {
         Transform transform;
         transform.scale = glm::vec3(0.005f);
-        auto sponza = std::make_shared<Mesh>();
-        sponza->loadFromFile("../../assets/3dmodels/sponza-crytek/sponza.obj", textureArray);
+        auto sponza = std::make_shared<Mesh>("../../assets/3dmodels/sponza-crytek/sponza.obj", textureArray);
         scene.add_node(sponza, transform);
     }
 
@@ -106,14 +104,12 @@ void createScene(Scene& scene, UniqueTextureArray& textureArray)
     {
         Transform transform;
         transform.scale = glm::vec3(4.0f);
-        auto bunny = std::make_shared<Mesh>();
-#if 1
-        bunny->loadFromFile("../../assets/3dmodels/stanford/bunny/bun_zipper.ply",
-            textureArray,
+        auto bunny = std::make_shared<Mesh>(
+            "../../assets/3dmodels/stanford/bunny/bun_zipper.ply",
             Material::PBRMetal(
                 glm::vec3(0.955f, 0.638f, 0.538f), // Copper
-                0.8f));
-#endif
+                0.8f),
+            textureArray);
         scene.add_node(bunny, transform);
     }
 }

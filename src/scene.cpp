@@ -9,7 +9,7 @@ raytracer::SceneNode& raytracer::Scene::add_node(std::shared_ptr<IMesh> primitiv
 	if (!parent) parent = &get_root_node();
 
 	bool found = false;
-	u32 meshId = 0;
+	uint32_t meshId = 0;
 	for (auto& pair : _meshes)
 	{
 		if (pair.mesh.get() == primitive.get())
@@ -22,7 +22,7 @@ raytracer::SceneNode& raytracer::Scene::add_node(std::shared_ptr<IMesh> primitiv
 
 	if (!found)
 	{
-		meshId = (u32)_meshes.size();
+		meshId = (uint32_t)_meshes.size();
 		_meshes.emplace_back(primitive, 0);
 	}
 

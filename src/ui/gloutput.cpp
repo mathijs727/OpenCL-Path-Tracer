@@ -25,13 +25,13 @@ GLOutput::GLOutput(int width, int height)
     // Create full screen quad
     // For whatever reason, OpenGL doesnt like GL_QUADS (gives me no output), so I'll just use two triangles
     float vertices[] = {
-        -1.0f, -1.0f, 0.0f,    0.0f, 1.0f,
-        1.0f, -1.0f, 0.0f,    1.0f, 1.0f,
-        1.0f,  1.0f, 0.0f,    1.0f, 0.0f,
+        -1.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, -1.0f, 0.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
 
-        -1.0f, -1.0f, 0.0f,   0.0f, 1.0f,
-        1.0f,  1.0f, 0.0f,    1.0f, 0.0f,
-        -1.0f,  1.0f, 0.0f,    0.0f, 0.0f
+        -1.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+        -1.0f, 1.0f, 0.0f, 0.0f, 0.0f
     };
     glGenVertexArrays(1, &m_vao);
     glBindVertexArray(m_vao);
@@ -61,62 +61,59 @@ GLOutput::GLOutput(int width, int height)
 
 GLOutput::~GLOutput()
 {
-	glDeleteTextures(1, &m_texture);
-	glDeleteVertexArrays(1, &m_vao);
-	glDeleteBuffers(1, &m_vbo);
-	glDeleteProgram(m_shader);
+    glDeleteTextures(1, &m_texture);
+    glDeleteVertexArrays(1, &m_vao);
+    glDeleteBuffers(1, &m_vbo);
+    glDeleteProgram(m_shader);
 }
 
-#define BUFFER_OFFSET(i) ((char *)NULL + (i))
+#define BUFFER_OFFSET(i) ((char*)NULL + (i))
 
 void GLOutput::render()
 {
-	glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glUseProgram(m_shader);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_texture);
-	glUniform1i(glGetUniformLocation(m_shader, "u_texture"), 0);
-	glBindVertexArray(m_vao);
-	
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+    glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUseProgram(m_shader);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_texture);
+    glUniform1i(glGetUniformLocation(m_shader, "u_texture"), 0);
+    glBindVertexArray(m_vao);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 GLuint GLOutput::loadShader(const char* fileName, GLenum type)
 {
-	std::ifstream file(fileName);
-	if (!file.is_open())
-	{
-		std::string errorMessage = "Cannot open file: ";
-		errorMessage += fileName;
-		std::cout << errorMessage.c_str() << std::endl;
-	}
+    std::ifstream file(fileName);
+    if (!file.is_open()) {
+        std::string errorMessage = "Cannot open file: ";
+        errorMessage += fileName;
+        std::cout << errorMessage.c_str() << std::endl;
+    }
 
-	std::string prog(std::istreambuf_iterator<char>(file),
-		(std::istreambuf_iterator<char>()));
-	GLuint shader = glCreateShader(type);
-	const char* source = prog.c_str();
-	GLint sourceSize = prog.size();
-	glShaderSource(shader, 1, &source, &sourceSize);
-	glCompileShader(shader);
+    std::string prog(std::istreambuf_iterator<char>(file),
+        (std::istreambuf_iterator<char>()));
+    GLuint shader = glCreateShader(type);
+    const char* source = prog.c_str();
+    GLint sourceSize = prog.size();
+    glShaderSource(shader, 1, &source, &sourceSize);
+    glCompileShader(shader);
 
-	GLint shaderCompiled;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &shaderCompiled);
-	if (!shaderCompiled)
-	{
-		std::cout << "Error compiling " << (type == GL_VERTEX_SHADER ? "vertex" : "fragment") << " shader" << std::endl;
-		int infologLength = 0;
-		int charsWritten = 0;
-		char *infoLog;
+    GLint shaderCompiled;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &shaderCompiled);
+    if (!shaderCompiled) {
+        std::cout << "Error compiling " << (type == GL_VERTEX_SHADER ? "vertex" : "fragment") << " shader" << std::endl;
+        int infologLength = 0;
+        int charsWritten = 0;
+        char* infoLog;
 
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infologLength);
-		if (infologLength > 0)
-		{
-			infoLog = new char[infologLength];
-			glGetShaderInfoLog(shader, infologLength, &charsWritten, infoLog);
-			std::cout << infoLog << std::endl;
-			delete infoLog;
-		}
-	}
-	return shader;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infologLength);
+        if (infologLength > 0) {
+            infoLog = new char[infologLength];
+            glGetShaderInfoLog(shader, infologLength, &charsWritten, infoLog);
+            std::cout << infoLog << std::endl;
+            delete infoLog;
+        }
+    }
+    return shader;
 }

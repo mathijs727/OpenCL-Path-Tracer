@@ -31,8 +31,8 @@ void raytracer::RefittingBvhBuilder::update(
 		else {
 			// Leaf node
 			AABB newBounds;
-			u32 end = node.firstTriangleIndex + node.triangleCount;
-			for (u32 j = node.firstTriangleIndex; j < end; j++)
+			uint32_t end = node.firstTriangleIndex + node.triangleCount;
+			for (uint32_t j = node.firstTriangleIndex; j < end; j++)
 			{
 				newBounds.fit(_aabbs[j]);
 			}

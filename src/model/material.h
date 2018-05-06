@@ -40,7 +40,7 @@ struct Material {
         {
             CL_VEC3(diffuseColour);
             cl_int tex_id;
-            byte __padding[12];
+            std::byte __padding[12];
         } diffuse;
         struct
         {
@@ -54,7 +54,7 @@ struct Material {
             float smoothness;
             float f0NonMetal;
             bool metallic;
-            byte __padding[4];
+            std::byte __padding[4];
         } pbr;
         struct
         {
@@ -73,7 +73,7 @@ struct Material {
         } emissive;
     };
     Type type; // 4 bytes
-    byte __padding2[12];
+    std::byte __padding2[12];
 
     static Material Diffuse(const glm::vec3& colour)
     {

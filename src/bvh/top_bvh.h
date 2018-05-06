@@ -14,12 +14,12 @@ class TopLevelBvhBuilder
 public:
 	TopLevelBvhBuilder(Scene& scene) : _scene(scene) { };
 
-	u32 build(std::vector<SubBvhNode>& subBvhNodes,
+	uint32_t build(std::vector<SubBvhNode>& subBvhNodes,
 		std::vector<TopBvhNode>& outTopNodes);
 private:
-	u32 findBestMatch(const std::vector<u32>& list, u32 nodeId);
+	uint32_t findBestMatch(const std::vector<uint32_t>& list, uint32_t nodeId);
 	TopBvhNode createNode(const SceneNode* node, const glm::mat4 transform);
-	TopBvhNode mergeNodes(u32 nodeId1, u32 nodeId2);
+	TopBvhNode mergeNodes(uint32_t nodeId1, uint32_t nodeId2);
 	AABB calcCombinedBounds(const AABB& bounds1, const AABB& bounds2);
 	AABB calcTransformedAABB(const AABB& bounds, glm::mat4 transform);
 private:

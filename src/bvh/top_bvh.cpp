@@ -8,7 +8,7 @@
 
 using namespace raytracer;
 
-u32 raytracer::TopLevelBvhBuilder::build(
+uint32_t raytracer::TopLevelBvhBuilder::build(
 	std::vector<SubBvhNode>& subBvhNodes, 
 	std::vector<TopBvhNode>& outTopNodes)
 {
@@ -16,7 +16,7 @@ u32 raytracer::TopLevelBvhBuilder::build(
 	_top_bvh_nodes = &outTopNodes;
 
 	// Add the scene graph nodes to teh top-level BVH buffer
-	std::vector<u32> list;
+	std::vector<uint32_t> list;
 	std::stack<std::pair<SceneNode*, glm::mat4>> nodeStack;
 	nodeStack.push(std::make_pair(&_scene.get_root_node(), glm::mat4()));
 	while (!nodeStack.empty())
@@ -27,7 +27,7 @@ u32 raytracer::TopLevelBvhBuilder::build(
 		glm::mat4 transform = currentPair.second * matrix;
 
 		// Visit children
-		for (uint i = 0; i < sceneNode->children.size(); i++)
+		for (unsigned i = 0; i < sceneNode->children.size(); i++)
 		{
 			nodeStack.push(std::make_pair(sceneNode->children[i].get(), transform));
 		}
@@ -37,7 +37,7 @@ u32 raytracer::TopLevelBvhBuilder::build(
 
 		if (_scene.get_meshes()[sceneNode->mesh].mesh > 0)
 		{
-			u32 nodeId = (u32)outTopNodes.size();
+			uint32_t nodeId = (uint32_t)outTopNodes.size();
 			outTopNodes.push_back(createNode(sceneNode, transform));
 			list.push_back(nodeId);
 		}
@@ -46,11 +46,11 @@ u32 raytracer::TopLevelBvhBuilder::build(
 
 	// Slide 50: http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2004%20-%20real-time%20ray%20tracing.pdf
 	// Fast Agglomerative Clustering for Rendering (Walter et al, 2008)
-	u32 nodeA = list.back();// list.pop_back();
-	u32 nodeB = findBestMatch(list, nodeA);
+	uint32_t nodeA = list.back();// list.pop_back();
+	uint32_t nodeB = findBestMatch(list, nodeA);
 	while (list.size() > 1)
 	{
-		u32 nodeC = findBestMatch(list, nodeB);
+		uint32_t nodeC = findBestMatch(list, nodeB);
 		if (nodeA == nodeC)
 		{
 			// http://stackoverflow.com/questions/39912/how-do-i-remove-an-item-from-a-stl-vector-with-a-certain-value
@@ -60,7 +60,7 @@ u32 raytracer::TopLevelBvhBuilder::build(
 			list.erase(newEndB);
 			
 			// A = new Node(A, B);
-			u32 nodeId = (u32)_top_bvh_nodes->size();
+			uint32_t nodeId = (uint32_t)_top_bvh_nodes->size();
 			_top_bvh_nodes->push_back(mergeNodes(nodeA, nodeB));
 			nodeA = nodeId;
 
@@ -73,15 +73,15 @@ u32 raytracer::TopLevelBvhBuilder::build(
 		}
 	}
 
-	return (u32)outTopNodes.size() - 1;// Root node is at the end
+	return (uint32_t)outTopNodes.size() - 1;// Root node is at the end
 }
 
-u32 raytracer::TopLevelBvhBuilder::findBestMatch(const std::vector<u32>& list, u32 nodeId)
+uint32_t raytracer::TopLevelBvhBuilder::findBestMatch(const std::vector<uint32_t>& list, uint32_t nodeId)
 {
 	TopBvhNode& node = (*_top_bvh_nodes)[nodeId];
 	float curMinArea = std::numeric_limits<float>::max();
-	u32 curMin = -1;
-	for (u32 otherNodeId : list)
+	uint32_t curMin = -1;
+	for (uint32_t otherNodeId : list)
 	{
 		TopBvhNode& otherNode = (*_top_bvh_nodes)[otherNodeId];
 		AABB bounds = calcCombinedBounds(node.bounds, otherNode.bounds);
@@ -113,7 +113,7 @@ TopBvhNode raytracer::TopLevelBvhBuilder::createNode(const SceneNode* sceneGraph
 	return node;
 }
 
-TopBvhNode raytracer::TopLevelBvhBuilder::mergeNodes(u32 nodeId1, u32 nodeId2)
+TopBvhNode raytracer::TopLevelBvhBuilder::mergeNodes(uint32_t nodeId1, uint32_t nodeId2)
 {
 	const TopBvhNode& node1 = (*_top_bvh_nodes)[nodeId1];
 	const TopBvhNode& node2 = (*_top_bvh_nodes)[nodeId2];

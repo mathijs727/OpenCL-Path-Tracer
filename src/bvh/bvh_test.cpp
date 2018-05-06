@@ -35,13 +35,13 @@ void raytracer::BvhTester::test()
 
 	// Histogram
 	std::cout << "Triangle per leaf histogram:" << std::endl;
-	const u32 max = maxTrianglesPerLeaf(_root_node);
+	const uint32_t max = maxTrianglesPerLeaf(_root_node);
 	for (int i = 1; i <= 10; i++)
 	{
 		float stepLin = (float)max / i;
 		float stepQuad = ((stepLin / max) * (stepLin / max)) * max;
-		u32 stepMax = (u32)stepQuad;
-		u32 count = countTrianglesLessThen(_root_node, stepMax);
+		uint32_t stepMax = (uint32_t)stepQuad;
+		uint32_t count = countTrianglesLessThen(_root_node, stepMax);
 
 		std::cout << "< " << stepMax << ":\t\t" << count << std::endl;
 	}
@@ -49,7 +49,7 @@ void raytracer::BvhTester::test()
 	std::cout << "\n\n" << std::endl;
 }
 
-u32 raytracer::BvhTester::countNodes(u32 nodeId)
+uint32_t raytracer::BvhTester::countNodes(uint32_t nodeId)
 {
 	auto& node = _bvhNodes[nodeId];
 	if (node.triangleCount == 0)
@@ -61,7 +61,7 @@ u32 raytracer::BvhTester::countNodes(u32 nodeId)
 	}
 }
 
-u32 raytracer::BvhTester::countDepth(u32 nodeId)
+uint32_t raytracer::BvhTester::countDepth(uint32_t nodeId)
 {
 	auto& node = _bvhNodes[nodeId];
 	if (node.triangleCount == 0)
@@ -73,7 +73,7 @@ u32 raytracer::BvhTester::countDepth(u32 nodeId)
 	}
 }
 
-u32 raytracer::BvhTester::countTriangles(u32 nodeId)
+uint32_t raytracer::BvhTester::countTriangles(uint32_t nodeId)
 {
 	auto& node = _bvhNodes[nodeId];
 	if (node.triangleCount == 0)
@@ -85,7 +85,7 @@ u32 raytracer::BvhTester::countTriangles(u32 nodeId)
 	}
 }
 
-u32 raytracer::BvhTester::countLeafs(u32 nodeId)
+uint32_t raytracer::BvhTester::countLeafs(uint32_t nodeId)
 {
 	auto& node = _bvhNodes[nodeId];
 	if (node.triangleCount == 0)
@@ -97,7 +97,7 @@ u32 raytracer::BvhTester::countLeafs(u32 nodeId)
 	}
 }
 
-u32 raytracer::BvhTester::maxTrianglesPerLeaf(u32 nodeId)
+uint32_t raytracer::BvhTester::maxTrianglesPerLeaf(uint32_t nodeId)
 {
 	auto& node = _bvhNodes[nodeId];
 	if (node.triangleCount == 0)
@@ -109,7 +109,7 @@ u32 raytracer::BvhTester::maxTrianglesPerLeaf(u32 nodeId)
 	}
 }
 
-u32 raytracer::BvhTester::countTrianglesLessThen(u32 nodeId, u32 maxCount)
+uint32_t raytracer::BvhTester::countTrianglesLessThen(uint32_t nodeId, uint32_t maxCount)
 {
 	auto& node = _bvhNodes[nodeId];
 	if (node.triangleCount == 0)

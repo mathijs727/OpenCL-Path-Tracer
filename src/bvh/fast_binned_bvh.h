@@ -16,16 +16,16 @@ namespace raytracer {
 		FastBinnedBvhBuilder() { };
 		~FastBinnedBvhBuilder() { };
 
-		u32 build(
+		uint32_t build(
 			std::vector<VertexSceneData>& vertices,
 			std::vector<TriangleSceneData>& triangles,
 			std::vector<SubBvhNode>& outBvhNodes);// BVH may change this
 	private:
-		void subdivide(u32 nodeId);
-		bool partition(u32 nodeId);
+		void subdivide(uint32_t nodeId);
+		bool partition(uint32_t nodeId);
 		AABB createBounds(const TriangleSceneData& triangle);
 
-		u32 allocateNodePair();
+		uint32_t allocateNodePair();
 	private:
 		// Used during binned BVH construction
 		std::vector<glm::vec3> _centres;

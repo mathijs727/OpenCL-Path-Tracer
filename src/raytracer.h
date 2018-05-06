@@ -44,13 +44,13 @@ private:
 
     void InitOpenCL();
     void InitBuffers(
-        u32 numVertices,
-        u32 numTriangles,
-        u32 numEmissiveTriangles,
-        u32 numMaterials,
-        u32 numSubBvhNodes,
-        u32 numTopBvhNodes,
-        u32 numLights);
+        uint32_t numVertices,
+        uint32_t numTriangles,
+        uint32_t numEmissiveTriangles,
+        uint32_t numMaterials,
+        uint32_t numSubBvhNodes,
+        uint32_t numTopBvhNodes,
+        uint32_t numLights);
 
     cl::Kernel LoadKernel(const char* fileName, const char* funcName);
 
@@ -101,7 +101,7 @@ private:
     cl_uint _num_emissive_triangles[2];
     cl_uint _num_static_materials;
     cl_uint _num_static_bvh_nodes;
-    uint _active_buffers = 0;
+    unsigned _active_buffers = 0;
     cl::Buffer _vertices[2];
     cl::Buffer _triangles[2];
     cl::Buffer _emissive_trangles[2];

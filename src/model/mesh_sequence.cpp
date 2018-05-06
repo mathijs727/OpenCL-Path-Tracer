@@ -75,42 +75,42 @@ void raytracer::MeshSequence::goToNextFrame()
 	_bvh_needs_update = true;
 }
 
-u32 raytracer::MeshSequence::maxNumVertices() const
+uint32_t raytracer::MeshSequence::maxNumVertices() const
 {
-	u32 max = 0;
+	uint32_t max = 0;
 	for (auto& frame : _frames)
 	{
-		max = std::max(max, (u32)frame.vertices.size());
+		max = std::max(max, (uint32_t)frame.vertices.size());
 	}
 	return max;
 }
 
-u32 raytracer::MeshSequence::maxNumTriangles() const
+uint32_t raytracer::MeshSequence::maxNumTriangles() const
 {
-	u32 max = 0;
+	uint32_t max = 0;
 	for (auto& frame : _frames)
 	{
-		max = std::max(max, (u32)frame.triangles.size());
+		max = std::max(max, (uint32_t)frame.triangles.size());
 	}
 	return max;
 }
 
-u32 raytracer::MeshSequence::maxNumMaterials() const
+uint32_t raytracer::MeshSequence::maxNumMaterials() const
 {
-	u32 max = 0;
+	uint32_t max = 0;
 	for (auto& frame : _frames)
 	{
-		max = std::max(max, (u32)frame.materials.size());
+		max = std::max(max, (uint32_t)frame.materials.size());
 	}
 	return max;
 }
 
-u32 raytracer::MeshSequence::maxNumBvhNodes() const
+uint32_t raytracer::MeshSequence::maxNumBvhNodes() const
 {
-	u32 max = 0;
+	uint32_t max = 0;
 	for (auto& frame : _frames)
 	{
-		max = std::max(max, (u32)frame.triangles.size());
+		max = std::max(max, (uint32_t)frame.triangles.size());
 	}
 	return max;
 }
@@ -139,7 +139,7 @@ void raytracer::MeshSequence::buildBvh()
 
 void raytracer::MeshSequence::addSubMesh(
 	const aiScene* scene,
-	uint mesh_index,
+	unsigned mesh_index,
 	const glm::mat4 & transform_matrix,
 	std::vector<VertexSceneData>& vertices,
 	std::vector<TriangleSceneData>& triangles,
@@ -152,7 +152,7 @@ void raytracer::MeshSequence::addSubMesh(
 		return;
 
 	// process the materials
-	u32 materialId = (u32)materials.size();
+	uint32_t materialId = (uint32_t)materials.size();
 	aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
 	aiColor3D colour;
 	material->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
@@ -169,8 +169,8 @@ void raytracer::MeshSequence::addSubMesh(
 
 	// add all of the vertex data
 	glm::mat4 normalMatrix = normal_matrix(transform_matrix);
-	u32 vertexOffset = (u32)vertices.size();
-	for (uint v = 0; v < in_mesh->mNumVertices; ++v) {
+	uint32_t vertexOffset = (uint32_t)vertices.size();
+	for (unsigned v = 0; v < in_mesh->mNumVertices; ++v) {
 		glm::vec4 position = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
 		glm::vec4 normal = normalMatrix * glm::vec4(ai2glm(in_mesh->mNormals[v]), 1);
 		glm::vec2 texCoords;
@@ -188,14 +188,14 @@ void raytracer::MeshSequence::addSubMesh(
 	}
 
 	// add all of the faces data
-	for (uint f = 0; f < in_mesh->mNumFaces; ++f) {
+	for (unsigned f = 0; f < in_mesh->mNumFaces; ++f) {
 		aiFace* in_face = &in_mesh->mFaces[f];
 		if (in_face->mNumIndices != 3) {
 			std::cout << "found a face which is not a triangle! discarding." << std::endl;
 			continue;
 		}
 		auto aiIndices = in_face->mIndices;
-		auto face = glm::u32vec3(aiIndices[0], aiIndices[1], aiIndices[2]);
+		auto face = glm::uint32_tvec3(aiIndices[0], aiIndices[1], aiIndices[2]);
 
 		// Fill in the triangle
 		TriangleSceneData triangle;
@@ -231,7 +231,7 @@ void raytracer::MeshSequence::loadFile(const char* file, const Transform& offset
 			auto current = stack.top();
 			stack.pop();
 			glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
-			for (uint i = 0; i < current.node->mNumMeshes; ++i) {
+			for (unsigned i = 0; i < current.node->mNumMeshes; ++i) {
 				addSubMesh(scene,
 					current.node->mMeshes[i],
 					cur_transform,
@@ -243,7 +243,7 @@ void raytracer::MeshSequence::loadFile(const char* file, const Transform& offset
 				//else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
 				//out_vec.push_back(mesh);
 			}
-			for (uint i = 0; i < current.node->mNumChildren; ++i) {
+			for (unsigned i = 0; i < current.node->mNumChildren; ++i) {
 				stack.push(StackElement(current.node->mChildren[i], cur_transform));
 			}
 		}

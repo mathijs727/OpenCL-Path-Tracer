@@ -35,20 +35,20 @@ struct KernelData {
     raytracer::CameraData camera;
 
     // Scene
-    uint numEmissiveTriangles;
-    uint topLevelBvhRoot;
+    unsigned numEmissiveTriangles;
+    unsigned topLevelBvhRoot;
 
     // Used for ray generation
-    uint rayOffset;
-    uint scrWidth;
-    uint scrHeight;
+    unsigned rayOffset;
+    unsigned scrWidth;
+    unsigned scrHeight;
 
     // Used for ray compaction
-    uint numInRays;
-    uint numOutRays;
-    uint numShadowRays;
-    uint maxRays;
-    uint newRays;
+    unsigned numInRays;
+    unsigned numOutRays;
+    unsigned numShadowRays;
+    unsigned maxRays;
+    unsigned newRays;
 
     bool hasSkydome;
 };
@@ -260,10 +260,10 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene, const UniqueTe
     _num_static_materials = 0;
     _num_static_bvh_nodes = 0;
 
-    u32 numVertices = 0;
-    u32 numTriangles = 0;
-    u32 numMaterials = 0;
-    u32 numBvhNodes = 0;
+    uint32_t numVertices = 0;
+    uint32_t numTriangles = 0;
+    uint32_t numMaterials = 0;
+    uint32_t numBvhNodes = 0;
     for (auto& meshBvhPair : scene->get_meshes()) {
         auto mesh = meshBvhPair.mesh;
 
@@ -273,20 +273,20 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene, const UniqueTe
             numMaterials += mesh->maxNumMaterials();
             numBvhNodes += mesh->maxNumBvhNodes();
         } else {
-            numVertices += (u32)mesh->getVertices().size();
-            numTriangles += (u32)mesh->getTriangles().size();
-            numMaterials += (u32)mesh->getMaterials().size();
-            numBvhNodes += (u32)mesh->getBvhNodes().size();
+            numVertices += (uint32_t)mesh->getVertices().size();
+            numTriangles += (uint32_t)mesh->getTriangles().size();
+            numMaterials += (uint32_t)mesh->getMaterials().size();
+            numBvhNodes += (uint32_t)mesh->getBvhNodes().size();
 
-            _num_static_vertices += (u32)mesh->getVertices().size();
-            _num_static_triangles += (u32)mesh->getTriangles().size();
-            _num_static_materials += (u32)mesh->getMaterials().size();
-            _num_static_bvh_nodes += (u32)mesh->getBvhNodes().size();
+            _num_static_vertices += (uint32_t)mesh->getVertices().size();
+            _num_static_triangles += (uint32_t)mesh->getTriangles().size();
+            _num_static_materials += (uint32_t)mesh->getMaterials().size();
+            _num_static_bvh_nodes += (uint32_t)mesh->getBvhNodes().size();
         }
     }
 
     InitBuffers(numVertices, numTriangles, MAX_NUM_LIGHTS, numMaterials,
-        numBvhNodes, (u32)scene->get_meshes().size() * 2, (u32)scene->get_lights().size());
+        numBvhNodes, (uint32_t)scene->get_meshes().size() * 2, (uint32_t)scene->get_lights().size());
 
     // Collect all static geometry and upload it to the GPU
     for (auto& meshBvhPair : scene->get_meshes()) {
@@ -295,24 +295,24 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene, const UniqueTe
             continue;
 
         // TODO: use memcpy instead of looping over vertices (faster?)
-        u32 startVertex = (u32)_vertices_host.size();
+        uint32_t startVertex = (uint32_t)_vertices_host.size();
         for (auto& vertex : mesh->getVertices()) {
             _vertices_host.push_back(vertex);
         }
 
-        u32 startMaterial = (u32)_materials_host.size();
+        uint32_t startMaterial = (uint32_t)_materials_host.size();
         for (auto& material : mesh->getMaterials()) {
             _materials_host.push_back(material);
         }
 
-        u32 startTriangle = (u32)_triangles_host.size();
+        uint32_t startTriangle = (uint32_t)_triangles_host.size();
         for (auto& triangle : mesh->getTriangles()) {
             _triangles_host.push_back(triangle);
             _triangles_host.back().indices += startVertex;
             _triangles_host.back().material_index += startMaterial;
         }
 
-        u32 startBvhNode = (u32)_sub_bvh_nodes_host.size();
+        uint32_t startBvhNode = (uint32_t)_sub_bvh_nodes_host.size();
         for (auto& bvhNode : mesh->getBvhNodes()) {
             _sub_bvh_nodes_host.push_back(bvhNode);
             auto& newNode = _sub_bvh_nodes_host.back();
@@ -336,7 +336,7 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene, const UniqueTe
     writeToBuffer(queue, _sub_bvh[1], _sub_bvh_nodes_host);
 
     /*// Copy textures to the GPU
-    for (uint texId = 0; texId < HDRTexture::getNumUniqueSurfaces(); texId++) {
+    for (unsigned texId = 0; texId < HDRTexture::getNumUniqueSurfaces(); texId++) {
         Tmpl8::Surface* surface = HDRTexture::getSurface(texId);
 
         // Origin (o) and region (r)
@@ -486,8 +486,8 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
     data.topLevelBvhRoot = _top_bvh_root_node[_active_buffers];
 
     data.rayOffset = 0;
-    data.scrWidth = (u32)_scr_width;
-    data.scrHeight = (u32)_scr_height;
+    data.scrWidth = (uint32_t)_scr_width;
+    data.scrHeight = (uint32_t)_scr_height;
 
     data.numInRays = 0;
     data.numOutRays = 0;
@@ -510,7 +510,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
     static_assert(MAX_ACTIVE_RAYS, "MAX_ACTIVE_RAYS must be a multiple of 64 (work group size)");
     int inRayBuffer = 0;
     int outRayBuffer = 1;
-    u32 survivingRays = 0;
+    uint32_t survivingRays = 0;
     while (true) {
         if (survivingRays != MAX_ACTIVE_RAYS) {
             // Generate primary rays and fill the emptyness
@@ -583,7 +583,7 @@ void raytracer::RayTracer::TraceRays(const Camera& camera)
         survivingRays = updatedKernelData.numOutRays;
         // Stop if we reach 0 out rays and we processed the whole screen
         //updatedKernelDataEvent.wait();
-        uint maxRays = _scr_width * _scr_height;
+        unsigned maxRays = _scr_width * _scr_height;
         if (survivingRays == 0 && // We are out of rays
             (updatedKernelData.rayOffset + updatedKernelData.newRays >= maxRays)) // And we wont generate new ones
             break;
@@ -717,24 +717,24 @@ void raytracer::RayTracer::CopyNextAnimationFrameData()
         mesh->buildBvh();
 
         // TODO: use memcpy instead of looping over vertices (faster?)
-        u32 startVertex = (u32)_vertices_host.size();
+        uint32_t startVertex = (uint32_t)_vertices_host.size();
         for (auto& vertex : mesh->getVertices()) {
             _vertices_host.push_back(vertex);
         }
 
-        u32 startMaterial = (u32)_materials_host.size();
+        uint32_t startMaterial = (uint32_t)_materials_host.size();
         for (auto& material : mesh->getMaterials()) {
             _materials_host.push_back(material);
         }
 
-        u32 startTriangle = (u32)_triangles_host.size();
+        uint32_t startTriangle = (uint32_t)_triangles_host.size();
         for (auto& triangle : mesh->getTriangles()) {
             _triangles_host.push_back(triangle);
             _triangles_host.back().indices += startVertex;
             _triangles_host.back().material_index += startMaterial;
         }
 
-        u32 startBvhNode = (u32)_sub_bvh_nodes_host.size();
+        uint32_t startBvhNode = (uint32_t)_sub_bvh_nodes_host.size();
         for (auto& bvhNode : mesh->getBvhNodes()) {
             _sub_bvh_nodes_host.push_back(bvhNode);
             auto& newNode = _sub_bvh_nodes_host.back();
@@ -749,7 +749,7 @@ void raytracer::RayTracer::CopyNextAnimationFrameData()
     // Get the light emmiting triangles transformed by the scene graph
     _emissive_triangles_host.clear();
     CollectTransformedLights(&_scene->get_root_node(), glm::mat4());
-    _num_emissive_triangles[copyBuffers] = (u32)_emissive_triangles_host.size();
+    _num_emissive_triangles[copyBuffers] = (uint32_t)_emissive_triangles_host.size();
     writeToBuffer(copyQueue, _emissive_trangles[copyBuffers], _emissive_triangles_host, 0, waitEvents);
 
     if (_vertices_host.size() > static_cast<size_t>(_num_static_vertices)) // Dont copy if we dont have any dynamic geometry
@@ -975,13 +975,13 @@ void raytracer::RayTracer::InitOpenCL()
 }
 
 void raytracer::RayTracer::InitBuffers(
-    u32 numVertices,
-    u32 numTriangles,
-    u32 numEmissiveTriangles,
-    u32 numMaterials,
-    u32 numSubBvhNodes,
-    u32 numTopBvhNodes,
-    u32 numLights)
+    uint32_t numVertices,
+    uint32_t numTriangles,
+    uint32_t numEmissiveTriangles,
+    uint32_t numMaterials,
+    uint32_t numSubBvhNodes,
+    uint32_t numTopBvhNodes,
+    uint32_t numLights)
 {
     cl_int err;
 
@@ -1062,7 +1062,7 @@ void raytracer::RayTracer::InitBuffers(
     _material_textures = cl::Image2DArray(m_clContext,
         CL_MEM_READ_ONLY,
         cl::ImageFormat(CL_BGRA, CL_UNORM_INT8),
-        std::max((u32)1u, (u32)Texture::getNumUniqueSurfaces()),
+        std::max((uint32_t)1u, (uint32_t)Texture::getNumUniqueSurfaces()),
         Texture::TEXTURE_WIDTH,
         Texture::TEXTURE_HEIGHT,
         0, 0, NULL, // Unused host_ptr
@@ -1071,7 +1071,7 @@ void raytracer::RayTracer::InitBuffers(
 
     _ray_traversal_buffer = cl::Buffer(m_clContext,
         CL_MEM_READ_WRITE,
-        MAX_ACTIVE_RAYS * 32 * sizeof(u32),
+        MAX_ACTIVE_RAYS * 32 * sizeof(uint32_t),
         NULL,
         &err);
     checkClErr(err, "Buffer::Buffer()");
@@ -1086,13 +1086,13 @@ void raytracer::RayTracer::InitBuffers(
     // Create random streams and copy them to the GPU
     size_t numWorkItems = _scr_width * _scr_height;
 #ifdef RANDOM_XOR32
-    size_t streamBufferSize = numWorkItems * sizeof(u32);
-    auto streams = std::make_unique<u32[]>(numWorkItems);
+    size_t streamBufferSize = numWorkItems * sizeof(uint32_t);
+    auto streams = std::make_unique<uint32_t[]>(numWorkItems);
 
-    // Generate random uints the C++11 way
+    // Generate random unsigneds the C++11 way
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<u32> dis;
+    std::uniform_int_distribution<uint32_t> dis;
     for (size_t i = 0; i < numWorkItems; i++)
         streams[i] = dis(gen);
 
