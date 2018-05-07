@@ -309,7 +309,7 @@ void raytracer::RayTracer::SetScene(std::shared_ptr<Scene> scene, const UniqueTe
         for (auto& triangle : mesh->getTriangles()) {
             _triangles_host.push_back(triangle);
             _triangles_host.back().indices += startVertex;
-            _triangles_host.back().material_index += startMaterial;
+            _triangles_host.back().materialIndex += startMaterial;
         }
 
         uint32_t startBvhNode = (uint32_t)_sub_bvh_nodes_host.size();
@@ -731,7 +731,7 @@ void raytracer::RayTracer::CopyNextAnimationFrameData()
         for (auto& triangle : mesh->getTriangles()) {
             _triangles_host.push_back(triangle);
             _triangles_host.back().indices += startVertex;
-            _triangles_host.back().material_index += startMaterial;
+            _triangles_host.back().materialIndex += startMaterial;
         }
 
         uint32_t startBvhNode = (uint32_t)_sub_bvh_nodes_host.size();
@@ -799,7 +799,7 @@ void raytracer::RayTracer::CollectTransformedLights(const SceneNode* node, const
             result.vertices[0] = newTransform * vertices[triangle.indices[0]].vertex;
             result.vertices[1] = newTransform * vertices[triangle.indices[1]].vertex;
             result.vertices[2] = newTransform * vertices[triangle.indices[2]].vertex;
-            result.material = materials[triangle.material_index];
+            result.material = materials[triangle.materialIndex];
             _emissive_triangles_host.push_back(result);
         }
     }

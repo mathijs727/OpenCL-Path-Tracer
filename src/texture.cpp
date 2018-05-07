@@ -30,10 +30,6 @@ CLTextureArray::CLTextureArray(const UniqueTextureArray& files, CLContext& conte
     copy(files.getTextureFiles(), context.getCopyQueue());
 }
 
-CLTextureArray::~CLTextureArray()
-{
-}
-
 CLTextureArray::operator cl::Image2DArray() const
 {
     return m_imageArray;

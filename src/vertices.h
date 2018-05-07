@@ -6,7 +6,7 @@
 namespace raytracer {
 struct TriangleSceneData {
     glm::u32vec3 indices;
-    uint32_t material_index;
+    uint32_t materialIndex;
 };
 
 struct VertexSceneData {

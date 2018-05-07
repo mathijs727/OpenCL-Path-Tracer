@@ -26,11 +26,11 @@ public:
     Mesh(std::string_view fileName, const Material& overrideMaterial, UniqueTextureArray& textureArray);
     Mesh(std::string_view fileName, UniqueTextureArray& textureArray);
 
-    const std::vector<VertexSceneData>& getVertices() const override { return m_vertices; }
-    const std::vector<TriangleSceneData>& getTriangles() const override { return m_triangles; }
-    const std::vector<Material>& getMaterials() const override { return m_materials; }
-    const std::vector<SubBvhNode>& getBvhNodes() const override { return m_bvhNodes; }
-    const std::vector<uint32_t>& getEmissiveTriangles() const override { return m_emissiveTriangles; }
+    gsl::span<const VertexSceneData> getVertices() const override { return m_vertices; }
+    gsl::span<const TriangleSceneData> getTriangles() const override { return m_triangles; }
+    gsl::span<const Material> getMaterials() const override { return m_materials; }
+    gsl::span<const SubBvhNode> getBvhNodes() const override { return m_bvhNodes; }
+    gsl::span<const uint32_t> getEmissiveTriangles() const override { return m_emissiveTriangles; }
 
     uint32_t getBvhRootNode() const override { return m_bvhRootNode; };
 
@@ -49,8 +49,8 @@ private:
 
     void addSubMesh(
         const aiScene* scene,
-        unsigned mesh_index,
-        const glm::mat4& transform_matrix,
+        unsigned meshIndex,
+        const glm::mat4& transformMatrix,
         std::string_view texturePath,
         UniqueTextureArray& textureArray,
         std::optional<Material> overrideMaterial);

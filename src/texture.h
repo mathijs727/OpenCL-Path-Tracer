@@ -63,7 +63,7 @@ private:
 class CLTextureArray {
 public:
     CLTextureArray(const UniqueTextureArray& files, CLContext& context, size_t width, size_t height, bool storeAsFloat);
-    ~CLTextureArray();
+    ~CLTextureArray() = default;
 
     operator cl::Image2DArray() const;
     cl::Image2DArray getImage2DArray() const;

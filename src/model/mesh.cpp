@@ -27,7 +27,7 @@ static glm::vec3 ai2glm(const aiColor3D& c)
     return glm::vec3(c.r, c.g, c.b);
 }
 
-static glm::mat4 normal_matrix(const glm::mat4& mat)
+static glm::mat4 toNormalMatrix(const glm::mat4& mat)
 {
     return glm::transpose(glm::inverse(mat));
 }
@@ -40,9 +40,9 @@ static std::string getPath(std::string_view str)
     return std::string(str.substr(0, found)) + "/";
 }
 
-static bool fileExists(std::string_view name)
+static bool fileExists(std::string_view fileName)
 {
-    std::ifstream f(name.data());
+    std::ifstream f(fileName.data());
     return f.good() && f.is_open();
 }
 
@@ -70,21 +70,21 @@ Mesh::Mesh(std::string_view fileName, UniqueTextureArray& textureArray)
 
 void Mesh::addSubMesh(
     const aiScene* scene,
-    unsigned mesh_index,
-    const glm::mat4& transform_matrix,
+    unsigned meshIndex,
+    const glm::mat4& transformMatrix,
     std::string_view texturePath,
     UniqueTextureArray& textureArray,
     std::optional<Material> overrideMaterial)
 {
-    const aiMesh* in_mesh = scene->mMeshes[mesh_index];
+    const aiMesh* inMesh = scene->mMeshes[meshIndex];
 
-    if (in_mesh->mNumVertices == 0 || in_mesh->mNumFaces == 0)
+    if (inMesh->mNumVertices == 0 || inMesh->mNumFaces == 0)
         return;
 
     // process the materials
     uint32_t materialId = (uint32_t)m_materials.size();
     if (!overrideMaterial) {
-        aiMaterial* material = scene->mMaterials[in_mesh->mMaterialIndex];
+        aiMaterial* material = scene->mMaterials[inMesh->mMaterialIndex];
         aiColor3D colour;
         aiColor3D emissiveColour;
         material->Get(AI_MATKEY_COLOR_DIFFUSE, colour);
@@ -109,17 +109,17 @@ void Mesh::addSubMesh(
     }
 
     // add all of the vertex data
-    glm::mat4 normalMatrix = normal_matrix(transform_matrix);
+    glm::mat4 normalMatrix = toNormalMatrix(transformMatrix);
     uint32_t vertexOffset = (uint32_t)m_vertices.size();
-    for (unsigned v = 0; v < in_mesh->mNumVertices; ++v) {
-        glm::vec4 position = transform_matrix * glm::vec4(ai2glm(in_mesh->mVertices[v]), 1);
+    for (unsigned v = 0; v < inMesh->mNumVertices; ++v) {
+        glm::vec4 position = transformMatrix * glm::vec4(ai2glm(inMesh->mVertices[v]), 1);
         glm::vec4 normal = glm::vec4(0);
-        if (in_mesh->mNormals != nullptr)
-            normal = normalMatrix * glm::vec4(ai2glm(in_mesh->mNormals[v]), 0);
+        if (inMesh->mNormals != nullptr)
+            normal = normalMatrix * glm::vec4(ai2glm(inMesh->mNormals[v]), 0);
         glm::vec2 texCoords;
-        if (in_mesh->HasTextureCoords(0)) {
-            texCoords.x = in_mesh->mTextureCoords[0][v].x;
-            texCoords.y = in_mesh->mTextureCoords[0][v].y;
+        if (inMesh->HasTextureCoords(0)) {
+            texCoords.x = inMesh->mTextureCoords[0][v].x;
+            texCoords.y = inMesh->mTextureCoords[0][v].y;
         }
 
         // Fill in the vertex
@@ -131,18 +131,18 @@ void Mesh::addSubMesh(
     }
 
     // add all of the faces data
-    for (unsigned f = 0; f < in_mesh->mNumFaces; ++f) {
-        aiFace* in_face = &in_mesh->mFaces[f];
-        if (in_face->mNumIndices != 3) {
+    for (unsigned f = 0; f < inMesh->mNumFaces; ++f) {
+        aiFace* inFace = &inMesh->mFaces[f];
+        if (inFace->mNumIndices != 3) {
             continue;
         }
-        auto aiIndices = in_face->mIndices;
+        auto aiIndices = inFace->mIndices;
         auto face = glm::u32vec3(aiIndices[0], aiIndices[1], aiIndices[2]);
 
         // Fill in the triangle
         TriangleSceneData triangle;
         triangle.indices = face + vertexOffset;
-        triangle.material_index = materialId;
+        triangle.materialIndex = materialId;
         m_triangles.push_back(triangle);
 
         // Doesnt work if SBVH is gonna mess up triangle order anyways
@@ -156,7 +156,7 @@ void Mesh::collectEmissiveTriangles()
     m_emissiveTriangles.clear();
     for (uint32_t i = 0; i < (uint32_t)m_triangles.size(); i++) {
         auto triangle = m_triangles[i];
-        auto material = m_materials[triangle.material_index];
+        auto material = m_materials[triangle.materialIndex];
         glm::vec4 vertices[3];
         vertices[0] = m_vertices[triangle.indices.x].vertex;
         vertices[1] = m_vertices[triangle.indices.y].vertex;
