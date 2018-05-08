@@ -161,7 +161,7 @@ void Mesh::collectEmissiveTriangles()
         vertices[0] = m_vertices[triangle.indices.x].vertex;
         vertices[1] = m_vertices[triangle.indices.y].vertex;
         vertices[2] = m_vertices[triangle.indices.z].vertex;
-        if (material.type == Material::Type::EMISSIVE)
+        if (material.type == Material::MaterialType::EMISSIVE)
             m_emissiveTriangles.push_back(i);
     }
 }

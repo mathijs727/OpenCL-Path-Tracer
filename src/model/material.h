@@ -19,7 +19,7 @@ namespace raytracer {
 class Scene;
 
 struct Material {
-    enum class Type : cl_int {
+    enum class MaterialType : cl_int {
         DIFFUSE,
         PBR,
         REFRACTIVE,
@@ -27,19 +27,17 @@ struct Material {
         EMISSIVE
     };
 
-    Material() {}
-    Material(const Material& m) { memcpy(this, &m, sizeof(Material)); }
-    Material& operator=(const Material& m)
-    {
-        memcpy(this, &m, sizeof(Material));
-        return *this;
-    }
+    Material() {} // constructor = default does not work because of the unions
+    //Material(const Material& m) { memcpy(this, &m, sizeof(Material)); }
+    Material(const Material&) = default;
+    Material& operator=(const Material&) = default;
 
+    // Needs to be serializeable so can't use std::variant
     union {
         struct
         {
             CL_VEC3(diffuseColour);
-            cl_int tex_id;
+            cl_int textureId;
             std::byte __padding[12];
         } diffuse;
         struct
@@ -72,31 +70,31 @@ struct Material {
             CL_VEC3(emissiveColour);
         } emissive;
     };
-    Type type; // 4 bytes
+    MaterialType type; // 4 bytes
     std::byte __padding2[12];
 
     static Material Diffuse(const glm::vec3& colour)
     {
         Material result;
-        result.type = Type::DIFFUSE;
+        result.type = MaterialType::DIFFUSE;
         result.diffuse.diffuseColour = colour;
-        result.diffuse.tex_id = -1;
+        result.diffuse.textureId = -1;
         return result;
     }
 
     static Material Diffuse(int diffuseTextureIndex, const glm::vec3& colour = glm::vec3(0))
     {
         Material result;
-        result.type = Type::DIFFUSE;
+        result.type = MaterialType::DIFFUSE;
         result.diffuse.diffuseColour = colour;
-        result.diffuse.tex_id = diffuseTextureIndex;
+        result.diffuse.textureId = diffuseTextureIndex;
         return result;
     }
 
     static Material PBRMetal(const glm::vec3 reflectance, float smoothness)
     {
         Material result;
-        result.type = Type::PBR;
+        result.type = MaterialType::PBR;
         result.pbr.reflectance = reflectance;
         result.pbr.smoothness = smoothness;
         result.pbr.metallic = true;
@@ -106,7 +104,7 @@ struct Material {
     static Material PBRDielectric(const glm::vec3 baseColour, float smoothness, float f0 = 0.04f)
     {
         Material result;
-        result.type = Type::PBR;
+        result.type = MaterialType::PBR;
         result.pbr.baseColour = baseColour;
         result.pbr.smoothness = smoothness;
         result.pbr.f0NonMetal = f0;
@@ -117,7 +115,7 @@ struct Material {
     static Material Refractive(float smoothness, float refractiveIndex)
     {
         Material result;
-        result.type = Type::REFRACTIVE;
+        result.type = MaterialType::REFRACTIVE;
         result.refractive.smoothness = smoothness;
         result.refractive.refractiveIndex = refractiveIndex;
         result.refractive.absorption = glm::vec3(0);
@@ -127,7 +125,7 @@ struct Material {
     static Material Refractive(float smoothness, float refractiveIndex, glm::vec3 colour, float absorptionFactor)
     {
         Material result;
-        result.type = Type::REFRACTIVE;
+        result.type = MaterialType::REFRACTIVE;
         result.refractive.smoothness = smoothness;
         result.refractive.refractiveIndex = refractiveIndex;
         result.refractive.absorption = (1.0f - colour) * absorptionFactor;
@@ -137,7 +135,7 @@ struct Material {
     static Material BasicRefractive(float refractiveIndex)
     {
         Material result;
-        result.type = Type::BASIC_REFRACTIVE;
+        result.type = MaterialType::BASIC_REFRACTIVE;
         result.basicRefractive.refractiveIndex = refractiveIndex;
         result.basicRefractive.absorption = glm::vec3(0);
         return result;
@@ -146,7 +144,7 @@ struct Material {
     static Material BasicRefractive(float refractiveIndex, glm::vec3 colour, float absorptionFactor)
     {
         Material result;
-        result.type = Type::BASIC_REFRACTIVE;
+        result.type = MaterialType::BASIC_REFRACTIVE;
         result.basicRefractive.refractiveIndex = refractiveIndex;
         result.basicRefractive.absorption = (1.0f - colour) * absorptionFactor;
         return result;
@@ -156,7 +154,7 @@ struct Material {
     {
         // Cornell box is not defined in physical units so multiply by 5 to make it brighter
         Material result;
-        result.type = Type::EMISSIVE;
+        result.type = MaterialType::EMISSIVE;
         result.emissive.emissiveColour = colour * intensityLumen;
         return result;
     }
