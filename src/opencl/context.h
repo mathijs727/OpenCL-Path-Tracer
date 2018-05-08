@@ -3,7 +3,7 @@
 
 class CLContext {
 public:
-    CLContext(cl::Context context, cl::Device device, cl::CommandQueue graphicsQueue, cl::CommandQueue copyQueue);
+    CLContext();
     ~CLContext() = default;
 
     cl::Context getContext() const;

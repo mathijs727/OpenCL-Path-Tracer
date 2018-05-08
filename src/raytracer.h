@@ -42,7 +42,6 @@ private:
     void copyNextAnimationFrameData();
     void collectTransformedLights(const SceneNode* node, const glm::mat4& transform);
 
-    static CLContext initOpenCL();
     void initBuffers(
         uint32_t numVertices,
         uint32_t numTriangles,
