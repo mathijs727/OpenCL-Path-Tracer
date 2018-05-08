@@ -1,28 +1,24 @@
 #pragma once
 #include <glm/glm.hpp>
 
-struct Ray
-{
-	Ray() = default;
-	Ray(const glm::vec3& origin, const glm::vec3& direction) {
-		this->origin = origin;
-		this->direction = glm::normalize(direction);
-	}
-	glm::vec3 origin;
-	glm::vec3 direction;
-
-	glm::vec3 get_direction() const { return direction; }
+struct Ray {
+    Ray() = default;
+    Ray(glm::vec3 origin, glm::vec3 direction)
+        : origin(origin)
+        , direction(direction)
+    {
+    }
+    glm::vec3 origin;
+    glm::vec3 direction;
 };
 
-struct Line
-{
-	Line() = delete;
-	Line(const glm::vec3& origin, const glm::vec3& dest) {
-		this->origin = origin;
-		this->dest = dest;
-	}
-	glm::vec3 origin;
-	glm::vec3 dest;
-	
-	glm::vec3 get_direction() const { return glm::normalize(dest - origin); }
+struct Line {
+    Line() = delete;
+    Line(glm::vec3 origin, glm::vec3 dest)
+        : origin(origin)
+        , dest(dest)
+    {
+    }
+    glm::vec3 origin;
+    glm::vec3 dest;
 };
