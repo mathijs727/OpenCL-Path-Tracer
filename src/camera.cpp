@@ -1,9 +1,8 @@
 #include "camera.h"
 #include <glm/detail/func_trigonometric.hpp>
 
-using namespace raytracer;
-
-raytracer::Camera::Camera(const Transform& transform, float fov, float aspectRatio, float focalDistance)
+namespace raytracer {
+Camera::Camera(const Transform& transform, float fov, float aspectRatio, float focalDistance)
     : m_transform(transform)
     , m_aspectRatio(aspectRatio)
     , m_horizontalFov(fov)
@@ -16,7 +15,7 @@ raytracer::Camera::Camera(const Transform& transform, float fov, float aspectRat
 {
 }
 
-CameraData raytracer::Camera::get_camera_data() const
+CameraData Camera::get_camera_data() const
 {
     // Matrices
     glm::mat4 transformMatrix = m_transform.matrix();
@@ -57,7 +56,7 @@ CameraData raytracer::Camera::get_camera_data() const
     return result;
 }
 
-/*void raytracer::Camera::get_frustum(glm::vec3& eye, glm::vec3& scr_base_origin, glm::vec3& scr_base_u, glm::vec3& scr_base_v) const {
+/*void Camera::get_frustum(glm::vec3& eye, glm::vec3& scr_base_origin, glm::vec3& scr_base_u, glm::vec3& scr_base_v) const {
 	eye = m_transform.location;
 	float halfWidth = _worldspaceHalfWidth;
 	float halfHeight = halfWidth * m_aspectRatio;
@@ -70,11 +69,11 @@ CameraData raytracer::Camera::get_camera_data() const
 	scr_base_v = glm::mat3_cast(m_transform.orientation) * glm::vec3(0,-height,0);
 }*/
 
-float raytracer::Camera::getHorizontalFov() const
+float Camera::getHorizontalFov() const
 {
     return m_horizontalFov;
 }
-const Transform& raytracer::Camera::getTransform() const
+const Transform& Camera::getTransform() const
 {
     return m_transform;
 }
@@ -82,4 +81,5 @@ const Transform& raytracer::Camera::getTransform() const
 void Camera::setTransform(const Transform& transform)
 {
     m_transform = transform;
+}
 }

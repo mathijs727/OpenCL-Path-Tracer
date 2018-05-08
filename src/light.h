@@ -8,7 +8,7 @@ namespace raytracer {
 class Scene;
 
 struct Light {
-    enum class Type {
+    enum class LightType {
         Point,
         Directional
     };
@@ -31,7 +31,7 @@ struct Light {
             std::byte __padding3[4]; // 16 bytes
         } directional;
     };
-    Type type;
+    LightType type;
     std::byte __padding4[12]; // 16 bytes
 
     // Apperently necesarry (maybe got something to do with glm::vec in union???)
@@ -46,7 +46,7 @@ struct Light {
         float radius = 25.0f;
 
         Light light;
-        light.type = Type::Point;
+        light.type = LightType::Point;
         light.colour = colour;
         light.point.position = pos;
         light.point.sqrAttRadius = radius * radius;
@@ -57,7 +57,7 @@ struct Light {
     static Light Directional(const glm::vec3& colour, const glm::vec3 dir)
     {
         Light light;
-        light.type = Type::Directional;
+        light.type = LightType::Directional;
         light.colour = colour;
         light.directional.direction = glm::normalize(dir);
         return light;
