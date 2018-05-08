@@ -1,5 +1,6 @@
 #pragma once
 #include "opencl/cl_gl_includes.h"
+#include "opencl/context.h"
 #include <gsl/gsl>
 #include <memory>
 #include <string_view>
@@ -7,40 +8,6 @@
 #include <vector>
 
 namespace raytracer {
-
-struct CLContext {
-public:
-    cl::Context getContext() const
-    {
-        return m_context;
-    }
-
-    operator cl::Context() const
-    {
-        return m_context;
-    }
-
-    cl::Device getDevice() const
-    {
-        return m_device;
-    }
-
-    cl::CommandQueue getGraphicsQueue() const
-    {
-        return m_queue;
-    }
-
-    cl::CommandQueue getCopyQueue() const
-    {
-        return m_copyQueue;
-    }
-
-public: // TMP
-    cl::Context m_context;
-    cl::Device m_device;
-    cl::CommandQueue m_queue;
-    cl::CommandQueue m_copyQueue;
-};
 
 struct TextureFile {
     std::string filename;
@@ -80,5 +47,4 @@ private:
     bool m_storeAsFloat;
     cl::Image2DArray m_imageArray;
 };
-
 }

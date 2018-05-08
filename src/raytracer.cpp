@@ -63,8 +63,8 @@ RayTracer::RayTracer(int width, int height, std::shared_ptr<Scene> scene, const 
     : m_samplesPerPixel(0)
     , m_screenWidth(width)
     , m_screenHeight(height)
+    , m_clContext(initOpenCL())
 {
-    initOpenCL();
 
     m_generateRaysKernel = loadKernel("../../assets/cl/kernel.cl", "generatePrimaryRays");
     m_intersectShadowsKernel = loadKernel("../../assets/cl/kernel.cl", "intersectShadows");
@@ -504,7 +504,7 @@ void RayTracer::calculateAverageGrayscale()
 
 void RayTracer::copyNextAnimationFrameData()
 {
-    auto queue = m_clContext.getGraphicsQueue();
+    auto graphicsQueue = m_clContext.getGraphicsQueue();
     auto copyQueue = m_clContext.getCopyQueue();
 
     // Manually flush the queue
@@ -512,7 +512,7 @@ void RayTracer::copyNextAnimationFrameData()
     //  one kernel launch is not enough reason to flush). So it would be executed at _queue.finish(), which
     //  is called after the top lvl bvh construction (which is expensive) has completed. Instead we manually
     //  flush and than calculate the top lvl bvh.
-    queue.flush();
+    graphicsQueue.flush();
 
     int copyBuffers = (m_activeBuffer + 1) % 2;
     std::vector<cl::Event> waitEvents;
@@ -593,7 +593,7 @@ void RayTracer::copyNextAnimationFrameData()
     }
 
     // Make sure the main queue waits for the copy to finish
-    cl_int err = queue.enqueueBarrierWithWaitList(&waitEvents);
+    cl_int err = graphicsQueue.enqueueBarrierWithWaitList(&waitEvents);
     checkClErr(err, "CommandQueue::enqueueBarrierWithWaitList");
 }
 
@@ -625,7 +625,7 @@ void RayTracer::collectTransformedLights(const SceneNode* node, const glm::mat4&
 
 // http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/
 // https://www.codeproject.com/articles/685281/opengl-opencl-interoperability-a-case-study-using
-void RayTracer::initOpenCL()
+CLContext RayTracer::initOpenCL()
 {
 #ifdef OPENCL_GL_INTEROP
     setenv("CUDA_CACHE_DISABLE", "1", 1);
@@ -643,6 +643,9 @@ void RayTracer::initOpenCL()
 #endif
         exit(EXIT_FAILURE);
     }
+
+    cl::Context clContext;
+    cl::Device clDevice;
 
     // Loop on all platforms.
     std::vector<cl_platform_id> lPlatformIds(lNbPlatformId);
@@ -715,8 +718,8 @@ void RayTracer::initOpenCL()
                 lPlatformId = lPlatformIdToTry;
                 lDeviceId = lDeviceIdToTry;
                 lContext = lContextToTry;
-                m_clContext.m_device = cl::Device(lDeviceId);
-                m_clContext.m_context = cl::Context(lContext);
+                clDevice = cl::Device(lDeviceId);
+                clContext = cl::Context(lContext);
                 break;
             }
         }
@@ -772,7 +775,7 @@ void RayTracer::initOpenCL()
 #endif
 
     std::string openCLVersion;
-    m_clContext.getDevice().getInfo(CL_DEVICE_VERSION, &openCLVersion);
+    clDevice.getInfo(CL_DEVICE_VERSION, &openCLVersion);
     std::cout << "OpenCL version: " << openCLVersion << std::endl;
 
     // Create a command queue.
@@ -782,10 +785,12 @@ void RayTracer::initOpenCL()
     cl_command_queue_properties props = 0;
 #endif
     checkClErr(lError, "Unable to create an OpenCL command queue.");
-    m_clContext.m_queue = cl::CommandQueue(m_clContext.m_context, m_clContext.m_device, props, &lError);
+    cl::CommandQueue graphicsQueue(clContext, clDevice,  props, &lError);
     checkClErr(lError, "Unable to create an OpenCL command queue.");
-    m_clContext.m_copyQueue = cl::CommandQueue(m_clContext.m_context, m_clContext.m_device, props, &lError);
+    cl::CommandQueue copyQueue(clContext, clDevice, props, &lError);
     checkClErr(lError, "Unable to create an OpenCL command queue.");
+
+    return CLContext(clContext, clDevice, graphicsQueue, copyQueue);
 }
 
 void RayTracer::initBuffers(

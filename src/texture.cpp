@@ -43,7 +43,7 @@ cl::Image2DArray CLTextureArray::getImage2DArray() const
 
 void CLTextureArray::copy(gsl::span<const TextureFile> files, cl::CommandQueue commandQueue)
 {
-    for (size_t i = 0; i < files.size(); i++) {
+    for (std::ptrdiff_t i = 0; i < files.size(); i++) {
         auto [filename, isLinear, brightnessMultiplier] = files[i];
         auto buffer = loadImage(filename, isLinear, brightnessMultiplier);
         cl::size_t<3> origin;
@@ -78,7 +78,7 @@ std::unique_ptr<std::byte[]> CLTextureArray::loadImage(std::string_view filename
     FIBITMAP* tmp = FreeImage_Load(fif, filename.data());
 
     // Resize
-    tmp = FreeImage_Rescale(tmp, m_width, m_height, FILTER_LANCZOS3);
+    tmp = FreeImage_Rescale(tmp, (int)m_width, (int)m_height, FILTER_LANCZOS3);
 
     // Convert to linear color space if necessary
     if (!isLinear)
