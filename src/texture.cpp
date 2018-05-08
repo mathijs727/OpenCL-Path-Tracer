@@ -1,6 +1,7 @@
 #include "texture.h"
-#include "template/cl_helpers.h"
+#include "opencl/cl_helpers.h"
 #include <FreeImage.h>
+#include <iostream>
 
 namespace raytracer {
 

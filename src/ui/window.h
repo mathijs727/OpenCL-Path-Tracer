@@ -1,5 +1,5 @@
 #pragma once
-#include "template/cl_gl_includes.h"
+#include "opencl/cl_gl_includes.h"
 #include <GLFW/glfw3.h>
 #include <functional>
 #include <glm/vec2.hpp>

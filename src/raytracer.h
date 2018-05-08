@@ -1,5 +1,4 @@
 #pragma once
-//#include "template/template.h"// Includes template/cl.hpp
 #include "bvh/top_bvh.h"
 #include "model/material.h"
 #include "texture.h"
@@ -26,8 +25,8 @@ public:
 
     void frameTick(); // Load next animation frame data
 
-    int getNumPasses();
-    int getMaxPasses();
+    int getSamplesPerPixel() const;
+    int getMaxSamplesPerPixel() const;
 
 private:
     void setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray& textureArray);

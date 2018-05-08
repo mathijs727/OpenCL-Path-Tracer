@@ -1,5 +1,5 @@
 #pragma once
-#include "template/cl_gl_includes.h"
+#include "opencl/cl_gl_includes.h"
 #include <gsl/gsl>
 #include <memory>
 #include <string_view>

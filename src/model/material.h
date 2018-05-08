@@ -1,6 +1,5 @@
 #pragma once
 #include "light.h"
-#include "template/surface.h"
 #include "texture.h"
 #include "types.h"
 #include <algorithm>

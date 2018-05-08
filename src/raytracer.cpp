@@ -1,10 +1,11 @@
 #include "raytracer.h"
 
 #include "camera.h"
+#include "opencl/cl_gl_includes.h"
+#include "opencl/cl_helpers.h"
 #include "pixel.h"
 #include "ray.h"
 #include "scene.h"
-#include "template/surface.h"
 //#include "texture.h"
 #include <Windows.h>
 #include <algorithm>
@@ -20,16 +21,22 @@
 
 #include <clRNG/lfsr113.h>
 
-//#define PROFILE_OPENCL
-#define OPENCL_GL_INTEROP
-//#define OUTPUT_AVERAGE_GRAYSCALE
-#define MAX_RAYS_PER_PIXEL 20000000
-#define MAX_NUM_LIGHTS 256
+static int setenv(std::string_view name, std::string_view value, int overwrite);
+static size_t toMultipleOf(size_t N, size_t base);
+static int roundUp(int numToRound, int multiple);
 
+template <typename T>
+static void writeToBuffer(cl::CommandQueue& queue, cl::Buffer& buffer, gsl::span<T> items, size_t offset = 0);
+template <typename T>
+static void writeToBuffer(cl::CommandQueue& queue, cl::Buffer& buffer, gsl::span<T> items, size_t offset, std::vector<cl::Event>& events);
+
+//#define OUTPUT_AVERAGE_GRAYSCALE
 //#define RANDOM_XOR32
 #define RANDOM_LFSR113
 
-#define MAX_ACTIVE_RAYS 1280 * 720 // Number of rays per pass (top performance = all pixels in 1 pass but very large buffer sizes at 4K?)
+static constexpr uint32_t MAX_SAMPLES_PER_PIXEL = 20000000;
+static constexpr uint32_t MAX_NUM_LIGHTS = 256;
+static constexpr uint32_t MAX_ACTIVE_RAYS = 1280 * 720; // Number of rays per pass (top performance = all pixels in 1 pass but very large buffer sizes at high res)
 
 struct KernelData {
     raytracer::CameraData camera;
@@ -40,8 +47,8 @@ struct KernelData {
 
     // Used for ray generation
     unsigned rayOffset;
-    unsigned scrWidth;
-    unsigned scrHeight;
+    unsigned screenWidth;
+    unsigned screenHeight;
 
     // Used for ray compaction
     unsigned numInRays;
@@ -50,122 +57,6 @@ struct KernelData {
     unsigned maxRays;
     unsigned newRays;
 };
-
-#ifdef WIN32
-int setenv(const char* name, const char* value, int overwrite)
-{
-    int errcode = 0;
-    if (!overwrite) {
-        size_t envsize = 0;
-        errcode = getenv_s(&envsize, NULL, 0, name);
-        if (errcode || envsize)
-            return errcode;
-    }
-    return _putenv_s(name, value);
-}
-#endif
-
-static cl_float3 glmToCl(const glm::vec3& vec)
-{
-    return { vec.x, vec.y, vec.z };
-}
-
-//void floatToPixel(float* floats, uint32_t* pixels, int count);
-
-// http://developer.amd.com/tools-and-sdks/opencl-zone/opencl-resources/introductory-tutorial-to-opencl/
-#ifdef _WIN32
-
-#ifdef _DEBUG
-#define checkClErr(ERROR_CODE, NAME)                                                                                             \
-    if ((ERROR_CODE) != CL_SUCCESS) {                                                                                            \
-        std::cout << "OpenCL ERROR: " << NAME << " " << (ERROR_CODE) << " (" << __FILE__ << ":" << __LINE__ << ")" << std::endl; \
-        system("PAUSE");                                                                                                         \
-        exit(EXIT_FAILURE);                                                                                                      \
-    }
-#else
-#define checkClErr(ERROR_CODE, NAME)
-#endif
-
-#else
-#define checkClErr(ERROR_CODE, NAME)                                                                                             \
-    if ((ERROR_CODE) != CL_SUCCESS) {                                                                                            \
-        std::cout << "OpenCL ERROR: " << NAME << " " << (ERROR_CODE) << " (" << __FILE__ << ":" << __LINE__ << ")" << std::endl; \
-        exit(EXIT_FAILURE);                                                                                                      \
-    }
-#endif
-
-static size_t toMultipleOf(size_t N, size_t base)
-{
-    return static_cast<size_t>((ceil((double)N / (double)base) * base));
-}
-
-template <typename T>
-inline void writeToBuffer(
-    cl::CommandQueue& queue,
-    cl::Buffer& buffer,
-    const std::vector<T>& items,
-    size_t offset = 0)
-{
-    if (items.size() == 0)
-        return;
-
-    cl_int err = queue.enqueueWriteBuffer(
-        buffer,
-        CL_TRUE,
-        offset * sizeof(T),
-        (items.size() - offset) * sizeof(T),
-        &items[offset]);
-    checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-}
-
-template <typename T>
-inline void writeToBuffer(
-    cl::CommandQueue& queue,
-    cl::Buffer& buffer,
-    const std::vector<T>& items,
-    size_t offset,
-    std::vector<cl::Event>& events)
-{
-    if (items.size() == 0)
-        return;
-
-    cl::Event ev;
-    cl_int err = queue.enqueueWriteBuffer(
-        buffer,
-        CL_TRUE,
-        offset * sizeof(T),
-        (items.size() - offset) * sizeof(T),
-        &items[offset],
-        nullptr,
-        &ev);
-    events.push_back(ev);
-    checkClErr(err, "CommandQueue::enqueueWriteBuffer");
-}
-
-inline void timeOpenCL(cl::Event& ev, const char* operationName)
-{
-#ifdef PROFILE_OPENCL
-    ev.wait();
-    cl_ulong startTime, stopTime;
-    ev.getProfilingInfo(CL_PROFILING_COMMAND_START, &startTime);
-    ev.getProfilingInfo(CL_PROFILING_COMMAND_END, &stopTime);
-    double totalTime = stopTime - startTime;
-    std::cout << "Timing (" << operationName << "): " << (totalTime / 1000000.0) << "ms" << std::endl;
-#endif
-}
-
-// http://stackoverflow.com/questions/3407012/c-rounding-up-to-the-nearest-multiple-of-a-number
-inline int roundUp(int numToRound, int multiple)
-{
-    if (multiple == 0)
-        return numToRound;
-
-    int remainder = numToRound % multiple;
-    if (remainder == 0)
-        return numToRound;
-
-    return numToRound + multiple - remainder;
-}
 
 namespace raytracer {
 RayTracer::RayTracer(int width, int height, std::shared_ptr<Scene> scene, const UniqueTextureArray& materialTextures, const UniqueTextureArray& skydomeTextures, GLuint outputTarget)
@@ -216,7 +107,7 @@ void RayTracer::rayTrace(const Camera& camera)
         m_samplesPerPixel = 0;
     }
 
-    if (m_samplesPerPixel >= MAX_RAYS_PER_PIXEL)
+    if (m_samplesPerPixel >= MAX_SAMPLES_PER_PIXEL)
         return;
 
     // Non blocking CPU
@@ -275,14 +166,14 @@ void RayTracer::frameTick()
     m_activeBuffer = (m_activeBuffer + 1) % 2;
 }
 
-int RayTracer::getNumPasses()
+int RayTracer::getSamplesPerPixel() const
 {
     return m_samplesPerPixel;
 }
 
-int RayTracer::getMaxPasses()
+int RayTracer::getMaxSamplesPerPixel() const
 {
-    return MAX_RAYS_PER_PIXEL;
+    return MAX_SAMPLES_PER_PIXEL;
 }
 
 void RayTracer::setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray& textureArray)
@@ -360,15 +251,15 @@ void RayTracer::setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray&
     }
 
     auto queue = m_clContext.getGraphicsQueue();
-    writeToBuffer(queue, m_verticesBuffers[0], m_verticesHost);
-    writeToBuffer(queue, m_trianglesBuffers[0], m_trianglesHost);
-    writeToBuffer(queue, m_materialsBuffers[0], m_materialsHost);
-    writeToBuffer(queue, m_subBvhBuffers[0], m_subBvhNodesHost);
+    writeToBuffer(queue, m_verticesBuffers[0], gsl::make_span(m_verticesHost));
+    writeToBuffer(queue, m_trianglesBuffers[0], gsl::make_span(m_trianglesHost));
+    writeToBuffer(queue, m_materialsBuffers[0], gsl::make_span(m_materialsHost));
+    writeToBuffer(queue, m_subBvhBuffers[0], gsl::make_span(m_subBvhNodesHost));
 
-    writeToBuffer(queue, m_verticesBuffers[1], m_verticesHost);
-    writeToBuffer(queue, m_trianglesBuffers[1], m_trianglesHost);
-    writeToBuffer(queue, m_materialsBuffers[1], m_materialsHost);
-    writeToBuffer(queue, m_subBvhBuffers[1], m_subBvhNodesHost);
+    writeToBuffer(queue, m_verticesBuffers[1], gsl::make_span(m_verticesHost));
+    writeToBuffer(queue, m_trianglesBuffers[1], gsl::make_span(m_trianglesHost));
+    writeToBuffer(queue, m_materialsBuffers[1], gsl::make_span(m_materialsHost));
+    writeToBuffer(queue, m_subBvhBuffers[1], gsl::make_span(m_subBvhNodesHost));
 
     m_materialTextures = std::make_unique<CLTextureArray>(textureArray, m_clContext, 1024, 1024, false);
 
@@ -413,8 +304,8 @@ void RayTracer::traceRays(const Camera& camera)
     data.topLevelBvhRoot = m_topBvhRootNode[m_activeBuffer];
 
     data.rayOffset = 0;
-    data.scrWidth = (uint32_t)m_screenWidth;
-    data.scrHeight = (uint32_t)m_screenHeight;
+    data.screenWidth = (uint32_t)m_screenWidth;
+    data.screenHeight = (uint32_t)m_screenHeight;
 
     data.numInRays = 0;
     data.numOutRays = 0;
@@ -673,21 +564,21 @@ void RayTracer::copyNextAnimationFrameData()
     m_emissiveTrianglesHost.clear();
     collectTransformedLights(&m_scene->get_root_node(), glm::mat4());
     m_numEmissiveTriangles[copyBuffers] = (uint32_t)m_emissiveTrianglesHost.size();
-    writeToBuffer(copyQueue, m_emissiveTrianglesBuffers[copyBuffers], m_emissiveTrianglesHost, 0, waitEvents);
+    writeToBuffer(copyQueue, m_emissiveTrianglesBuffers[copyBuffers], gsl::make_span(m_emissiveTrianglesHost), 0, waitEvents);
 
     if (m_verticesHost.size() > static_cast<size_t>(m_numStaticVertices)) // Dont copy if we dont have any dynamic geometry
     {
-        writeToBuffer(copyQueue, m_verticesBuffers[copyBuffers], m_verticesHost, m_numStaticVertices, waitEvents);
-        writeToBuffer(copyQueue, m_trianglesBuffers[copyBuffers], m_trianglesHost, m_numStaticTriangles, waitEvents);
-        writeToBuffer(copyQueue, m_materialsBuffers[copyBuffers], m_materialsHost, m_numStaticMaterials, waitEvents);
-        writeToBuffer(copyQueue, m_subBvhBuffers[copyBuffers], m_subBvhNodesHost, m_numStaticBvhNodes, waitEvents);
+        writeToBuffer(copyQueue, m_verticesBuffers[copyBuffers], gsl::make_span(m_verticesHost), m_numStaticVertices, waitEvents);
+        writeToBuffer(copyQueue, m_trianglesBuffers[copyBuffers], gsl::make_span(m_trianglesHost), m_numStaticTriangles, waitEvents);
+        writeToBuffer(copyQueue, m_materialsBuffers[copyBuffers], gsl::make_span(m_materialsHost), m_numStaticMaterials, waitEvents);
+        writeToBuffer(copyQueue, m_subBvhBuffers[copyBuffers], gsl::make_span(m_subBvhNodesHost), m_numStaticBvhNodes, waitEvents);
     }
 
     // Update the top level BVH and copy it to the GPU on a seperate copy queue
     m_topBvhNodesHost.clear();
     auto bvhBuilder = TopLevelBvhBuilder(*m_scene.get());
     m_topBvhRootNode[copyBuffers] = bvhBuilder.build(m_subBvhNodesHost, m_topBvhNodesHost);
-    writeToBuffer(copyQueue, m_topBvhBuffers[copyBuffers], m_topBvhNodesHost, 0, waitEvents);
+    writeToBuffer(copyQueue, m_topBvhBuffers[copyBuffers], gsl::make_span(m_topBvhNodesHost), 0, waitEvents);
 
     if (m_verticesHost.size() > static_cast<size_t>(m_numStaticVertices)) {
         timeOpenCL(waitEvents[0], "vertex upload");
@@ -981,17 +872,6 @@ void RayTracer::initBuffers(
         &err);
     checkClErr(err, "Buffer::Buffer()");
 
-    /*// https://www.khronos.org/registry/cl/specs/opencl-cplusplus-1.2.pdf
-    _material_textures = cl::Image2DArray(m_clContext,
-        CL_MEM_READ_ONLY,
-        cl::ImageFormat(CL_BGRA, CL_UNORM_INT8),
-        std::max((uint32_t)1u, (uint32_t)Texture::getNumUniqueSurfaces()),
-        Texture::TEXTURE_WIDTH,
-        Texture::TEXTURE_HEIGHT,
-        0, 0, NULL, // Unused host_ptr
-        &err);
-    checkClErr(err, "cl::Image2DArray");*/
-
     m_rayTraversalBuffer = cl::Buffer(m_clContext,
         CL_MEM_READ_WRITE,
         MAX_ACTIVE_RAYS * 32 * sizeof(uint32_t),
@@ -1135,5 +1015,79 @@ cl::Kernel RayTracer::loadKernel(std::string_view fileName, std::string_view fun
 
     return kernel;
 }
+}
 
+static int setenv(std::string_view name, std::string_view value, int overwrite)
+{
+#ifdef WIN32
+    int errcode = 0;
+    if (!overwrite) {
+        size_t envsize = 0;
+        errcode = getenv_s(&envsize, NULL, 0, name.data());
+        if (errcode || envsize)
+            return errcode;
+    }
+    return _putenv_s(name.data(), value.data());
+#endif
+}
+
+static size_t toMultipleOf(size_t N, size_t base)
+{
+    return static_cast<size_t>((ceil((double)N / (double)base) * base));
+}
+
+// http://stackoverflow.com/questions/3407012/c-rounding-up-to-the-nearest-multiple-of-a-number
+static int roundUp(int numToRound, int multiple)
+{
+    if (multiple == 0)
+        return numToRound;
+
+    int remainder = numToRound % multiple;
+    if (remainder == 0)
+        return numToRound;
+
+    return numToRound + multiple - remainder;
+}
+
+template <typename T>
+static void writeToBuffer(
+    cl::CommandQueue& queue,
+    cl::Buffer& buffer,
+    gsl::span<T> items,
+    size_t offset)
+{
+    if (items.size() == 0)
+        return;
+
+    cl_int err = queue.enqueueWriteBuffer(
+        buffer,
+        CL_TRUE,
+        offset * sizeof(T),
+        (items.size() - offset) * sizeof(T),
+        &items[offset]);
+    checkClErr(err, "CommandQueue::enqueueWriteBuffer");
+}
+
+template <typename T>
+static void writeToBuffer(
+    cl::CommandQueue& queue,
+    cl::Buffer& buffer,
+    gsl::span<T> items,
+    size_t offset,
+    std::vector<cl::Event>& events)
+{
+    if (items.size() == 0)
+        return;
+
+    cl::Event ev;
+    cl_int err = queue.enqueueWriteBuffer(
+        buffer,
+        CL_TRUE,
+        offset * sizeof(T),
+        (items.size() - offset) * sizeof(T),
+        &items[offset],
+        nullptr,
+        &ev);
+    events.push_back(ev);
+    checkClErr(err, "CommandQueue::enqueueWriteBuffer");
 }

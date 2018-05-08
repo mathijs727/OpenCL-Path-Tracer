@@ -1,7 +1,7 @@
 #include "camera.h"
+#include "common.h"
 #include "raytracer.h"
 #include "scene.h"
-#include "template/common.h"
 #include "texture.h"
 #include "transform.h"
 #include "ui/gloutput.h"
@@ -64,9 +64,6 @@ int main(int argc, char* argv[])
     });
 
     RayTracer rayTracer(screenWidth, screenHeight, scene, materialTextures, skydomeTextures, output.getGLTexture());
-    //rayTracer.SetScene(scene, textureArray);
-    //rayTracer.SetSkydome("../../assets/skydome/DF360_005_Ref.hdr", true, 75.0f);
-    //rayTracer.SetTarget(output.getGLTexture());
 
     auto prevFrame = std::chrono::high_resolution_clock::now();
     while (!window.shouldClose() && !userClose) {

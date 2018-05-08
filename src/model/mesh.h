@@ -2,6 +2,7 @@
 #include "bvh/binned_bvh.h"
 #include "imesh.h"
 #include "material.h"
+#include "mesh_helpers.h"
 #include "shapes.h"
 #include "texture.h"
 #include "transform.h"

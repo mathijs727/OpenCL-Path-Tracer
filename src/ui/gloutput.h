@@ -1,5 +1,5 @@
 #pragma once
-#include "template/cl_gl_includes.h" // Includes GLEW
+#include "opencl/cl_gl_includes.h" // Includes GLEW
 
 class GLOutput {
 public:
