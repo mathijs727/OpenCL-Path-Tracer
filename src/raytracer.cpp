@@ -190,7 +190,7 @@ void RayTracer::setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray&
     uint32_t numTriangles = 0;
     uint32_t numMaterials = 0;
     uint32_t numBvhNodes = 0;
-    for (auto& meshBvhPair : scene->get_meshes()) {
+    for (const auto& meshBvhPair : scene->getMeshes()) {
         auto mesh = meshBvhPair.mesh;
 
         if (mesh->isDynamic()) {
@@ -212,10 +212,10 @@ void RayTracer::setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray&
     }
 
     initBuffers(numVertices, numTriangles, MAX_NUM_LIGHTS, numMaterials,
-        numBvhNodes, (uint32_t)scene->get_meshes().size() * 2, (uint32_t)scene->get_lights().size());
+        numBvhNodes, (uint32_t)scene->getMeshes().size() * 2, (uint32_t)scene->getLights().size());
 
     // Collect all static geometry and upload it to the GPU
-    for (auto& meshBvhPair : scene->get_meshes()) {
+    for (auto& meshBvhPair : scene->getMeshes()) {
         auto mesh = meshBvhPair.mesh;
         if (mesh->isDynamic())
             continue;
@@ -247,7 +247,7 @@ void RayTracer::setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray&
             else
                 newNode.leftChildIndex += startBvhNode;
         }
-        meshBvhPair.bvh_offset = startBvhNode;
+        meshBvhPair.bvhOffset = startBvhNode;
     }
 
     auto queue = m_clContext.getGraphicsQueue();
@@ -523,7 +523,7 @@ void RayTracer::copyNextAnimationFrameData()
     m_subBvhNodesHost.resize(m_numStaticBvhNodes);
 
     // Collect all static geometry and upload it to the GPU
-    for (auto& meshBvhPair : m_scene->get_meshes()) {
+    for (auto& meshBvhPair : m_scene->getMeshes()) {
         auto mesh = meshBvhPair.mesh;
         if (!mesh->isDynamic())
             continue;
@@ -557,12 +557,12 @@ void RayTracer::copyNextAnimationFrameData()
             else
                 newNode.leftChildIndex += startBvhNode;
         }
-        meshBvhPair.bvh_offset = startBvhNode;
+        meshBvhPair.bvhOffset = startBvhNode;
     }
 
     // Get the light emmiting triangles transformed by the scene graph
     m_emissiveTrianglesHost.clear();
-    collectTransformedLights(&m_scene->get_root_node(), glm::mat4());
+    collectTransformedLights(&m_scene->getRootNode(), glm::mat4());
     m_numEmissiveTriangles[copyBuffers] = (uint32_t)m_emissiveTrianglesHost.size();
     writeToBuffer(copyQueue, m_emissiveTrianglesBuffers[copyBuffers], gsl::make_span(m_emissiveTrianglesHost), 0, waitEvents);
 
@@ -601,7 +601,7 @@ void RayTracer::collectTransformedLights(const SceneNode* node, const glm::mat4&
 {
     auto newTransform = transform * node->transform.matrix();
     if (node->mesh != -1) {
-        auto& mesh = m_scene->get_meshes()[node->mesh];
+        auto& mesh = m_scene->getMeshes()[node->mesh];
         auto& vertices = mesh.mesh->getVertices();
         auto& triangles = mesh.mesh->getTriangles();
         auto& emissiveTriangles = mesh.mesh->getEmissiveTriangles();

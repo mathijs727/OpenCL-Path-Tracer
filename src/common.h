@@ -1,14 +1,14 @@
 #pragma once
 
-template<typename T>
+template <typename T>
 struct Pi;
 
-template<>
+template <>
 struct Pi<float> {
     static constexpr float value = 3.1415927f;
 };
 
-template<>
+template <>
 struct Pi<double> {
-    static constexpr float value = 3.141592653589793;
+    static constexpr double value = 3.141592653589793;
 };
