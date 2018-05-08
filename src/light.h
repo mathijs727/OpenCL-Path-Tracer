@@ -34,12 +34,9 @@ struct Light {
     LightType type;
     std::byte __padding4[12]; // 16 bytes
 
-    // Apperently necesarry (maybe got something to do with glm::vec in union???)
+    // Constructor = default does not compile because of the union
     Light(){};
-    Light(const Light& other)
-    {
-        memcpy(this, &other, sizeof(Light));
-    };
+    Light(const Light&) = default;
 
     static Light Point(const glm::vec3& colour, const glm::vec3 pos)
     {
@@ -64,5 +61,5 @@ struct Light {
     }
 };
 
-bool get_light_vector(const Light& light, const glm::vec3 position, glm::vec3& lightDirection);
+bool getLightVector(const Light& light, glm::vec3 position, glm::vec3& outLightDirection);
 }
