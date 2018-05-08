@@ -484,11 +484,8 @@ void RayTracer::traceRays(const Camera& camera)
         m_shadingKernel.setArg(8, m_emissiveTrianglesBuffers[m_activeBuffer]);
         m_shadingKernel.setArg(9, m_materialsBuffers[m_activeBuffer]);
         m_shadingKernel.setArg(10, m_materialTextures->getImage2DArray());
-        /*if (_skydome_loaded)
-            m_shadingKernel.setArg(11, *m_skydomeTextures);
-        else
-            throw std::runtime_error("No skydome texture!");*/
-        m_shadingKernel.setArg(11, m_randomStreamBuffer);
+        m_shadingKernel.setArg(11, m_skydomeTextures->getImage2DArray());
+        m_shadingKernel.setArg(12, m_randomStreamBuffer);
 
         err = queue.enqueueNDRangeKernel(
             m_shadingKernel,

@@ -9,7 +9,7 @@ __constant sampler_t skydomeSampler =
 
 // http://www.cs.uu.nl/docs/vakken/magr/2016-2017/slides/lecture%2009%20-%20various.pdf
 // Slide 36
-float3 readSkydome(float3 dir, image2d_array_t texture)
+float3 readSkydome(float3 dir, image2d_array_t skydomeTextures)
 {
 	// Convert unit vector to polar coordinates
 	float u = 1 + atan2(dir.x, -dir.z) / PI;
@@ -19,7 +19,7 @@ float3 readSkydome(float3 dir, image2d_array_t texture)
 	u /= 2;
 
 	float4 colourWithAlpha = read_imagef(
-		texture,
+        skydomeTextures,
 		skydomeSampler,
 		(float4)(u, 1.0f - v, 0, 0));
 	return colourWithAlpha.xyz;
