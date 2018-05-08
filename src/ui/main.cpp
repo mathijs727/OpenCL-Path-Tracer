@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
     cameraTransform.location = glm::vec3(2.5f, 2.0f, 0.01f);
     //cameraTransform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
     Camera camera(cameraTransform, 100.0f, (float)screenWidth / screenHeight, 1.0f);
-    camera.is_thin_lense() = false;
+    camera.m_thinLens = false;
 
     auto scene = std::make_shared<Scene>();
     UniqueTextureArray textureArray;
@@ -131,7 +131,9 @@ void cameraLookHandler(Camera& camera, glm::dvec2 mousePosition)
     cameraEuler.x = glm::clamp(cameraEuler.x, -glm::half_pi<float>(), glm::half_pi<float>());
 
     if (delta.x != 0.0 || delta.y != 0.0) {
-        camera.transform().orientation = glm::quat(cameraEuler);
+        Transform transform = camera.getTransform();
+        transform.orientation = glm::quat(cameraEuler);
+        camera.setTransform(transform);
     }
 }
 
@@ -148,6 +150,8 @@ void cameraMoveHandler(Camera& camera, const Window& window, double dt)
 
     if (movement != glm::vec3(0)) {
         movement *= static_cast<float>(dt * cameraMoveSpeed);
-        camera.transform().location += glm::mat3_cast(camera.transform().orientation) * movement;
+        Transform transform = camera.getTransform();
+        transform.location += glm::mat3_cast(transform.orientation) * movement;
+        camera.setTransform(transform);
     }
 }

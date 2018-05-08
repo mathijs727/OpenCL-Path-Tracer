@@ -12,8 +12,8 @@ struct CameraData {
     CL_VEC3(u);
     CL_VEC3(v);
 
-    CL_VEC3(u_normalized);
-    CL_VEC3(v_normalized);
+    CL_VEC3(normalizedU);
+    CL_VEC3(normalizedV);
     float focalDistance;
     float apertureRadius;
 
@@ -33,31 +33,30 @@ public:
     CameraData get_camera_data() const;
 
     //void get_frustum(glm::vec3& eye, glm::vec3& scr_base_origin, glm::vec3& scr_base_u, glm::vec3& scr_base_v) const;
-    float fov() const;
-    Transform& transform();
-    const Transform& transform() const;
+    float getHorizontalFov() const;
 
-    float& get_focal_distance() { return _focal_distance; };
-    float& get_focal_length_mm() { return _focal_length_mm; }
-    float& get_aperture_fstops() { return _aperture; };
-    float& get_shutter_time() { return _shutter_time; };
-    float& get_iso() { return _iso; };
-    bool& is_thin_lense() { return _thinLens; }
+    const Transform& getTransform() const;
+    void setTransform(const Transform& set);
+
+public:
+    // NOTE:
+    // According to the Webkit style guide member variables should be private. We break this rule here because imgui requires references
+    // to these variables so that it can change them. The alternative would be to let it change temporary variables and forward the changes
+    // through getters and setters. In my opinion using public members is a better solution than the alternative.
+    float m_focalDistance;
+    float m_focalLengthMm;
+    float m_aperture;
+    float m_shutterTime;
+    float m_iso;
+
+    bool m_thinLens;
 
 private:
-    Transform _transform;
+    Transform m_transform;
 
     // y divided by x
-    float _aspectRatio;
-    float _focal_distance;
-    float _fov; // Horizontal Field Of View
-
-    float _focal_length_mm;
-    float _aperture;
-    float _shutter_time;
-    float _iso;
-
-    bool _thinLens;
+    float m_aspectRatio;
+    float m_horizontalFov; // Horizontal Field Of View
 };
 
 }
