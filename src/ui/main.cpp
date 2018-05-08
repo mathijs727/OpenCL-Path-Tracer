@@ -18,6 +18,8 @@ static const double cameraViewSpeed = 0.1;
 static const double cameraMoveSpeed = 1.0f;
 
 void createScene(Scene& scene, UniqueTextureArray& textureArray);
+void createSkydome(std::string_view fileName, bool isLinear, float brightnessMultiplier, UniqueTextureArray& textureArray);
+
 void cameraLookHandler(Camera& camera, glm::dvec2 mousePosition);
 void cameraMoveHandler(Camera& camera, const Window& window, double dt);
 
@@ -32,8 +34,10 @@ int main(int argc, char* argv[])
     camera.m_thinLens = false;
 
     auto scene = std::make_shared<Scene>();
-    UniqueTextureArray textureArray;
-    createScene(*scene, textureArray);
+    UniqueTextureArray materialTextures;
+    createScene(*scene, materialTextures);
+    UniqueTextureArray skydomeTextures;
+    createSkydome("../../assets/skydome/DF360_005_Ref.hdr", true, 75.0f, skydomeTextures);
 
     // Window creates OpenGL context so all OpenGL code should come afterwards.
     Window window(screenWidth, screenHeight, "Hello world!");
@@ -59,10 +63,10 @@ int main(int argc, char* argv[])
         }
     });
 
-    RayTracer rayTracer(screenWidth, screenHeight);
-    rayTracer.SetScene(scene, textureArray);
-    rayTracer.SetSkydome("../../assets/skydome/DF360_005_Ref.hdr", true, 75.0f);
-    rayTracer.SetTarget(output.getGLTexture());
+    RayTracer rayTracer(screenWidth, screenHeight, scene, materialTextures, skydomeTextures, output.getGLTexture());
+    //rayTracer.SetScene(scene, textureArray);
+    //rayTracer.SetSkydome("../../assets/skydome/DF360_005_Ref.hdr", true, 75.0f);
+    //rayTracer.SetTarget(output.getGLTexture());
 
     auto prevFrame = std::chrono::high_resolution_clock::now();
     while (!window.shouldClose() && !userClose) {
@@ -73,7 +77,7 @@ int main(int argc, char* argv[])
         window.processInput();
         cameraMoveHandler(camera, window, dt);
 
-        rayTracer.RayTrace(camera);
+        rayTracer.rayTrace(camera);
         output.render();
 
         window.swapBuffers();
@@ -112,6 +116,11 @@ void createScene(Scene& scene, UniqueTextureArray& textureArray)
             textureArray);
         scene.add_node(bunny, transform);
     }
+}
+
+void createSkydome(std::string_view fileName, bool isLinear, float brightnessMultiplier, UniqueTextureArray& textureArray)
+{
+    textureArray.add(fileName, isLinear, brightnessMultiplier);
 }
 
 void cameraLookHandler(Camera& camera, glm::dvec2 mousePosition)

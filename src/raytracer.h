@@ -5,6 +5,7 @@
 #include "texture.h"
 #include "vertices.h"
 #include <memory>
+#include <string_view>
 #include <vector>
 
 namespace Tmpl8 {
@@ -18,32 +19,32 @@ class Scene;
 
 class RayTracer {
 public:
-    RayTracer(int width, int height);
+    RayTracer(int width, int height, std::shared_ptr<Scene> scene, const UniqueTextureArray& materialTextures, const UniqueTextureArray& skydomeTextures, GLuint outputTarget);
     ~RayTracer();
 
-    void SetSkydome(const char* filePathFormat, bool isLinear, float multiplier);
+    void rayTrace(const Camera& camera);
 
-    void SetScene(std::shared_ptr<Scene> scene, const UniqueTextureArray& textureArray);
-    void SetTarget(GLuint glTexture);
-    void RayTrace(const Camera& camera);
+    void frameTick(); // Load next animation frame data
 
-    void FrameTick(); // Load next animation frame data
-
-    int GetNumPasses();
-    int GetMaxPasses();
+    int getNumPasses();
+    int getMaxPasses();
 
 private:
-    void TraceRays(const Camera& camera);
+    void setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray& textureArray);
+    void setSkydome(const UniqueTextureArray& skydomeTextureArray);
+    void setTarget(GLuint glTexture);
 
-    void Accumulate(const Camera& camera);
-    void ClearAccumulationBuffer();
-    void CalculateAverageGrayscale();
+    void traceRays(const Camera& camera);
 
-    void CopyNextAnimationFrameData();
-    void CollectTransformedLights(const SceneNode* node, const glm::mat4& transform);
+    void accumulate(const Camera& camera);
+    void clearAccumulationBuffer();
+    void calculateAverageGrayscale();
 
-    void InitOpenCL();
-    void InitBuffers(
+    void copyNextAnimationFrameData();
+    void collectTransformedLights(const SceneNode* node, const glm::mat4& transform);
+
+    void initOpenCL();
+    void initBuffers(
         uint32_t numVertices,
         uint32_t numTriangles,
         uint32_t numEmissiveTriangles,
@@ -52,71 +53,58 @@ private:
         uint32_t numTopBvhNodes,
         uint32_t numLights);
 
-    cl::Kernel LoadKernel(const char* fileName, const char* funcName);
+    cl::Kernel loadKernel(std::string_view fileName, std::string_view funcName);
 
 private:
-    std::shared_ptr<Scene> _scene;
-
-    std::unique_ptr<CLTextureArray> _skydome;
-    bool _skydome_loaded;
-
-    cl_uint _scr_width, _scr_height;
-
-    /*cl::Context _context;
-    cl::Device _device;
-    cl::CommandQueue _queue;
-    cl::CommandQueue _copyQueue;*/
     CLContext m_clContext;
 
-    cl::Kernel _generate_rays_kernel;
-    cl::Kernel _intersect_walk_kernel;
-    cl::Kernel _shading_kernel;
-    cl::Kernel _intersect_shadows_kernel;
-    cl::Kernel _update_kernel_data_kernel;
-
-    cl::Buffer _ray_traversal_buffer;
-    cl::Buffer _ray_kernel_data;
-    cl::Buffer _random_streams;
-    cl::Buffer _rays_buffers[2];
-    cl::Buffer _shading_buffer;
-    cl::Buffer _shadow_rays_buffer;
-
-    cl_uint _rays_per_pixel;
-    cl::Kernel _accumulate_kernel;
-    cl::Buffer _accumulation_buffer;
-    cl::ImageGL _output_image;
-
-    GLuint _output_image_gl;
-    cl::Image2D _output_image_cl;
-    std::unique_ptr<float[]> _output_image_cpu;
-
-    std::vector<VertexSceneData> _vertices_host;
-    std::vector<TriangleSceneData> _triangles_host;
-    std::vector<EmissiveTriangle> _emissive_triangles_host;
-    std::vector<Material> _materials_host;
-    std::vector<SubBvhNode> _sub_bvh_nodes_host;
-
-    cl_uint _num_static_vertices;
-    cl_uint _num_static_triangles;
-    cl_uint _num_emissive_triangles[2];
-    cl_uint _num_static_materials;
-    cl_uint _num_static_bvh_nodes;
-    unsigned _active_buffers = 0;
-    cl::Buffer _vertices[2];
-    cl::Buffer _triangles[2];
-    cl::Buffer _emissive_trangles[2];
-    cl::Buffer _materials[2];
-    cl::Buffer _sub_bvh[2];
-
-    //cl::Image2D _no_texture;
-    //cl::Image2D _skydome_texture;
-    //cl::Image2DArray _material_textures;
+    std::shared_ptr<Scene> m_scene;
     std::unique_ptr<CLTextureArray> m_skydomeTextures;
     std::unique_ptr<CLTextureArray> m_materialTextures;
 
-    std::vector<TopBvhNode> _top_bvh_nodes_host;
-    cl_uint _top_bvh_root_node[2];
-    cl::Buffer _top_bvh[2];
-};
+    cl_uint m_screenWidth, m_screenHeight;
+    GLuint m_glOutputImage;
+    cl::Image2D m_clOutputImage;
+    std::unique_ptr<float[]> m_cpuOutputImage;
 
+    cl::Kernel m_generateRaysKernel;
+    cl::Kernel m_intersectWalkKernel;
+    cl::Kernel m_shadingKernel;
+    cl::Kernel m_intersectShadowsKernel;
+    cl::Kernel m_updateKernelDataKernel;
+
+    cl::Buffer m_rayTraversalBuffer;
+    cl::Buffer m_kernelDataBuffer;
+    cl::Buffer m_randomStreamBuffer;
+    cl::Buffer m_raysBuffer[2];
+    cl::Buffer m_shadingRequestBuffer;
+    cl::Buffer m_shadowRaysBuffer;
+
+    cl_uint m_samplesPerPixel;
+    cl::Kernel m_accumulateKernel;
+    cl::Buffer m_accumulationBuffer;
+    cl::ImageGL m_clGLInteropOutputImage;
+
+    std::vector<VertexSceneData> m_verticesHost;
+    std::vector<TriangleSceneData> m_trianglesHost;
+    std::vector<EmissiveTriangle> m_emissiveTrianglesHost;
+    std::vector<Material> m_materialsHost;
+    std::vector<TopBvhNode> m_topBvhNodesHost;
+    std::vector<SubBvhNode> m_subBvhNodesHost;
+
+    unsigned m_activeBuffer = 0;
+    cl_uint m_numStaticVertices;
+    cl_uint m_numStaticTriangles;
+    cl_uint m_numEmissiveTriangles[2];
+    cl_uint m_numStaticMaterials;
+    cl_uint m_numStaticBvhNodes;
+    cl_uint m_topBvhRootNode[2];
+
+    cl::Buffer m_verticesBuffers[2];
+    cl::Buffer m_trianglesBuffers[2];
+    cl::Buffer m_emissiveTrianglesBuffers[2];
+    cl::Buffer m_materialsBuffers[2];
+    cl::Buffer m_topBvhBuffers[2];
+    cl::Buffer m_subBvhBuffers[2];
+};
 }

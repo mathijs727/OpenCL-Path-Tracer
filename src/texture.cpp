@@ -4,13 +4,13 @@
 
 namespace raytracer {
 
-int UniqueTextureArray::add(std::string_view filename, bool isLinear)
+int UniqueTextureArray::add(std::string_view filename, bool isLinear, float brightnessMultiplier)
 {
     if (auto iter = m_textureLookupTable.find(std::string(filename)); iter != m_textureLookupTable.end()) {
         return iter->second;
     } else {
         int id = static_cast<int>(m_textureFiles.size());
-        m_textureFiles.push_back({ std::string(filename), isLinear });
+        m_textureFiles.push_back({ std::string(filename), isLinear, brightnessMultiplier });
         m_textureLookupTable[std::string(filename)] = id;
         return id;
     }
@@ -43,8 +43,8 @@ cl::Image2DArray CLTextureArray::getImage2DArray() const
 void CLTextureArray::copy(gsl::span<const TextureFile> files, cl::CommandQueue commandQueue)
 {
     for (size_t i = 0; i < files.size(); i++) {
-        auto [filename, isLinear] = files[i];
-        auto buffer = loadImage(filename, isLinear);
+        auto [filename, isLinear, brightnessMultiplier] = files[i];
+        auto buffer = loadImage(filename, isLinear, brightnessMultiplier);
         cl::size_t<3> origin;
         origin[0] = 0;
         origin[1] = 0;
@@ -67,7 +67,7 @@ void CLTextureArray::copy(gsl::span<const TextureFile> files, cl::CommandQueue c
     }
 }
 
-std::unique_ptr<std::byte[]> CLTextureArray::loadImage(std::string_view filename, bool isLinear)
+std::unique_ptr<std::byte[]> CLTextureArray::loadImage(std::string_view filename, bool isLinear, float brightnessMultiplier)
 {
     // Load file
     FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
@@ -94,14 +94,17 @@ std::unique_ptr<std::byte[]> CLTextureArray::loadImage(std::string_view filename
         auto floatBuffer = reinterpret_cast<float*>(buffer.get());
         for (int y = 0; y < m_height; y++) {
             for (int x = 0; x < m_width; x++) {
-                floatBuffer[(y * m_width + x) * 4 + 0] = rawData[(y * m_width + x) * 3 + 0];
-                floatBuffer[(y * m_width + x) * 4 + 1] = rawData[(y * m_width + x) * 3 + 1];
-                floatBuffer[(y * m_width + x) * 4 + 2] = rawData[(y * m_width + x) * 3 + 2];
+                floatBuffer[(y * m_width + x) * 4 + 0] = rawData[(y * m_width + x) * 3 + 0] * brightnessMultiplier;
+                floatBuffer[(y * m_width + x) * 4 + 1] = rawData[(y * m_width + x) * 3 + 1] * brightnessMultiplier;
+                floatBuffer[(y * m_width + x) * 4 + 2] = rawData[(y * m_width + x) * 3 + 2] * brightnessMultiplier;
                 floatBuffer[(y * m_width + x) * 4 + 3] = 1.0f;
             }
         }
         return buffer;
     } else {
+        if (brightnessMultiplier != 1.0f)
+            throw std::runtime_error("Brightness multiplier can only be used when a texture is stored as a float");
+
         // Convert to 32 bit
         const size_t pixelSize = 4; // 4 bytes = 32 bits
         FIBITMAP* dib = FreeImage_ConvertTo32Bits(tmp);

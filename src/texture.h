@@ -44,7 +44,8 @@ public: // TMP
 
 struct TextureFile {
     std::string filename;
-    bool isLinear = false;
+    bool isLinear;
+    float brightnessMultiplier;
 };
 
 class UniqueTextureArray {
@@ -52,7 +53,7 @@ public:
     UniqueTextureArray() = default;
     ~UniqueTextureArray() = default;
 
-    int add(std::string_view filename, bool isLinear = false);
+    int add(std::string_view filename, bool isLinear = false, float brightnessMultiplier = 1.0f);
     gsl::span<const TextureFile> getTextureFiles() const;
 
 private:
@@ -70,7 +71,7 @@ public:
 
 private:
     void copy(gsl::span<const TextureFile> files, cl::CommandQueue commandQueue);
-    std::unique_ptr<std::byte[]> loadImage(std::string_view filename, bool isLinear);
+    std::unique_ptr<std::byte[]> loadImage(std::string_view filename, bool isLinear, float brightnessMultiplier);
 
     static cl::Image2DArray createImageArray(cl::Context context, size_t width, size_t height, size_t arrayLength, bool storeAsFloat);
 

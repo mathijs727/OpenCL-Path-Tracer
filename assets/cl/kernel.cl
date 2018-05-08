@@ -282,11 +282,11 @@ __kernel void shade(
 			active = true;
 			// Store random streams
 			randCopyOverStreamsToGlobal(1, &randomStreams[gid], &randomStream);
-		} else if (inputData->hasSkydome) {
-			// We missed the scene, but have a skydome to fall back to
+		}/* else {
+			// We missed the scene but have a skydome to fall back to
 			float3 c = (float3)(0,0,0);// readSkydome(normalize(rayData->ray.direction), skydomeTexture);
 			outputPixels[rayData->outputPixel] += rayData->multiplier * c;
-		}
+		}*/
 	}
 
 	int index = workgroup_counter_inc(&inputData->numOutRays, active);
