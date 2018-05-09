@@ -8,11 +8,11 @@ void traverse(std::vector<SubBvhNode>& bvhNodes)
 {
 }
 
-raytracer::BvhTester::BvhTester(std::shared_ptr<Mesh> mesh)
-    : m_vertices(mesh->getVertices())
-    , m_triangles(mesh->getTriangles())
-    , m_bvhNodes(mesh->getBvhNodes())
-    , m_rootNode(mesh->getBvhRootNode())
+raytracer::BvhTester::BvhTester(std::shared_ptr<Mesh> meshID)
+    : m_vertices(meshID->getVertices())
+    , m_triangles(meshID->getTriangles())
+    , m_bvhNodes(meshID->getBvhNodes())
+    , m_rootNode(meshID->getBvhRootNode())
 {
 }
 

@@ -8,7 +8,7 @@
 namespace raytracer {
 class BvhTester {
 public:
-    BvhTester(std::shared_ptr<Mesh> mesh);
+    BvhTester(std::shared_ptr<Mesh> meshID);
     ~BvhTester();
 
     void test();

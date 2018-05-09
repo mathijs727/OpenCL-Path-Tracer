@@ -17,26 +17,24 @@ uint32_t raytracer::TopLevelBvhBuilder::build(
 
     // Add the scene graph nodes to teh top-level BVH buffer
     std::vector<uint32_t> list;
-    std::stack<std::pair<SceneNode*, glm::mat4>> nodeStack;
-    nodeStack.push(std::make_pair(&_scene.getRootNode(), glm::mat4()));
+    std::stack<std::pair<SceneNode&, glm::mat4>> nodeStack;
+    nodeStack.push(std::make_pair(std::ref(_scene.getRootNode()), glm::mat4()));
     while (!nodeStack.empty()) {
-        std::pair<SceneNode*, glm::mat4> currentPair = nodeStack.top();
+        auto[sceneNode, baseTransformMatrix] = nodeStack.top();
         nodeStack.pop();
-        SceneNode* sceneNode = currentPair.first;
-        glm::mat4 matrix = sceneNode->transform.matrix();
-        glm::mat4 transform = currentPair.second * matrix;
+        glm::mat4 transformMatrix = baseTransformMatrix * sceneNode.transform.matrix();
 
         // Visit children
-        for (unsigned i = 0; i < sceneNode->children.size(); i++) {
-            nodeStack.push(std::make_pair(sceneNode->children[i].get(), transform));
+        for (unsigned i = 0; i < sceneNode.children.size(); i++) {
+            nodeStack.push(std::make_pair(std::ref(*sceneNode.children[i].get()), transformMatrix));
         }
 
-        if (sceneNode->mesh == -1)
+        if (sceneNode.meshID == -1)
             continue;
 
-        if (_scene.getMeshes()[sceneNode->mesh].mesh > 0) {
+        if (_scene.getMeshes()[sceneNode.meshID].meshID > 0) {
             uint32_t nodeId = (uint32_t)outTopNodes.size();
-            outTopNodes.push_back(createNode(sceneNode, transform));
+            outTopNodes.push_back(createNode(&sceneNode, transformMatrix));
             list.push_back(nodeId);
         }
     }
@@ -95,10 +93,10 @@ uint32_t raytracer::TopLevelBvhBuilder::findBestMatch(const std::vector<uint32_t
 
 TopBvhNode raytracer::TopLevelBvhBuilder::createNode(const SceneNode* sceneGraphNode, const glm::mat4 transform)
 {
-    auto& bvhMeshPair = _scene.getMeshes()[sceneGraphNode->mesh];
+    auto& bvhMeshPair = _scene.getMeshes()[sceneGraphNode->meshID];
 
     TopBvhNode node;
-    node.subBvhNode = bvhMeshPair.mesh->getBvhRootNode() + bvhMeshPair.bvhOffset;
+    node.subBvhNode = bvhMeshPair.meshID->getBvhRootNode() + bvhMeshPair.bvhOffset;
     node.bounds = calcTransformedAABB((*_sub_bvh_nodes)[node.subBvhNode].bounds, transform);
     node.invTransform = glm::inverse(transform);
     node.isLeaf = true;
