@@ -5,7 +5,7 @@
 namespace raytracer {
 
 struct CameraData {
-    UNION_STRUCT_FUNCTIONS(CameraData);
+    CameraData(){}; // For some reaso =default doesn't work
 
     CL_VEC3(eyePoint);
     CL_VEC3(screenPoint);
@@ -58,5 +58,4 @@ private:
     float m_aspectRatio;
     float m_horizontalFov; // Horizontal Field Of View
 };
-
 }
