@@ -1,5 +1,6 @@
 target_sources(raytracer
 	PRIVATE
+		"${CMAKE_CURRENT_LIST_DIR}/aabb.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/binned_bvh.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/bvh_test.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/fast_binned_bvh.cpp"
