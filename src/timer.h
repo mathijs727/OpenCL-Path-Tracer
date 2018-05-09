@@ -1,27 +1,19 @@
 #pragma once
 #include <chrono>
 
-struct Timer
-{
-	typedef std::chrono::high_resolution_clock Clock;
-	typedef std::chrono::high_resolution_clock::time_point TimePoint;
-	typedef std::chrono::microseconds MicroSeconds;
+class Timer {
+public:
+    Timer();
 
-	TimePoint start;
-	Timer() : start(get()) {  }
-	float elapsed() const {
-		auto diff = get() - start;
-		auto durationMs = std::chrono::duration_cast<MicroSeconds>(
-			diff);
-		return static_cast<float>(durationMs.count()) / 1000000.0f;
-	}
-	static TimePoint get() {
-		return Clock::now();
-	}
+    template <typename T>
+    T elapsed() const;
 
-	//static double to_time(const TimePoint vt) {
-	//	// TODO...
-	//}
+    void reset();
 
-	void reset() { start = get(); }
+private:
+    using Clock = std::chrono::high_resolution_clock;
+    using TimePoint = std::chrono::high_resolution_clock::time_point;
+    using MicroSeconds = std::chrono::microseconds;
+
+    TimePoint m_start;
 };

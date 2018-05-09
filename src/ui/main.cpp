@@ -3,10 +3,10 @@
 #include "raytracer.h"
 #include "scene.h"
 #include "texture.h"
+#include "timer.h"
 #include "transform.h"
 #include "ui/gloutput.h"
 #include "window.h"
-#include <chrono>
 #include <glm/glm.hpp>
 
 using namespace ui;
@@ -65,11 +65,11 @@ int main(int argc, char* argv[])
 
     RayTracer rayTracer(screenWidth, screenHeight, scene, materialTextures, skydomeTextures, output.getGLTexture());
 
-    auto prevFrame = std::chrono::high_resolution_clock::now();
+    Timer timer;
     while (!window.shouldClose() && !userClose) {
         auto now = std::chrono::high_resolution_clock::now();
-        double dt = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(now - prevFrame).count()) / 1000000.0;
-        prevFrame = now;
+        double dt = timer.elapsed<double>();
+        timer.reset();
 
         window.processInput();
         cameraMoveHandler(camera, window, dt);

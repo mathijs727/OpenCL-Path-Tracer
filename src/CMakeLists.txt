@@ -11,6 +11,7 @@ target_sources(raytracer
 		#"${CMAKE_CURRENT_LIST_DIR}/gloutput.cpp"
 		#"${CMAKE_CURRENT_LIST_DIR}/hdrtexture.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/texture.cpp"
+		"${CMAKE_CURRENT_LIST_DIR}/timer.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/light.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/raytracer.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/scene.cpp"
