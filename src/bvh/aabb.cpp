@@ -56,6 +56,11 @@ glm::vec3 AABB::size() const
     return glm::max(glm::vec3(0.0f), max - min);
 }
 
+glm::vec3 AABB::extent() const
+{
+    return max - min;
+}
+
 float AABB::surfaceArea() const
 {
     glm::vec3 s = size();

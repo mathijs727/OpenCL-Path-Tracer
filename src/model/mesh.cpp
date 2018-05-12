@@ -1,5 +1,5 @@
 #include "mesh.h"
-#include "bvh/binned_bvh.h"
+#include "bvh/bvh_build.h"
 #include "bvh/fast_binned_bvh.h"
 #include "bvh/sbvh.h"
 #include "timer.h"
@@ -190,6 +190,7 @@ void Mesh::loadFromFile(
 
         // Create a BVH for the mesh
         std::tie(m_bvhRootNode, m_triangles, m_bvhNodes) = buildBinnedBVH(m_vertices, m_triangles);
+        //std::tie(m_bvhRootNode, m_triangles, m_bvhNodes) = buildBinnedFastBVH(m_vertices, m_triangles);
         //FastBinnedBvhBuilder bvhBuilder;
         //m_bvhRootNode = bvhBuilder.build(m_vertices, m_triangles, m_bvhNodes);
 

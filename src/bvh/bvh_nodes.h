@@ -2,6 +2,12 @@
 #include "aabb.h"
 
 namespace raytracer {
+
+struct PrimitiveData {
+    uint32_t globalIndex;
+    AABB bounds;
+};
+
 struct TopBvhNode {
     AABB bounds;
     glm::mat4 invTransform;

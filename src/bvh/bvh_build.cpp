@@ -1,24 +1,28 @@
 #include "bvh_build.h"
+#include "bvh_allocator.h"
+#include "bvh_object_split.h"
 #include <algorithm>
 #include <stack>
 #include <vector>
 
 namespace raytracer {
 
-class BVHAllocator {
-public:
-    uint32_t allocatePair();
+static int maxIndex(glm::vec3 vec)
+{
+    if (vec[0] > vec[1]) {
+        if (vec[0] > vec[2])
+            return 0;
+        else
+            return 2;
+    } else {
+        if (vec[1] > vec[2])
+            return 1;
+        else
+            return 2;
+    }
+}
 
-    const SubBvhNode& operator[](uint32_t i) const;
-    SubBvhNode& operator[](uint32_t i);
-
-    std::vector<SubBvhNode>&& getNodesMove();
-
-private:
-    std::vector<SubBvhNode> m_nodes;
-};
-
-std::vector<PrimitiveData> generatePrimitives(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
+static std::vector<PrimitiveData> generatePrimitives(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
 {
     std::vector<PrimitiveData> primitives(triangles.size());
 
@@ -42,7 +46,8 @@ static AABB computeBounds(gsl::span<const PrimitiveData> primitives)
     return bounds;
 }
 
-std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBvhNode>> buildBVH(std::vector<PrimitiveData>&& startPrimitives, SplitFunc&& splitFunc)
+using SplitFunc = std::function<std::optional<std::pair<AABB, AABB>>(const SubBvhNode& node, gsl::span<const PrimitiveData>, PrimInsertIter left, PrimInsertIter right)>;
+static std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBvhNode>> buildBVH(std::vector<PrimitiveData>&& startPrimitives, SplitFunc&& splitFunc)
 {
     BVHAllocator nodeAllocator;
     std::vector<PrimitiveData> outPrimitives;
@@ -90,57 +95,117 @@ std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBvhNode>> buildB
     return { rootNodeID, std::move(outPrimitives), std::move(nodeAllocator.getNodesMove()) };
 }
 
-std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> performObjectBinning(const AABB& nodeBounds, int axis, gsl::span<const PrimitiveData> primitives)
+using InPlaceSplitFunc = std::function<std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>>(const SubBvhNode& node, gsl::span<PrimitiveData>)>;
+static std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBvhNode>> buildBVHInPlace(std::vector<PrimitiveData>&& startPrimitives, InPlaceSplitFunc&& splitFunc)
 {
-    glm::vec3 extent = nodeBounds.max - nodeBounds.min;
+    BVHAllocator nodeAllocator;
 
-    // Loop through the triangles and calculate bin dimensions and primitive counts
-    std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> bins;
-    float k1 = BVH_OBJECT_BIN_COUNT / extent[axis];
-    float k1Inv = extent[axis] / BVH_OBJECT_BIN_COUNT;
-    for (const auto& primitive : primitives) {
-        // Calculate the bin ID as described in the paper
-        float primCenter = primitive.bounds.center()[axis];
-        float x = k1 * (primCenter - nodeBounds.min[axis]);
-        size_t binID = std::min(static_cast<size_t>(x), BVH_OBJECT_BIN_COUNT - 1); // Prevent out of bounds (if centroid on the right bound)
+    uint32_t rootNodeID = nodeAllocator.allocatePair();
+    SubBvhNode& rootNode = nodeAllocator[rootNodeID];
+    rootNode.bounds = computeBounds(startPrimitives);
+    rootNode.firstTriangleIndex = 0;
+    rootNode.triangleCount = static_cast<uint32_t>(startPrimitives.size());
 
-        // Check against the bins left and right bounds to compensate for floating point drift
-        float leftBound = nodeBounds.min[axis] + binID * k1Inv;
-        float rightBound = nodeBounds.min[axis] + (binID + 1) * k1Inv;
-        if (primCenter < leftBound)
-            binID--;
-        else if (primCenter >= rightBound)
-            binID++;
+    struct StackItem {
+        uint32_t nodeID;
+        uint32_t primOffset;
+        gsl::span<PrimitiveData> primitives;
+    };
+    std::stack<StackItem> stack;
+    stack.push({ rootNodeID, 0, std::move(startPrimitives) });
 
-        auto& bin = bins[binID];
-        bin.primCount++;
-        bin.bounds.fit(primitive.bounds);
+    while (!stack.empty()) {
+        // Can't use structured bindings because we want to move the primitives instead of copying them.
+        auto [nodeID, primOffset, primitives] = std::move(stack.top());
+        stack.pop();
+
+        auto optResult = splitFunc(nodeAllocator[nodeID], primitives);
+
+        if (optResult) {
+            uint32_t leftNodeID = nodeAllocator.allocatePair();
+            uint32_t rightNodeID = leftNodeID + 1;
+
+            gsl::span<PrimitiveData> leftPrimitives;
+            gsl::span<PrimitiveData> rightPrimitives;
+            auto& leftNode = nodeAllocator[leftNodeID];
+            auto& rightNode = nodeAllocator[rightNodeID];
+            std::tie(leftPrimitives, leftNode.bounds, rightPrimitives, rightNode.bounds) = *optResult;
+
+            auto& node = nodeAllocator[nodeID]; // After allocation of child nodes because the allocator may move nodes in memory on allocation
+            node.leftChildIndex = leftNodeID; // Set child pointer (index) to newly allocated nodes
+            node.triangleCount = 0; // Triangle count = 0 -> inner node
+
+            stack.push({ leftNodeID, primOffset, leftPrimitives });
+            stack.push({ rightNodeID, primOffset + (uint32_t)leftPrimitives.size(), rightPrimitives });
+        } else {
+            auto& node = nodeAllocator[nodeID];
+            node.firstTriangleIndex = primOffset;
+            node.triangleCount = static_cast<uint32_t>(primitives.length());
+        }
     }
 
-    return bins;
+    return { rootNodeID, std::move(startPrimitives), std::move(nodeAllocator.getNodesMove()) };
 }
 
-uint32_t BVHAllocator::allocatePair()
+BvhBuildReturnType buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
 {
-    uint32_t leftIndex = (uint32_t)m_nodes.size();
-    m_nodes.emplace_back();
-    m_nodes.emplace_back();
-    return leftIndex;
+    /*auto primitives = generatePrimitives(vertices, triangles); // Create primitive refences
+    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVH(std::move(primitives), [](const SubBvhNode& node, gsl::span<const PrimitiveData> primitives, PrimInsertIter left, PrimInsertIter right) -> std::optional<std::pair<AABB, AABB>> {
+        if (auto split = findObjectSplitBinned(node, primitives); split) {
+            performObjectSplit(primitives, *split, left, right);
+            return { { split->leftBounds, split->rightBounds } };
+        } else {
+            return {};
+        }
+    });
+
+    // Convert primitive references to triangles
+    std::vector<TriangleSceneData> outTriangles(reorderedPrimitives.size());
+    std::transform(reorderedPrimitives.begin(), reorderedPrimitives.end(), outTriangles.begin(), [&](const PrimitiveData& primitive) {
+        return triangles[primitive.globalIndex];
+    });
+    return { rootNodeID, outTriangles, bvhNodes };*/
+
+    auto primitives = generatePrimitives(vertices, triangles); // Create primitive refences
+    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVHInPlace(std::move(primitives), [](const SubBvhNode& node, gsl::span<PrimitiveData> primitives) -> std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>> {
+        if (auto split = findObjectSplitBinned(node, primitives); split) {
+            size_t splitIndex = performObjectSplitInPlace(primitives, *split);
+            auto leftPrims = primitives.subspan(0, splitIndex);
+            auto rightPrims = primitives.subspan(splitIndex, primitives.length() - splitIndex);
+            return { { leftPrims, split->leftBounds, rightPrims, split->rightBounds } };
+        } else {
+            return {};
+        }
+    });
+
+    // Convert primitive references to triangles
+    std::vector<TriangleSceneData> outTriangles(reorderedPrimitives.size());
+    std::transform(reorderedPrimitives.begin(), reorderedPrimitives.end(), outTriangles.begin(), [&](const PrimitiveData& primitive) {
+        return triangles[primitive.globalIndex];
+    });
+    return { rootNodeID, outTriangles, bvhNodes };
 }
 
-const SubBvhNode& BVHAllocator::operator[](uint32_t i) const
+BvhBuildReturnType buildBinnedFastBVH(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
 {
-    return m_nodes[i];
-}
+    auto primitives = generatePrimitives(vertices, triangles); // Create primitive refences
+    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVH(std::move(primitives), [](const SubBvhNode& node, gsl::span<const PrimitiveData> primitives, PrimInsertIter left, PrimInsertIter right) -> std::optional<std::pair<AABB, AABB>> {
+        glm::vec3 extent = node.bounds.extent();
+        int axis = maxIndex(extent);
+        if (auto split = findObjectSplitBinned(node, primitives, std::array{ axis }); split) {
+            performObjectSplit(primitives, *split, left, right);
+            return { { split->leftBounds, split->rightBounds } };
+        } else {
+            return {};
+        }
+    });
 
-SubBvhNode& BVHAllocator::operator[](uint32_t i)
-{
-    return m_nodes[i];
-}
-
-std::vector<SubBvhNode>&& BVHAllocator::getNodesMove()
-{
-    return std::move(m_nodes);
+    // Convert primitive references to triangles
+    std::vector<TriangleSceneData> outTriangles(reorderedPrimitives.size());
+    std::transform(reorderedPrimitives.begin(), reorderedPrimitives.end(), outTriangles.begin(), [&](const PrimitiveData& primitive) {
+        return triangles[primitive.globalIndex];
+    });
+    return { rootNodeID, outTriangles, bvhNodes };
 }
 
 }

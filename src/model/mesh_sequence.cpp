@@ -1,5 +1,5 @@
 #include "mesh_sequence.h"
-#include "bvh/binned_bvh.h"
+#include "bvh/bvh_build.h"
 #include "bvh/refit_bvh.h"
 #include "bvh/sbvh.h"
 #include "mesh_helpers.h"
