@@ -14,7 +14,7 @@ AABB::AABB(glm::vec3 min, glm::vec3 max)
 {
 }
 
-void AABB::extend(glm::vec3 vec)
+void AABB::fit(glm::vec3 vec)
 {
     min = glm::min(min, vec);
     max = glm::max(max, vec);
@@ -29,6 +29,21 @@ void AABB::fit(const AABB& other)
 AABB AABB::operator+(const AABB& other) const
 {
     return { glm::min(min, other.min), glm::max(max, other.max) };
+}
+
+bool AABB::contains(glm::vec3 vec) const
+{
+    return (vec[0] >= min[0] && vec[1] >= min[1] && vec[2] >= min[2]) && (vec[0] <= max[0] && vec[1] <= max[1] && vec[2] <= max[2]);
+}
+
+bool AABB::contains(const AABB& other) const
+{
+    return contains(other.min) && contains(other.max);
+}
+
+bool AABB::operator==(const AABB& other) const
+{
+    return min == other.min && max == other.max;
 }
 
 glm::vec3 AABB::center() const

@@ -24,16 +24,10 @@ std::vector<PrimitiveData> generatePrimitives(gsl::span<const VertexSceneData> v
 
     uint32_t i = 0;
     std::transform(triangles.begin(), triangles.end(), primitives.begin(), [&](const TriangleSceneData& triangle) -> PrimitiveData {
-        std::array<glm::vec3, 3> triVertices;
-        triVertices[0] = (glm::vec3)vertices[(triangle.indices[0])].vertex;
-        triVertices[1] = (glm::vec3)vertices[(triangle.indices[1])].vertex;
-        triVertices[2] = (glm::vec3)vertices[(triangle.indices[2])].vertex;
-
         AABB bounds;
-        bounds.extend(triVertices[0]);
-        bounds.extend(triVertices[1]);
-        bounds.extend(triVertices[2]);
-
+        bounds.fit(vertices[(triangle.indices[0])].vertex);
+        bounds.fit(vertices[(triangle.indices[1])].vertex);
+        bounds.fit(vertices[(triangle.indices[2])].vertex);
         return { i++, bounds };
     });
 
@@ -54,22 +48,22 @@ std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBvhNode>> buildB
     std::vector<PrimitiveData> outPrimitives;
 
     uint32_t rootNodeID = nodeAllocator.allocatePair();
-    SubBvhNode& node = nodeAllocator[rootNodeID];
-    node.bounds = computeBounds(startPrimitives);
-    node.firstTriangleIndex = 0;
-    node.triangleCount = static_cast<uint32_t>(startPrimitives.size());
+    SubBvhNode& rootNode = nodeAllocator[rootNodeID];
+    rootNode.bounds = computeBounds(startPrimitives);
+    rootNode.firstTriangleIndex = 0;
+    rootNode.triangleCount = static_cast<uint32_t>(startPrimitives.size());
 
     std::stack<std::pair<uint32_t, std::vector<PrimitiveData>>> stack;
     stack.push({ rootNodeID, std::move(startPrimitives) });
 
     while (!stack.empty()) {
         // Can't use structured bindings because we want to move the primitives instead of copying them.
-        auto [bvhNodeID, primitives] = std::move(stack.top());
+        auto [nodeID, primitives] = std::move(stack.top());
         stack.pop();
 
         std::vector<PrimitiveData> left;
         std::vector<PrimitiveData> right;
-        auto optResult = splitFunc(nodeAllocator[bvhNodeID], primitives, std::inserter(left, left.begin()), std::inserter(right, right.begin()));
+        auto optResult = splitFunc(nodeAllocator[nodeID], primitives, std::inserter(left, left.begin()), std::inserter(right, right.begin()));
 
         if (optResult) {
             uint32_t leftNodeID = nodeAllocator.allocatePair();
@@ -77,19 +71,19 @@ std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBvhNode>> buildB
 
             auto& leftNode = nodeAllocator[leftNodeID];
             auto& rightNode = nodeAllocator[rightNodeID];
-            //leftNode.bounds = computeBounds(left);
-            //rightNode.bounds = computeBounds(right);
             std::tie(leftNode.bounds, rightNode.bounds) = *optResult;
 
-            node.leftChildIndex = leftNodeID;
+            auto& node = nodeAllocator[nodeID]; // After allocation of child nodes because the allocator may move nodes in memory on allocation
+            node.leftChildIndex = leftNodeID; // Set child pointer (index) to newly allocated nodes
+            node.triangleCount = 0; // Triangle count = 0 -> inner node
 
             stack.push({ leftNodeID, std::move(left) });
             stack.push({ rightNodeID, std::move(right) });
         } else {
-            auto& node = nodeAllocator[bvhNodeID];
+            auto& node = nodeAllocator[nodeID];
             node.firstTriangleIndex = static_cast<uint32_t>(outPrimitives.size());
-            node.triangleCount = static_cast<uint32_t>(left.size());
-            outPrimitives.insert(outPrimitives.begin(), left.begin(), left.end());
+            node.triangleCount = static_cast<uint32_t>(primitives.size());
+            outPrimitives.insert(outPrimitives.end(), primitives.begin(), primitives.end());
         }
     }
 

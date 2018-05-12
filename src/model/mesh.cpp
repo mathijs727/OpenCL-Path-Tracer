@@ -190,6 +190,8 @@ void Mesh::loadFromFile(
 
         // Create a BVH for the mesh
         std::tie(m_bvhRootNode, m_triangles, m_bvhNodes) = buildBinnedBVH(m_vertices, m_triangles);
+        //FastBinnedBvhBuilder bvhBuilder;
+        //m_bvhRootNode = bvhBuilder.build(m_vertices, m_triangles, m_bvhNodes);
 
         std::cout << "Time to build BVH: " << bvhBuildTimer.elapsed<double>() * 1000.0 << "ms" << std::endl;
 

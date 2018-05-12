@@ -28,7 +28,6 @@ std::tuple<uint32_t, std::vector<TriangleSceneData>, std::vector<SubBvhNode>> bu
             performObjectSplit(primitives, *split, left, right);
             return { { split->leftBounds, split->rightBounds } };
         } else {
-            std::copy(primitives.begin(), primitives.end(), left);
             return {};
         }
     });
@@ -75,7 +74,6 @@ static std::optional<ObjectSplit> findOptimalObjectSplit(const SubBvhNode& node,
             // SAH: Surface Area Heuristic
             float sah = mergedLeftBins.primCount * mergedLeftBins.bounds.surfaceArea() + mergedRightBins.primCount * mergedRightBins.bounds.surfaceArea();
             if (!bestObjectSplit || (sah < bestObjectSplit->sah && sah < currentNodeSAH)) { // Lower surface area heuristic is better
-
                 float position = node.bounds.min[axis] + binID * (extent[axis] / BVH_OBJECT_BIN_COUNT);
                 bestObjectSplit = ObjectSplit{
                     axis,

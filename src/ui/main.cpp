@@ -29,8 +29,8 @@ int main(int argc, char* argv[])
     glm::vec3 cameraEuler = glm::vec3(0.0f, Pi<float>::value, 0.0f);
 
     Transform cameraTransform;
-    cameraTransform.location = glm::vec3(2.5f, 2.0f, 0.01f);
-    //cameraTransform.orientation = glm::quat(0.803762913, -0.128022775, -0.573779523, -0.0913911909); // identity
+    cameraTransform.location = glm::vec3(-0.540209413f, 0.893056393f, 0.681102335f);
+    cameraTransform.orientation = glm::quat(0.206244200f, 0.0533384047f, 0.945924520f, -0.244632825f); // identity
     Camera camera(cameraTransform, 100.0f, (float)screenWidth / screenHeight, 1.0f);
     camera.m_thinLens = false;
 
