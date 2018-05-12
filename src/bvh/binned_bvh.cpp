@@ -1,241 +1,119 @@
 #include "binned_bvh.h"
+#include "bvh_build.h"
 #include <algorithm>
 #include <array>
 #include <iostream>
 #include <numeric>
-
-#define BVH_SPLITS 32
+#include <optional>
 
 namespace raytracer {
-uint32_t BinnedBvhBuilder::build(
-    std::vector<VertexSceneData>& vertices,
-    std::vector<TriangleSceneData>& triangles,
-    std::vector<SubBvhNode>& outBvhNodes)
+
+struct ObjectSplit {
+    int axis;
+    float position;
+};
+
+static std::optional<ObjectSplit> findOptimalObjectSplit(const SubBvhNode& node, gsl::span<const PrimitiveData> primitives);
+static void performObjectSplit(gsl::span<const PrimitiveData> primitives, const ObjectSplit& split, PrimInsertIter left, PrimInsertIter right);
+
+std::tuple<uint32_t, std::vector<TriangleSceneData>, std::vector<SubBvhNode>> buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
 {
-    _triangles = &triangles;
-    _vertices = &vertices;
-    _bvh_nodes = &outBvhNodes;
-
-    _centres.clear();
-    _aabbs.clear();
-    _centres.reserve(triangles.size());
-    _aabbs.reserve(triangles.size());
-
-    // Calculate centroids
-    for (auto& triangle : triangles) {
-        std::array<glm::vec3, 3> face;
-        face[0] = (glm::vec3)vertices[(triangle.indices[0])].vertex;
-        face[1] = (glm::vec3)vertices[(triangle.indices[1])].vertex;
-        face[2] = (glm::vec3)vertices[(triangle.indices[2])].vertex;
-        _centres.push_back(std::accumulate(std::begin(face), std::end(face), glm::vec3()) / 3.f);
-    }
-
-    // Calculate AABBs
-    for (auto& triangle : triangles) {
-        _aabbs.push_back(createBounds(triangle));
-    }
-
-    uint32_t rootIndex = allocateNodePair();
-    auto& root = (*_bvh_nodes)[rootIndex];
-    root.firstTriangleIndex = 0;
-    root.triangleCount = (uint32_t)triangles.size();
-
-    { // Calculate AABB of the root node
-        glm::vec3 min = glm::vec3(std::numeric_limits<float>::max()); // Work around bug in glm
-        glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest()); // Work around bug in glm
-        for (auto& aabb : _aabbs) {
-            min = glm::min(aabb.min, min);
-            max = glm::max(aabb.max, max);
+    auto primitives = generatePrimitives(vertices, triangles);
+    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVH(std::move(primitives), [](const SubBvhNode& node, gsl::span<const PrimitiveData> primitives, PrimInsertIter left, PrimInsertIter right) -> bool {
+        if (auto split = findOptimalObjectSplit(node, primitives); split) {
+            performObjectSplit(primitives, *split, left, right);
+            return true;
+        } else {
+            std::copy(primitives.begin(), primitives.end(), left);
+            return false;
         }
-        root.bounds.min = min;
-        root.bounds.max = max;
-    }
+    });
 
-    // Subdivide the root node
-    subdivide(rootIndex);
-
-    return rootIndex;
+    std::vector<TriangleSceneData> outTriangles(reorderedPrimitives.size());
+    std::transform(reorderedPrimitives.begin(), reorderedPrimitives.end(), outTriangles.begin(), [&](const PrimitiveData& primitive) {
+        return triangles[primitive.globalIndex];
+    });
+    return { rootNodeID, outTriangles, bvhNodes };
 }
 
-uint32_t BinnedBvhBuilder::allocateNodePair()
+static std::optional<ObjectSplit> findOptimalObjectSplit(const SubBvhNode& node, gsl::span<const PrimitiveData> primitives)
 {
-    uint32_t index = (uint32_t)_bvh_nodes->size();
-    _bvh_nodes->emplace_back();
-    _bvh_nodes->emplace_back();
-    return index;
-}
+    // Leaf nodes should have at least 3 primitives
+    if (primitives.size() < 4)
+        return {};
 
-void BinnedBvhBuilder::subdivide(uint32_t nodeId)
-{
-    if ((*_bvh_nodes)[nodeId].triangleCount < 4)
-        return;
+    glm::vec3 extent = node.bounds.max - node.bounds.min;
+    float currentNodeSAH = node.bounds.surfaceArea() * primitives.size();
 
-    if (partition(nodeId)) { // Divides our triangles over our children and calculates their bounds
-        subdivide((*_bvh_nodes)[nodeId].leftChildIndex);
-        subdivide((*_bvh_nodes)[nodeId].leftChildIndex + 1);
-    }
-}
+    // For all three axis
+    struct ObjectSplitInfo {
+        ObjectSplit split;
 
-bool BinnedBvhBuilder::partition(uint32_t nodeId)
-{
-    // Use pointer because references are not reassignable (we need to reassign after allocation)
-    auto* node = &(*_bvh_nodes)[nodeId];
-
-    // Split along the widest axis
-    glm::vec3 extents = node->bounds.max - node->bounds.min;
-
-    std::array<unsigned, BVH_SPLITS> binTriangleCount[3];
-    std::array<AABB, BVH_SPLITS> binAABB[3];
-
-    uint32_t localFirstTriangleIndex = node->firstTriangleIndex;
-    const uint32_t end = localFirstTriangleIndex + node->triangleCount;
-
-    uint32_t bestAxis = std::numeric_limits<uint32_t>::max();
-    float bestSAH = std::numeric_limits<float>::max();
-    int bestSplit = -1;
-    for (uint32_t axis = 0; axis < 3; ++axis) {
-        if (extents[axis] < 0.001f)
+        float sah = std::numeric_limits<float>::max();
+        AABB leftBounds;
+        AABB rightBounds;
+    };
+    std::optional<ObjectSplitInfo> bestObjectSplit;
+    for (int axis = 0; axis < 3; axis++) {
+        if (extent[axis] < 0.001f) // Skip if the bounds along this axis is too small
             continue;
 
-        for (int i = 0; i < BVH_SPLITS; i++)
-            binTriangleCount[axis][i] = 0;
+        // Loop through the triangles and calculate bin dimensions and primitive counts
+        auto bins = performObjectBinning(node.bounds, axis, primitives);
 
-        // Loop through the triangles and calculate bin dimensions and triangle count
-        float k1 = BVH_SPLITS / extents[axis] * 0.9999f; // Prevents the bin out of bounds (if centroid on the right bound)
-        for (uint32_t i = localFirstTriangleIndex; i < end; i++) {
-            // Calculate the bin ID as described in the paper
-            float x = k1 * (_centres[i][axis] - node->bounds.min[axis]);
-            int bin = std::min(static_cast<int>(x), BVH_SPLITS - 1);
+        // Calculate the cummulative surface area (SAH left + right of split) for all possible splits
+        for (size_t binID = 1; binID < BVH_OBJECT_BIN_COUNT; binID++) {
+            auto mergedLeftBins = std::accumulate(bins.begin(), bins.begin() + binID, ObjectBin(), [](const auto& left, const auto& right) -> ObjectBin {
+                return { left.primCount + right.primCount, left.bounds + right.bounds };
+            });
 
-            binTriangleCount[axis][bin]++;
-            binAABB[axis][bin].fit(_aabbs[i]);
-        }
+            auto mergedRightBins = std::accumulate(bins.begin() + binID, bins.end(), ObjectBin(), [](const auto& left, const auto& right) -> ObjectBin {
+                return { left.primCount + right.primCount, left.bounds + right.bounds };
+            });
 
-        // Determine for which bin the SAH is the lowest
+            // If all primitive centers lie on one side of the splitting plane then the split is invalid
+            if (mergedLeftBins.primCount == 0 || mergedRightBins.primCount == 0)
+                continue;
 
-        for (int split = 1; split < BVH_SPLITS; split++) {
-            // Calculate the triangle count and surface area of the AABB to the left of the possible split
-            int triangleCountLeft = 0;
-            float surfaceAreaLeft = 0.0f;
-            {
-                AABB leftAABB;
-                for (int leftBin = 0; leftBin < split; leftBin++) {
-                    triangleCountLeft += binTriangleCount[axis][leftBin];
-                    if (binTriangleCount[axis][leftBin] > 0)
-                        leftAABB.fit(binAABB[axis][leftBin]);
+            // SAH: Surface Area Heuristic
+            float sah = mergedLeftBins.primCount * mergedLeftBins.bounds.surfaceArea() + mergedRightBins.primCount * mergedRightBins.bounds.surfaceArea();
+            if (!bestObjectSplit || (sah < bestObjectSplit->sah && sah < currentNodeSAH)) { // Lower surface area heuristic is better
+
+                float position = node.bounds.min[axis] + binID * (extent[axis] / BVH_OBJECT_BIN_COUNT);
+
+                size_t left = 0;
+                size_t right = 0;
+                for (const auto& primitive : primitives) {
+                    bool isLeft = primitive.bounds.center()[axis] < position;
+                    if (isLeft)
+                        left++;
+                    else
+                        right++;
                 }
-                surfaceAreaLeft = leftAABB.surfaceArea();
-            }
+                assert(left == mergedLeftBins.primCount && right == mergedRightBins.primCount);
+                assert(left != 0 && right != 0);
 
-            // Calculate the triangle count and surface area of the AABB to the right of the possible split
-            int triangleCountRight = 0;
-            float surfaceAreaRight = 0.0f;
-            {
-                AABB rightAABB;
-                for (int rightBin = split; rightBin < BVH_SPLITS; rightBin++) {
-                    triangleCountRight += binTriangleCount[axis][rightBin];
-                    if (binTriangleCount[axis][rightBin] > 0)
-                        rightAABB.fit(binAABB[axis][rightBin]);
-                }
-                surfaceAreaRight = rightAABB.surfaceArea();
-            }
-
-            float SAH = triangleCountLeft * surfaceAreaLeft + triangleCountRight * surfaceAreaRight;
-            if (SAH < bestSAH && triangleCountLeft > 0 && triangleCountRight > 0) {
-                bestSAH = SAH;
-                bestSplit = split;
-                bestAxis = axis;
+                bestObjectSplit = ObjectSplitInfo{
+                    { axis, position },
+                    sah,
+                    mergedLeftBins.bounds,
+                    mergedRightBins.bounds
+                };
             }
         }
     }
 
-    // Dont split if we cannot find a split (if all triangles have there center in one bin for example)
-    if (bestAxis == std::numeric_limits<uint32_t>::max())
-        return false;
-
-    uint32_t axis = bestAxis;
-    // Partition the array around the bin pivot
-    // http://www.inf.fh-flensburg.de/lang/algorithmen/sortieren/quick/quicken.htm
-    float k1 = BVH_SPLITS / extents[axis] * 0.9999f;
-    uint32_t i = localFirstTriangleIndex;
-    uint32_t j = end - 1;
-    while (i < j) {
-        // Calculate the bin ID as described in the paper
-        while (true) {
-            int bin = static_cast<int>(k1 * (_centres[i][axis] - node->bounds.min[axis]));
-            if (bin < bestSplit && i < end - 1)
-                i++;
-            else
-                break;
-        }
-
-        while (true) {
-            int bin = static_cast<int>(k1 * (_centres[j][axis] - node->bounds.min[axis]));
-            if (bin >= bestSplit && j > 0)
-                j--;
-            else
-                break;
-        }
-
-        if (i <= j) {
-            // Swap
-            std::swap((*_triangles)[i], (*_triangles)[j]);
-            std::swap(_centres[i], _centres[j]);
-            std::swap(_aabbs[i], _aabbs[j]);
-            i++;
-            j--;
-        }
-    }
-
-    // Allocate child nodes
-    uint32_t leftIndex = allocateNodePair();
-    node = &(*_bvh_nodes)[nodeId]; // Allocation currently uses a std::vector, which means
-        // that addresses may change after allocation
-
-    // Initialize child nodes
-    auto& lNode = (*_bvh_nodes)[leftIndex];
-    lNode.firstTriangleIndex = node->firstTriangleIndex;
-    lNode.triangleCount = 0;
-    lNode.bounds = AABB();
-    for (int bin = 0; bin < bestSplit; bin++) {
-        lNode.triangleCount += binTriangleCount[axis][bin];
-        if (binTriangleCount[axis][bin] > 0)
-            lNode.bounds.fit(binAABB[axis][bin]);
-    }
-
-    auto& rNode = (*_bvh_nodes)[leftIndex + 1];
-    rNode.firstTriangleIndex = node->firstTriangleIndex + lNode.triangleCount;
-    rNode.triangleCount = node->triangleCount - lNode.triangleCount;
-    rNode.bounds = AABB();
-    for (int bin = bestSplit; bin < BVH_SPLITS; bin++) {
-        if (binTriangleCount[axis][bin] > 0)
-            rNode.bounds.fit(binAABB[axis][bin]);
-    }
-
-    // set this node as not a leaf anymore
-    node->triangleCount = 0;
-    node->leftChildIndex = leftIndex;
-
-    return true; // Yes we have split, in the future you may want to decide whether you split or not based on the SAH
+    if (bestObjectSplit)
+        return bestObjectSplit->split;
+    else
+        return {};
 }
 
-AABB BinnedBvhBuilder::createBounds(const TriangleSceneData& triangle)
+static void performObjectSplit(gsl::span<const PrimitiveData> primitives, const ObjectSplit& split, PrimInsertIter left, PrimInsertIter right)
 {
-    glm::vec3 min = glm::vec3(std::numeric_limits<float>::max()); // Work around bug in glm
-    glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest()); // Work around bug in glm
-
-    std::array<glm::vec3, 3> face;
-    face[0] = (glm::vec3)(*_vertices)[triangle.indices[0]].vertex;
-    face[1] = (glm::vec3)(*_vertices)[triangle.indices[1]].vertex;
-    face[2] = (glm::vec3)(*_vertices)[triangle.indices[2]].vertex;
-    for (auto& v : face) {
-        min = glm::min(min, v);
-        max = glm::max(max, v);
-    }
-
-    AABB result;
-    result.min = min;
-    result.max = max;
-    return result;
+    std::partition_copy(primitives.begin(), primitives.end(), left, right, [=](const PrimitiveData& primitive) -> bool {
+        float primPos = primitive.bounds.center()[split.axis];
+        return primPos < split.position;
+    });
 }
 }

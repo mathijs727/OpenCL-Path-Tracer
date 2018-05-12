@@ -9,7 +9,7 @@
 #include <numeric>
 #include <stack>
 
-#define BVH_SPLITS 8
+#define BVH_NUM_BINS 8
 #define ALPHA 0.01f
 #define COST_INTERSECTION 1.f
 #define COST_TRAVERSAL 1.5f
@@ -147,7 +147,7 @@ bool raytracer::SbvhBuilder::partition(uint32_t nodeId)
     float bestSah = maxSah;
     int bestAxis = -1;
     FinalSplit bestLeft, bestRight;
-    std::array<ObjectBin, BVH_SPLITS> objectBinsForEachAxis[3];
+    std::array<ObjectBin, BVH_NUM_BINS> objectBinsForEachAxis[3];
     int bestObjectSplit = -1;
     for (uint32_t axis = 0; axis < 3; ++axis) {
         if (size[axis] == 0)
@@ -155,10 +155,10 @@ bool raytracer::SbvhBuilder::partition(uint32_t nodeId)
         auto& localObjectBins = objectBinsForEachAxis[axis];
         makeObjectBins(nodeId, axis, localObjectBins.data());
 
-        std::array<SpatialSplitBin, BVH_SPLITS> spatialBins;
+        std::array<SpatialSplitBin, BVH_NUM_BINS> spatialBins;
         makeSpatialBins(nodeId, axis, spatialBins.data());
 
-        for (uint32_t split = 0; split < BVH_SPLITS; split++) {
+        for (uint32_t split = 0; split < BVH_NUM_BINS; split++) {
             float objectSah;
             bool objectSplitGood = doSingleObjectSplit(nodeId, axis, split, objectSah, localObjectBins.data());
             bool doSpatialSplit = true;
@@ -166,7 +166,7 @@ bool raytracer::SbvhBuilder::partition(uint32_t nodeId)
                 AABB leftBounds, rightBounds;
                 for (uint32_t bin = 0; bin < split; ++bin)
                     leftBounds.fit(localObjectBins[bin].bounds);
-                for (uint32_t bin = split; bin < BVH_SPLITS; ++bin)
+                for (uint32_t bin = split; bin < BVH_NUM_BINS; ++bin)
                     rightBounds.fit(localObjectBins[bin].bounds);
                 AABB intersection;
                 bool intersect = true;
@@ -216,7 +216,7 @@ bool raytracer::SbvhBuilder::partition(uint32_t nodeId)
     if (!spatialSplit) { // In case of regular object split
         assert(bestObjectSplit > 0);
         uint32_t axis = bestAxis; // for brevity
-        float k1 = BVH_SPLITS / size[axis] * 0.999999f; // Prevents the bin out of bounds (if centroid on the right bound)
+        float k1 = BVH_NUM_BINS / size[axis] * 0.999999f; // Prevents the bin out of bounds (if centroid on the right bound)
         // Partition the array around the bin pivot
         // http://www.inf.fh-flensburg.de/lang/algorithmen/sortieren/quick/quicken.htm
         uint32_t i = localFirstTriangleIndex;
@@ -225,8 +225,8 @@ bool raytracer::SbvhBuilder::partition(uint32_t nodeId)
         for (auto& tri : _node_triangle_list[nodeId]) {
             auto centre = _centres[tri.first];
             int bin = static_cast<int>(k1 * (centre[axis] - node->bounds.min[axis]));
-            bin = glm::clamp(bin, 0, BVH_SPLITS - 1);
-            assert(bin >= 0 && bin < BVH_SPLITS);
+            bin = glm::clamp(bin, 0, BVH_NUM_BINS - 1);
+            assert(bin >= 0 && bin < BVH_NUM_BINS);
             if (bin < (int)bestObjectSplit) {
                 leftTriangles.insert(tri);
             } else {
@@ -235,7 +235,7 @@ bool raytracer::SbvhBuilder::partition(uint32_t nodeId)
         }
         leftCount = 0;
         rightCount = 0;
-        for (int bin = bestObjectSplit; bin < BVH_SPLITS; bin++) {
+        for (int bin = bestObjectSplit; bin < BVH_NUM_BINS; bin++) {
             rightCount += objectBins[bin].triangleCount;
             if (objectBins[bin].triangleCount > 0)
                 rightBounds.fit(objectBins[bin].bounds);
@@ -326,7 +326,7 @@ uint32_t raytracer::SbvhBuilder::allocateNodePair()
 void raytracer::SbvhBuilder::makeObjectBins(uint32_t nodeId, uint32_t axis, ObjectBin* bins)
 {
     auto node = &(*_bvh_nodes)[nodeId];
-    for (int i = 0; i < BVH_SPLITS; i++)
+    for (int i = 0; i < BVH_NUM_BINS; i++)
         bins[i].triangleCount = 0;
 
     uint32_t localFirstTriangleIndex = node->firstTriangleIndex;
@@ -334,15 +334,15 @@ void raytracer::SbvhBuilder::makeObjectBins(uint32_t nodeId, uint32_t axis, Obje
     assert(extents[axis] != 0);
     // Loop through the triangles and calculate bin dimensions and triangle count
     const uint32_t end = localFirstTriangleIndex + node->triangleCount;
-    float k1 = BVH_SPLITS / extents[axis] * 0.999999f; // Prevents the bin out of bounds (if centroid on the right bound)
+    float k1 = BVH_NUM_BINS / extents[axis] * 0.999999f; // Prevents the bin out of bounds (if centroid on the right bound)
     for (auto& tri : _node_triangle_list[nodeId]) {
         // Calculate the bin ID as described in the paper
         AABB bounds = tri.second;
         auto centre = _centres[tri.first];
         float x = k1 * (centre[axis] - node->bounds.min[axis]);
-        int bin = glm::clamp(static_cast<int>(x), 0, BVH_SPLITS - 1);
-        //int bin = glm::min(glm::max(static_cast<int>(x), 0), BVH_SPLITS - 1);
-        assert(bin >= 0 && bin < BVH_SPLITS);
+        int bin = glm::clamp(static_cast<int>(x), 0, BVH_NUM_BINS - 1);
+        //int bin = glm::min(glm::max(static_cast<int>(x), 0), BVH_NUM_BINS - 1);
+        assert(bin >= 0 && bin < BVH_NUM_BINS);
         bins[bin].triangleCount++;
         bins[bin].bounds.fit(bounds);
     }
@@ -352,17 +352,17 @@ void raytracer::SbvhBuilder::makeSpatialBins(uint32_t nodeId, uint32_t axis, Spa
 {
     auto node = &(*_bvh_nodes)[nodeId];
     glm::vec3 size = node->bounds.max - node->bounds.min;
-    float k1 = BVH_SPLITS / size[axis] * 0.999999f; // Prevents the bin out of bounds (if centroid on the right bound
+    float k1 = BVH_NUM_BINS / size[axis] * 0.999999f; // Prevents the bin out of bounds (if centroid on the right bound
     assert(size[axis] != 0);
     for (auto& tri : _node_triangle_list[nodeId]) {
         uint32_t triangleId = tri.first;
         // Calculate the bin ID for the minimum and maximum points
         AABB bounds = tri.second;
         float x = k1 * (bounds.min[axis] - node->bounds.min[axis]);
-        int bin_min = glm::clamp(static_cast<int>(x), 0, BVH_SPLITS - 1);
+        int bin_min = glm::clamp(static_cast<int>(x), 0, BVH_NUM_BINS - 1);
 
         float y = k1 * (bounds.max[axis] - node->bounds.min[axis]);
-        int bin_max = glm::clamp(static_cast<int>(y), 0, BVH_SPLITS - 1);
+        int bin_max = glm::clamp(static_cast<int>(y), 0, BVH_NUM_BINS - 1);
 
         // if contained within a single bin don't need clipping
         if (bin_min == bin_max) {
@@ -413,7 +413,7 @@ bool raytracer::SbvhBuilder::doSingleObjectSplit(uint32_t nodeId, uint32_t axis,
     int triangleCountRight = 0;
     AABB rightAABB;
     {
-        for (uint32_t rightBin = split; rightBin < BVH_SPLITS; rightBin++) {
+        for (uint32_t rightBin = split; rightBin < BVH_NUM_BINS; rightBin++) {
             triangleCountRight += bins[rightBin].triangleCount;
             if (bins[rightBin].triangleCount > 0)
                 rightAABB.fit(bins[rightBin].bounds);
@@ -446,7 +446,7 @@ bool raytracer::SbvhBuilder::doSingleSpatialSplit(uint32_t nodeId, uint32_t axis
     }
 
     FinalSplit right;
-    for (uint32_t rightBin = split; rightBin < BVH_SPLITS; rightBin++) {
+    for (uint32_t rightBin = split; rightBin < BVH_NUM_BINS; rightBin++) {
         auto& bin = spatialSplits[rightBin];
         for (auto& ref : bin.refs) {
             auto found = right.trianglesAABB.find(ref.triangleIndex);

@@ -1,3 +1,4 @@
+#include "bvh/bvh_test.h"
 #include "camera.h"
 #include "common.h"
 #include "raytracer.h"
@@ -84,22 +85,22 @@ int main(int argc, char* argv[])
 void createScene(Scene& scene, UniqueTextureArray& textureArray)
 {
     // Light plane
-    {
+    /*{
         Transform transform;
         transform.location = glm::vec3(0, 10, -0.5f);
         transform.scale = glm::vec3(20, 1, 10);
         transform.orientation = glm::quat(glm::vec3(Pi<float>::value, 0, 0)); // Flip upside down
         auto lightPlane = std::make_shared<Mesh>("../../assets/3dmodels/plane/plane.obj", Material::Emissive(5500.0f, 1000.0f), textureArray);
         scene.addNode(lightPlane, transform);
-    }
+    }*/
 
     // Sponza
-    {
+    /*{
         Transform transform;
         transform.scale = glm::vec3(0.005f);
         auto sponza = std::make_shared<Mesh>("../../assets/3dmodels/sponza-crytek/sponza.obj", textureArray);
         scene.addNode(sponza, transform);
-    }
+    }*/
 
     // Stanford bunny
     {
@@ -111,6 +112,8 @@ void createScene(Scene& scene, UniqueTextureArray& textureArray)
                 glm::vec3(0.955f, 0.638f, 0.538f), // Copper
                 0.8f),
             textureArray);
+        BvhTester bvhTest(bunny);
+        bvhTest.test();
         scene.addNode(bunny, transform);
     }
 }

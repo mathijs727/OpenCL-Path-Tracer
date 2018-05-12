@@ -4,7 +4,7 @@
 #include <iostream>
 #include <numeric>
 
-#define BVH_SPLITS 32
+#define BVH_NUM_BINS 32
 
 namespace raytracer {
 
@@ -93,17 +93,17 @@ bool FastBinnedBvhBuilder::partition(uint32_t nodeId)
         }
     }
 
-    std::array<unsigned, BVH_SPLITS> binTriangleCount;
-    std::array<AABB, BVH_SPLITS> binAABB;
+    std::array<unsigned, BVH_NUM_BINS> binTriangleCount;
+    std::array<AABB, BVH_NUM_BINS> binAABB;
 
-    for (int i = 0; i < BVH_SPLITS; i++)
+    for (int i = 0; i < BVH_NUM_BINS; i++)
         binTriangleCount[i] = 0;
 
     uint32_t localFirstTriangleIndex = node->firstTriangleIndex;
 
     // Loop through the triangles and calculate bin dimensions and triangle count
     const uint32_t end = localFirstTriangleIndex + node->triangleCount;
-    float k1 = BVH_SPLITS / extents[axis] * 0.9999f; // Prevents the bin out of bounds (if centroid on the right bound)
+    float k1 = BVH_NUM_BINS / extents[axis] * 0.9999f; // Prevents the bin out of bounds (if centroid on the right bound)
     for (uint32_t i = localFirstTriangleIndex; i < end; i++) {
         // Calculate the bin ID as described in the paper
         float x = k1 * (_centres[i][axis] - node->bounds.min[axis]);
@@ -116,7 +116,7 @@ bool FastBinnedBvhBuilder::partition(uint32_t nodeId)
     // Determine for which bin the SAH is the lowest
     float bestSAH = std::numeric_limits<float>::max();
     int bestSplit = -1;
-    for (int split = 1; split < BVH_SPLITS; split++) {
+    for (int split = 1; split < BVH_NUM_BINS; split++) {
         // Calculate the triangle count and surface area of the AABB to the left of the possible split
         int triangleCountLeft = 0;
         float surfaceAreaLeft = 0.0f;
@@ -135,7 +135,7 @@ bool FastBinnedBvhBuilder::partition(uint32_t nodeId)
         float surfaceAreaRight = 0.0f;
         {
             AABB rightAABB;
-            for (int rightBin = split; rightBin < BVH_SPLITS; rightBin++) {
+            for (int rightBin = split; rightBin < BVH_NUM_BINS; rightBin++) {
                 triangleCountRight += binTriangleCount[rightBin];
                 if (binTriangleCount[rightBin] > 0)
                     rightAABB.fit(binAABB[rightBin]);
@@ -206,7 +206,7 @@ bool FastBinnedBvhBuilder::partition(uint32_t nodeId)
     rNode.firstTriangleIndex = node->firstTriangleIndex + lNode.triangleCount;
     rNode.triangleCount = node->triangleCount - lNode.triangleCount;
     rNode.bounds = AABB();
-    for (int bin = bestSplit; bin < BVH_SPLITS; bin++) {
+    for (int bin = bestSplit; bin < BVH_NUM_BINS; bin++) {
         if (binTriangleCount[bin] > 0)
             rNode.bounds.fit(binAABB[bin]);
     }

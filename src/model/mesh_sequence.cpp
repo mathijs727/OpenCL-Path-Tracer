@@ -94,8 +94,7 @@ void MeshSequence::buildBvh()
         m_bvhNodes.clear();
 
         // Create a new bvh using the fast binned builder
-        BinnedBvhBuilder bvhBuilder;
-        m_bvhRootNode = bvhBuilder.build(frame.vertices, frame.triangles, m_bvhNodes);
+        //std::tie(m_bvhRootNode, frame.triangles, m_bvhNodes) = buildBinnedBVH(frame.vertices, frame.triangles);
     }
 }
 

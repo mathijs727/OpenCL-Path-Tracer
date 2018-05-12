@@ -529,7 +529,7 @@ void RayTracer::copyNextAnimationFrameData()
 
         meshID->buildBvh();
 
-        // TODO: use memcpy instead of looping over vertices (faster?)
+        // TODO: use memcpy instead of looping over vertices (faster)
         uint32_t startVertex = (uint32_t)m_verticesHost.size();
         for (const auto& vertex : meshID->getVertices()) {
             m_verticesHost.push_back(vertex);

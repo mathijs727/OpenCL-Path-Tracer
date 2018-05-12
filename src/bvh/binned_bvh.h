@@ -1,42 +1,13 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <vector>
-#include "types.h"
-#include "bvh_nodes.h"
 #include "aabb.h"
+#include "bvh_nodes.h"
+#include "types.h"
 #include "vertices.h"
+#include <gsl/gsl>
+#include <tuple>
+#include <vector>
 
 namespace raytracer {
 
-	class Scene;
-	struct SceneNode;
-
-	class BinnedBvhBuilder
-	{
-	public:
-		BinnedBvhBuilder() { };
-		~BinnedBvhBuilder() { };
-
-		uint32_t build(
-			std::vector<VertexSceneData>& vertices,
-			std::vector<TriangleSceneData>& triangles,
-			std::vector<SubBvhNode>& outBvhNodes);// BVH may change this
-	private:
-		void subdivide(uint32_t nodeId);
-		bool partition(uint32_t nodeId);
-		AABB createBounds(const TriangleSceneData& triangle);
-
-		uint32_t allocateNodePair();
-	private:
-		// Used during binned BVH construction
-		std::vector<glm::vec3> _centres;
-		std::vector<AABB> _aabbs;
-
-		// Store triangle, vertex and bvh node vectors in the class during construction because
-		//  passing everything using recursion is so ugly (large parameter lists)
-		std::vector<TriangleSceneData>* _triangles;
-		std::vector<VertexSceneData>* _vertices;
-		std::vector<SubBvhNode>* _bvh_nodes;
-	};
+std::tuple<uint32_t, std::vector<TriangleSceneData>, std::vector<SubBvhNode>> buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles);
 }
-

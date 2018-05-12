@@ -2,6 +2,7 @@
 #include "bvh/binned_bvh.h"
 #include "bvh/fast_binned_bvh.h"
 #include "bvh/sbvh.h"
+#include "timer.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -177,16 +178,20 @@ void Mesh::loadFromFile(
     std::string bvhFileName(fileName);
     bvhFileName += ".bvh";
     bool buildBvh = true;
-    if (fileExists(bvhFileName)) {
+    // TODO: Re-enable BVH caching (currently disabled for testing BVH builders)
+    /*if (fileExists(bvhFileName)) {
         std::cout << "Loading bvh from file: " << bvhFileName << std::endl;
         buildBvh = !loadBvh(bvhFileName.c_str());
-    }
+    }*/
 
     if (buildBvh) {
         std::cout << "Starting bvh build..." << std::endl;
+        Timer bvhBuildTimer;
+
         // Create a BVH for the mesh
-        BinnedBvhBuilder bvhBuilder;
-        m_bvhRootNode = bvhBuilder.build(m_vertices, m_triangles, m_bvhNodes);
+        std::tie(m_bvhRootNode, m_triangles, m_bvhNodes) = buildBinnedBVH(m_vertices, m_triangles);
+
+        std::cout << "Time to build BVH: " << bvhBuildTimer.elapsed<double>() * 1000.0 << "ms" << std::endl;
 
         std::cout << "Storing bvh in file: " << bvhFileName << std::endl;
         storeBvh(bvhFileName.c_str());
