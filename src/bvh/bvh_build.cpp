@@ -69,17 +69,17 @@ std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBvhNode>> buildB
 
         std::vector<PrimitiveData> left;
         std::vector<PrimitiveData> right;
-        bool hasSplit = splitFunc(nodeAllocator[bvhNodeID], primitives, std::inserter(left, left.begin()), std::inserter(right, right.begin()));
+        auto optResult = splitFunc(nodeAllocator[bvhNodeID], primitives, std::inserter(left, left.begin()), std::inserter(right, right.begin()));
 
-        if (hasSplit) {
+        if (optResult) {
             uint32_t leftNodeID = nodeAllocator.allocatePair();
             uint32_t rightNodeID = leftNodeID + 1;
 
             auto& leftNode = nodeAllocator[leftNodeID];
-            leftNode.bounds = computeBounds(left);
-
             auto& rightNode = nodeAllocator[rightNodeID];
-            rightNode.bounds = computeBounds(right);
+            //leftNode.bounds = computeBounds(left);
+            //rightNode.bounds = computeBounds(right);
+            std::tie(leftNode.bounds, rightNode.bounds) = *optResult;
 
             node.leftChildIndex = leftNodeID;
 

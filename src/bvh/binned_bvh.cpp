@@ -11,6 +11,10 @@ namespace raytracer {
 struct ObjectSplit {
     int axis;
     float position;
+
+    AABB leftBounds;
+    AABB rightBounds;
+    float sah = std::numeric_limits<float>::max();
 };
 
 static std::optional<ObjectSplit> findOptimalObjectSplit(const SubBvhNode& node, gsl::span<const PrimitiveData> primitives);
@@ -19,13 +23,13 @@ static void performObjectSplit(gsl::span<const PrimitiveData> primitives, const 
 std::tuple<uint32_t, std::vector<TriangleSceneData>, std::vector<SubBvhNode>> buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
 {
     auto primitives = generatePrimitives(vertices, triangles);
-    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVH(std::move(primitives), [](const SubBvhNode& node, gsl::span<const PrimitiveData> primitives, PrimInsertIter left, PrimInsertIter right) -> bool {
+    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVH(std::move(primitives), [](const SubBvhNode& node, gsl::span<const PrimitiveData> primitives, PrimInsertIter left, PrimInsertIter right) -> std::optional<std::pair<AABB, AABB>> {
         if (auto split = findOptimalObjectSplit(node, primitives); split) {
             performObjectSplit(primitives, *split, left, right);
-            return true;
+            return { { split->leftBounds, split->rightBounds } };
         } else {
             std::copy(primitives.begin(), primitives.end(), left);
-            return false;
+            return {};
         }
     });
 
@@ -46,14 +50,7 @@ static std::optional<ObjectSplit> findOptimalObjectSplit(const SubBvhNode& node,
     float currentNodeSAH = node.bounds.surfaceArea() * primitives.size();
 
     // For all three axis
-    struct ObjectSplitInfo {
-        ObjectSplit split;
-
-        float sah = std::numeric_limits<float>::max();
-        AABB leftBounds;
-        AABB rightBounds;
-    };
-    std::optional<ObjectSplitInfo> bestObjectSplit;
+    std::optional<ObjectSplit> bestObjectSplit;
     for (int axis = 0; axis < 3; axis++) {
         if (extent[axis] < 0.001f) // Skip if the bounds along this axis is too small
             continue;
@@ -80,31 +77,19 @@ static std::optional<ObjectSplit> findOptimalObjectSplit(const SubBvhNode& node,
             if (!bestObjectSplit || (sah < bestObjectSplit->sah && sah < currentNodeSAH)) { // Lower surface area heuristic is better
 
                 float position = node.bounds.min[axis] + binID * (extent[axis] / BVH_OBJECT_BIN_COUNT);
-
-                size_t left = 0;
-                size_t right = 0;
-                for (const auto& primitive : primitives) {
-                    bool isLeft = primitive.bounds.center()[axis] < position;
-                    if (isLeft)
-                        left++;
-                    else
-                        right++;
-                }
-                assert(left == mergedLeftBins.primCount && right == mergedRightBins.primCount);
-                assert(left != 0 && right != 0);
-
-                bestObjectSplit = ObjectSplitInfo{
-                    { axis, position },
-                    sah,
+                bestObjectSplit = ObjectSplit{
+                    axis,
+                    position,
                     mergedLeftBins.bounds,
-                    mergedRightBins.bounds
+                    mergedRightBins.bounds,
+                    sah
                 };
             }
         }
     }
 
     if (bestObjectSplit)
-        return bestObjectSplit->split;
+        return bestObjectSplit;
     else
         return {};
 }

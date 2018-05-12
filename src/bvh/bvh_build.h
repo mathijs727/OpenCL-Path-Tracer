@@ -3,6 +3,7 @@
 #include "bvh_nodes.h"
 #include "vertices.h"
 #include <gsl/gsl>
+#include <optional>
 #include <tuple>
 #include <vector>
 
@@ -16,7 +17,7 @@ struct PrimitiveData {
 std::vector<PrimitiveData> generatePrimitives(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles);
 
 using PrimInsertIter = std::insert_iterator<std::vector<PrimitiveData>>;
-using SplitFunc = std::function<bool(const SubBvhNode& node, gsl::span<const PrimitiveData>, PrimInsertIter left, PrimInsertIter right)>;
+using SplitFunc = std::function<std::optional<std::pair<AABB, AABB>>(const SubBvhNode& node, gsl::span<const PrimitiveData>, PrimInsertIter left, PrimInsertIter right)>;
 std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBvhNode>> buildBVH(std::vector<PrimitiveData>&& primitives, SplitFunc&& splitFunc);
 
 struct ObjectBin {
