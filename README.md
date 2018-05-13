@@ -12,11 +12,7 @@ Make sure that your GPU manufacturers OpenCL SDK is installed:
 Download and install [vcpkg](https://github.com/Microsoft/vcpkg) and use it to install the dependencies:
 
 ```bash
-vcpkg install glew
-vcpkg install sdl2
-vcpkg install freeimage
-vcpkg install assimp
-vcpkg install glm
+vcpkg install glew glfw3 freeimage assimp glm
 ```
 
 
