@@ -26,6 +26,13 @@ void cameraMoveHandler(Camera& camera, const Window& window, double dt);
 
 int main(int argc, char* argv[])
 {
+#if 1 // Test BVH build only
+    auto scene = std::make_shared<Scene>();
+    UniqueTextureArray materialTextures;
+    createScene(*scene, materialTextures);
+
+    system("PAUSE");
+#else
     glm::vec3 cameraEuler = glm::vec3(0.0f, Pi<float>::value, 0.0f);
 
     Transform cameraTransform;
@@ -80,6 +87,7 @@ int main(int argc, char* argv[])
 
         window.swapBuffers();
     }
+#endif
 }
 
 void createScene(Scene& scene, UniqueTextureArray& textureArray)

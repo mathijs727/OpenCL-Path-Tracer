@@ -12,6 +12,11 @@ static constexpr size_t BVH_OBJECT_BIN_COUNT = 32;
 struct ObjectBin {
     size_t primCount = 0;
     AABB bounds;
+
+    ObjectBin operator+(const ObjectBin& other) const
+    {
+        return { primCount + other.primCount, bounds + other.bounds };
+    }
 };
 
 static std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> performObjectBinning(const AABB& nodeBounds, int axis, gsl::span<const PrimitiveData> primitives);
@@ -28,21 +33,18 @@ std::optional<ObjectSplit> findObjectSplitBinned(const SubBvhNode& node, gsl::sp
     // For all three axis
     std::optional<ObjectSplit> bestObjectSplit;
     for (int axis : axisToConsider) {
-        if (extent[axis] < 0.001f) // Skip if the bounds along this axis is too small
-            continue;
-
-        // Loop through the triangles and calculate bin dimensions and primitive counts
+        // Build a histogram based on the position of the bound centers along the given axis
         auto bins = performObjectBinning(node.bounds, axis, primitives);
 
-        // Calculate the cummulative surface area (SAH left + right of split) for all possible splits
-        for (size_t binID = 1; binID < BVH_OBJECT_BIN_COUNT; binID++) {
-            auto mergedLeftBins = std::accumulate(bins.begin(), bins.begin() + binID, ObjectBin(), [](const auto& left, const auto& right) -> ObjectBin {
-                return { left.primCount + right.primCount, left.bounds + right.bounds };
-            });
-
-            auto mergedRightBins = std::accumulate(bins.begin() + binID, bins.end(), ObjectBin(), [](const auto& left, const auto& right) -> ObjectBin {
-                return { left.primCount + right.primCount, left.bounds + right.bounds };
-            });
+        // Combine bins from left-to-right (summedBins) and right-to-left (inverseSummedBins)
+        std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> summedBins;
+        std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> inverseSummedBins;
+        std::exclusive_scan(bins.begin(), bins.end(), summedBins.begin(), ObjectBin{});
+        std::exclusive_scan(bins.rbegin(), bins.rend(), inverseSummedBins.begin(), ObjectBin{});
+        for (int splitPosition = 1; splitPosition < BVH_OBJECT_BIN_COUNT; splitPosition++) {
+            // Get bounds/primitive counts at the left and right of the split plane
+            ObjectBin mergedLeftBins = summedBins[splitPosition];
+            ObjectBin mergedRightBins = inverseSummedBins[BVH_OBJECT_BIN_COUNT - splitPosition];
 
             // If all primitive centers lie on one side of the splitting plane then the split is invalid
             if (mergedLeftBins.primCount == 0 || mergedRightBins.primCount == 0)
@@ -50,8 +52,8 @@ std::optional<ObjectSplit> findObjectSplitBinned(const SubBvhNode& node, gsl::sp
 
             // SAH: Surface Area Heuristic
             float sah = mergedLeftBins.primCount * mergedLeftBins.bounds.surfaceArea() + mergedRightBins.primCount * mergedRightBins.bounds.surfaceArea();
-            if (!bestObjectSplit || (sah < bestObjectSplit->sah && sah < currentNodeSAH)) { // Lower surface area heuristic is better
-                float position = node.bounds.min[axis] + binID * (extent[axis] / BVH_OBJECT_BIN_COUNT);
+            if ((!bestObjectSplit || sah < bestObjectSplit->sah) && sah < currentNodeSAH) { // Lower surface area heuristic is better
+                float position = node.bounds.min[axis] + splitPosition * (extent[axis] / BVH_OBJECT_BIN_COUNT);
                 bestObjectSplit = ObjectSplit{
                     axis,
                     position,

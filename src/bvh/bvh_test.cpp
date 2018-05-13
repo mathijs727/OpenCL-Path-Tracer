@@ -2,13 +2,13 @@
 #include <array>
 #include <iostream>
 
-using namespace raytracer;
+namespace raytracer {
 
 void traverse(std::vector<SubBvhNode>& bvhNodes)
 {
 }
 
-raytracer::BvhTester::BvhTester(std::shared_ptr<Mesh> meshID)
+BvhTester::BvhTester(std::shared_ptr<Mesh> meshID)
     : m_vertices(meshID->getVertices())
     , m_triangles(meshID->getTriangles())
     , m_bvhNodes(meshID->getBvhNodes())
@@ -16,11 +16,11 @@ raytracer::BvhTester::BvhTester(std::shared_ptr<Mesh> meshID)
 {
 }
 
-raytracer::BvhTester::~BvhTester()
+BvhTester::~BvhTester()
 {
 }
 
-void raytracer::BvhTester::test()
+void BvhTester::test()
 {
     std::cout << "\n\n-----   BVH TEST STARTING   -----\n";
     std::cout << "Number of triangles in model: " << m_triangles.size() << "\n";
@@ -45,14 +45,13 @@ void raytracer::BvhTester::test()
     }
 
     std::cout << "\nTesting node bounds\n";
-    testNodeBounds(m_rootNode);
-    std::cout << "Success!\n";
+    std::cout << (testNodeBounds(m_rootNode) ? "Success" : "Failed") << "\n";
 
     std::cout << "\n\n"
               << std::flush;
 }
 
-uint32_t raytracer::BvhTester::countNodes(uint32_t nodeId)
+uint32_t BvhTester::countNodes(uint32_t nodeId)
 {
     auto& node = m_bvhNodes[nodeId];
     if (node.triangleCount == 0) {
@@ -62,7 +61,7 @@ uint32_t raytracer::BvhTester::countNodes(uint32_t nodeId)
     }
 }
 
-uint32_t raytracer::BvhTester::countDepth(uint32_t nodeId)
+uint32_t BvhTester::countDepth(uint32_t nodeId)
 {
     auto& node = m_bvhNodes[nodeId];
     if (node.triangleCount == 0) {
@@ -72,7 +71,7 @@ uint32_t raytracer::BvhTester::countDepth(uint32_t nodeId)
     }
 }
 
-uint32_t raytracer::BvhTester::countTriangles(uint32_t nodeId)
+uint32_t BvhTester::countTriangles(uint32_t nodeId)
 {
     auto& node = m_bvhNodes[nodeId];
     if (node.triangleCount == 0) {
@@ -82,7 +81,7 @@ uint32_t raytracer::BvhTester::countTriangles(uint32_t nodeId)
     }
 }
 
-uint32_t raytracer::BvhTester::countLeafs(uint32_t nodeId)
+uint32_t BvhTester::countLeafs(uint32_t nodeId)
 {
     auto& node = m_bvhNodes[nodeId];
     if (node.triangleCount == 0) {
@@ -92,7 +91,7 @@ uint32_t raytracer::BvhTester::countLeafs(uint32_t nodeId)
     }
 }
 
-uint32_t raytracer::BvhTester::maxTrianglesPerLeaf(uint32_t nodeId)
+uint32_t BvhTester::maxTrianglesPerLeaf(uint32_t nodeId)
 {
     auto& node = m_bvhNodes[nodeId];
     if (node.triangleCount == 0) {
@@ -102,7 +101,7 @@ uint32_t raytracer::BvhTester::maxTrianglesPerLeaf(uint32_t nodeId)
     }
 }
 
-uint32_t raytracer::BvhTester::countTrianglesLessThen(uint32_t nodeId, uint32_t maxCount)
+uint32_t BvhTester::countTrianglesLessThen(uint32_t nodeId, uint32_t maxCount)
 {
     auto& node = m_bvhNodes[nodeId];
     if (node.triangleCount == 0) {
@@ -115,25 +114,25 @@ uint32_t raytracer::BvhTester::countTrianglesLessThen(uint32_t nodeId, uint32_t 
     }
 }
 
-void raytracer::BvhTester::testNodeBounds(uint32_t nodeId)
+bool BvhTester::testNodeBounds(uint32_t nodeId)
 {
     auto& node = m_bvhNodes[nodeId];
     auto bounds = node.bounds;
     if (node.triangleCount == 0) {
         // Check that both child nodes fit in this node
-        assert(node.bounds.contains(m_bvhNodes[node.leftChildIndex + 0].bounds));
-        assert(node.bounds.contains(m_bvhNodes[node.leftChildIndex + 1].bounds));
-        testNodeBounds(node.leftChildIndex + 0);
-        testNodeBounds(node.leftChildIndex + 1);
+        bool leftChildFits = node.bounds.contains(m_bvhNodes[node.leftChildIndex + 0].bounds);
+        bool rightChildFits = node.bounds.contains(m_bvhNodes[node.leftChildIndex + 1].bounds);
+        bool left = testNodeBounds(node.leftChildIndex + 0);
+        bool right = testNodeBounds(node.leftChildIndex + 1);
+        return left && right && leftChildFits && rightChildFits;
     } else {
         // Check that all triangles fit in the bounds of this leaf node
         for (const auto& triangle : m_triangles.subspan(node.firstTriangleIndex, node.triangleCount)) {
             auto v1 = m_vertices[triangle.indices[0]].vertex;
             auto v2 = m_vertices[triangle.indices[1]].vertex;
             auto v3 = m_vertices[triangle.indices[2]].vertex;
-            assert(bounds.contains(v1));
-            assert(bounds.contains(v2));
-            assert(bounds.contains(v3));
+            return bounds.contains(v1) && bounds.contains(v2) && bounds.contains(v3);
         }
     }
+}
 }

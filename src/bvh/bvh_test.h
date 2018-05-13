@@ -21,7 +21,7 @@ private:
     uint32_t maxTrianglesPerLeaf(uint32_t nodeId);
     uint32_t countTrianglesLessThen(uint32_t nodeId, uint32_t maxCount);
 
-    void testNodeBounds(uint32_t nodeId);
+    bool testNodeBounds(uint32_t nodeId);
 
 private:
     uint32_t m_rootNode;
