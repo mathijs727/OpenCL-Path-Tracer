@@ -120,19 +120,21 @@ bool BvhTester::testNodeBounds(uint32_t nodeId)
     auto bounds = node.bounds;
     if (node.triangleCount == 0) {
         // Check that both child nodes fit in this node
-        bool leftChildFits = node.bounds.contains(m_bvhNodes[node.leftChildIndex + 0].bounds);
-        bool rightChildFits = node.bounds.contains(m_bvhNodes[node.leftChildIndex + 1].bounds);
+        bool leftChildFits = node.bounds.fullyContains(m_bvhNodes[node.leftChildIndex + 0].bounds);
+        bool rightChildFits = node.bounds.fullyContains(m_bvhNodes[node.leftChildIndex + 1].bounds);
         bool left = testNodeBounds(node.leftChildIndex + 0);
         bool right = testNodeBounds(node.leftChildIndex + 1);
         return left && right && leftChildFits && rightChildFits;
     } else {
         // Check that all triangles fit in the bounds of this leaf node
+        bool allTrianglesFit = true;
         for (const auto& triangle : m_triangles.subspan(node.firstTriangleIndex, node.triangleCount)) {
             auto v1 = m_vertices[triangle.indices[0]].vertex;
             auto v2 = m_vertices[triangle.indices[1]].vertex;
             auto v3 = m_vertices[triangle.indices[2]].vertex;
-            return bounds.contains(v1) && bounds.contains(v2) && bounds.contains(v3);
+            allTrianglesFit = allTrianglesFit && bounds.contains(v1) && bounds.contains(v2) && bounds.contains(v3);
         }
+        return allTrianglesFit;
     }
 }
 }

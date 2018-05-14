@@ -9,6 +9,7 @@
 namespace raytracer {
 
 static constexpr size_t BVH_OBJECT_BIN_COUNT = 32;
+
 struct ObjectBin {
     size_t primCount = 0;
     AABB bounds;
@@ -21,20 +22,20 @@ struct ObjectBin {
 
 static std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> performObjectBinning(const AABB& nodeBounds, int axis, gsl::span<const PrimitiveData> primitives);
 
-std::optional<ObjectSplit> findObjectSplitBinned(const SubBvhNode& node, gsl::span<const PrimitiveData> primitives, gsl::span<const int> axisToConsider)
+std::optional<ObjectSplit> findObjectSplitBinned(const AABB& nodeBounds, gsl::span<const PrimitiveData> primitives, const OriginalPrimitives&, gsl::span<const int> axisToConsider)
 {
     // Leaf nodes should have at least 3 primitives
     if (primitives.size() < 4)
         return {};
 
-    glm::vec3 extent = node.bounds.max - node.bounds.min;
-    float currentNodeSAH = node.bounds.surfaceArea() * primitives.size();
+    glm::vec3 extent = nodeBounds.max - nodeBounds.min;
+    float currentNodeSAH = nodeBounds.surfaceArea() * primitives.size();
 
     // For all three axis
-    std::optional<ObjectSplit> bestObjectSplit;
+    std::optional<ObjectSplit> bestSplit;
     for (int axis : axisToConsider) {
         // Build a histogram based on the position of the bound centers along the given axis
-        auto bins = performObjectBinning(node.bounds, axis, primitives);
+        auto bins = performObjectBinning(nodeBounds, axis, primitives);
 
         // Combine bins from left-to-right (summedBins) and right-to-left (inverseSummedBins)
         std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> summedBins;
@@ -52,9 +53,9 @@ std::optional<ObjectSplit> findObjectSplitBinned(const SubBvhNode& node, gsl::sp
 
             // SAH: Surface Area Heuristic
             float sah = mergedLeftBins.primCount * mergedLeftBins.bounds.surfaceArea() + mergedRightBins.primCount * mergedRightBins.bounds.surfaceArea();
-            if ((!bestObjectSplit || sah < bestObjectSplit->sah) && sah < currentNodeSAH) { // Lower surface area heuristic is better
-                float position = node.bounds.min[axis] + splitPosition * (extent[axis] / BVH_OBJECT_BIN_COUNT);
-                bestObjectSplit = ObjectSplit{
+            if ((!bestSplit || sah < bestSplit->sah) && sah < currentNodeSAH) { // Lower surface area heuristic is better
+                float position = nodeBounds.min[axis] + splitPosition * (extent[axis] / BVH_OBJECT_BIN_COUNT);
+                bestSplit = ObjectSplit{
                     axis,
                     position,
                     mergedLeftBins.bounds,
@@ -65,17 +66,18 @@ std::optional<ObjectSplit> findObjectSplitBinned(const SubBvhNode& node, gsl::sp
         }
     }
 
-    if (bestObjectSplit)
-        return bestObjectSplit;
+    if (bestSplit)
+        return bestSplit;
     else
         return {};
 }
 
-void performObjectSplit(gsl::span<const PrimitiveData> primitives, const ObjectSplit& split, PrimInsertIter left, PrimInsertIter right)
+std::pair<AABB, AABB> performObjectSplit(gsl::span<const PrimitiveData> primitives, const OriginalPrimitives&, const ObjectSplit& split, PrimInsertIter left, PrimInsertIter right)
 {
     std::partition_copy(primitives.begin(), primitives.end(), left, right, [&](const PrimitiveData& primitive) -> bool {
         return primitive.bounds.center()[split.axis] < split.position;
     });
+    return { split.leftBounds, split.rightBounds };
 }
 
 size_t performObjectSplitInPlace(gsl::span<PrimitiveData> primitives, const ObjectSplit& split)

@@ -23,12 +23,12 @@ struct ObjectSplit {
     float sah = std::numeric_limits<float>::max();
 };
 
-using PrimInsertIter = std::insert_iterator<std::vector<PrimitiveData>>;
 std::optional<ObjectSplit> findObjectSplitBinned(
-    const SubBvhNode& node,
+    const AABB& nodeBounds,
     gsl::span<const PrimitiveData> primitives,
+    const OriginalPrimitives& orignalPrimitives,
     gsl::span<const int> axisToConsider = std::array{ 0, 1, 2 });
-void performObjectSplit(gsl::span<const PrimitiveData> primitives, const ObjectSplit& split, PrimInsertIter left, PrimInsertIter right);
+std::pair<AABB, AABB> performObjectSplit(gsl::span<const PrimitiveData> primitives, const OriginalPrimitives&, const ObjectSplit& split, PrimInsertIter left, PrimInsertIter right);
 size_t performObjectSplitInPlace(gsl::span<PrimitiveData> primitives, const ObjectSplit& split);
 
 }

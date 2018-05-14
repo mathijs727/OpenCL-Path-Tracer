@@ -1,12 +1,21 @@
 #pragma once
 #include "aabb.h"
+#include "vertices.h"
+#include <gsl/gsl>
+#include <vector>
 
 namespace raytracer {
+
+struct OriginalPrimitives {
+    gsl::span<const VertexSceneData> vertices;
+    gsl::span<const TriangleSceneData> triangles;
+};
 
 struct PrimitiveData {
     uint32_t globalIndex;
     AABB bounds;
 };
+using PrimInsertIter = std::insert_iterator<std::vector<PrimitiveData>>;
 
 struct TopBvhNode {
     AABB bounds;

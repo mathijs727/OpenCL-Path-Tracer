@@ -352,7 +352,7 @@ void raytracer::SbvhBuilder::makeSpatialBins(uint32_t nodeId, uint32_t axis, Spa
 {
     auto node = &(*_bvh_nodes)[nodeId];
     glm::vec3 size = node->bounds.max - node->bounds.min;
-    float k1 = BVH_NUM_BINS / size[axis] * 0.999999f; // Prevents the bin out of bounds (if centroid on the right bound
+    float k1 = BVH_NUM_BINS / size[axis] * 0.999999f; // Prevents the bin out of bounds (if centroid on the right bound)
     assert(size[axis] != 0);
     for (auto& tri : _node_triangle_list[nodeId]) {
         uint32_t triangleId = tri.first;

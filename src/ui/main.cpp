@@ -26,7 +26,7 @@ void cameraMoveHandler(Camera& camera, const Window& window, double dt);
 
 int main(int argc, char* argv[])
 {
-#if 1 // Test BVH build only
+#if 0 // Test BVH build only
     auto scene = std::make_shared<Scene>();
     UniqueTextureArray materialTextures;
     createScene(*scene, materialTextures);

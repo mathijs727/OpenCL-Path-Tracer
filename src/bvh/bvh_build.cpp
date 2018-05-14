@@ -1,6 +1,7 @@
 #include "bvh_build.h"
 #include "bvh_allocator.h"
 #include "bvh_object_split.h"
+#include "bvh_spatial_split.h"
 #include <algorithm>
 #include <stack>
 #include <vector>
@@ -150,8 +151,10 @@ static std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBvhNode>>
 BvhBuildReturnType buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
 {
     auto primitives = generatePrimitives(vertices, triangles); // Create primitive refences
-    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVHInPlace(std::move(primitives), [](const SubBvhNode& node, gsl::span<PrimitiveData> primitives) -> std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>> {
-        if (auto split = findObjectSplitBinned(node, primitives); split) {
+    OriginalPrimitives originalPrimitives{ vertices, triangles };
+
+    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVHInPlace(std::move(primitives), [&](const SubBvhNode& node, gsl::span<PrimitiveData> primitives) -> std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>> {
+        if (auto split = findObjectSplitBinned(node.bounds, primitives, originalPrimitives); split) {
             size_t splitIndex = performObjectSplitInPlace(primitives, *split);
             auto leftPrims = primitives.subspan(0, splitIndex);
             auto rightPrims = primitives.subspan(splitIndex, primitives.length() - splitIndex);
@@ -172,10 +175,12 @@ BvhBuildReturnType buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl
 BvhBuildReturnType buildBinnedFastBVH(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
 {
     auto primitives = generatePrimitives(vertices, triangles); // Create primitive refences
-    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVHInPlace(std::move(primitives), [](const SubBvhNode& node, gsl::span<PrimitiveData> primitives) -> std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>> {
+    OriginalPrimitives originalPrimitives{ vertices, triangles };
+
+    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVHInPlace(std::move(primitives), [&](const SubBvhNode& node, gsl::span<PrimitiveData> primitives) -> std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>> {
         glm::vec3 extent = node.bounds.extent();
         int axis = maxIndex(extent);
-        if (auto split = findObjectSplitBinned(node, primitives, std::array{ axis }); split) {
+        if (auto split = findObjectSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ axis }); split) {
             size_t splitIndex = performObjectSplitInPlace(primitives, *split);
             auto leftPrims = primitives.subspan(0, splitIndex);
             auto rightPrims = primitives.subspan(splitIndex, primitives.length() - splitIndex);
@@ -193,4 +198,40 @@ BvhBuildReturnType buildBinnedFastBVH(gsl::span<const VertexSceneData> vertices,
     return { rootNodeID, outTriangles, bvhNodes };
 }
 
+BvhBuildReturnType buildSpatialSplitBVH(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
+{
+    // using SplitFunc = std::function<std::optional<std::pair<AABB, AABB>>(const SubBvhNode& node, gsl::span<const PrimitiveData>, PrimInsertIter left, PrimInsertIter right)>;
+    auto startPrimitives = generatePrimitives(vertices, triangles); // Create primitive refences
+    OriginalPrimitives originalPrimitives{ vertices, triangles };
+
+    auto rootNodeSurfaceArea = computeBounds(startPrimitives).surfaceArea();
+
+    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVH(std::move(startPrimitives), [&](const SubBvhNode& node, gsl::span<const PrimitiveData> primitives, PrimInsertIter left, PrimInsertIter right) -> std::optional<std::pair<AABB, AABB>> {
+        glm::vec3 extent = node.bounds.extent();
+        if (auto objectSplitOpt = findObjectSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); objectSplitOpt) {
+            float alpha = objectSplitOpt->leftBounds.intersection(objectSplitOpt->rightBounds).surfaceArea() / rootNodeSurfaceArea;
+            if (alpha > 1e-05f) {
+                if (auto spatialSplitOpt = findSpatialSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); spatialSplitOpt) {
+                    //if (spatialSplitOpt->sah < objectSplitOpt->sah) {
+                    //std::cout << "SPATIAL SPLIT" << std::endl;
+                    return performSpatialSplit(primitives, originalPrimitives, *spatialSplitOpt, left, right);
+                    //}
+                }
+            }
+            return performObjectSplit(primitives, originalPrimitives, *objectSplitOpt, left, right);
+        } else if (auto spatialSplitOpt = findSpatialSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); spatialSplitOpt) {
+            std::cout << "SPATIAL SPLIT" << std::endl;
+            return performSpatialSplit(primitives, originalPrimitives, *spatialSplitOpt, left, right);
+        } else {
+            return {};
+        }
+    });
+
+    // Convert primitive references to triangles
+    std::vector<TriangleSceneData> outTriangles(reorderedPrimitives.size());
+    std::transform(reorderedPrimitives.begin(), reorderedPrimitives.end(), outTriangles.begin(), [&](const PrimitiveData& primitive) {
+        return triangles[primitive.globalIndex];
+    });
+    return { rootNodeID, outTriangles, bvhNodes };
+}
 }

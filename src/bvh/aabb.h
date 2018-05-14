@@ -22,9 +22,11 @@ struct AABB {
     void fit(glm::vec3 vec);
     void fit(const AABB& other);
     AABB operator+(const AABB& other) const;
+    AABB intersection(const AABB& other) const;
 
     bool contains(glm::vec3 vec) const;
-    bool contains(const AABB& other) const;
+    bool partiallyContains(const AABB& other) const;
+    bool fullyContains(const AABB& other) const;
     bool operator==(const AABB& other) const;
 
     glm::vec3 center() const;
