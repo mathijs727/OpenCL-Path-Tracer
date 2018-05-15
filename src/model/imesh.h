@@ -13,6 +13,7 @@ public:
     virtual gsl::span<const SubBvhNode> getBvhNodes() const = 0;
     virtual gsl::span<const uint32_t> getEmissiveTriangles() const = 0;
 
+    virtual AABB getBounds() const = 0;
     virtual bool isDynamic() const = 0;
     virtual uint32_t maxNumVertices() const = 0;
     virtual uint32_t maxNumTriangles() const = 0;

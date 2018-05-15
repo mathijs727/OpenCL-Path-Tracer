@@ -6,39 +6,33 @@
 namespace raytracer {
 
 Scene::Scene()
-    : m_rootNode({ nullptr, {}, {}, std::numeric_limits<uint32_t>::max() })
+    : m_rootNode({ nullptr, {}, {}, {}, {} })
 {
 }
 
-const SceneNode& Scene::addNode(std::shared_ptr<IMesh> primitive, const Transform& transform, SceneNode* parent)
+const SceneNode& Scene::addNode(std::shared_ptr<IMesh> object, const Transform& transform, SceneNode* parent)
 {
     if (!parent)
         parent = &m_rootNode;
 
-    bool found = false;
-    uint32_t meshID = 0;
-    for (auto& pair : m_meshes) {
-        if (pair.meshID.get() == primitive.get()) {
-            found = true;
-            break;
-        }
-        meshID++;
-    }
+    parent->bounds.fit(object->getBounds());
 
-    if (!found) {
+    uint32_t meshID;
+    if (auto iter = m_meshIDMapping.find(object.get()); iter != m_meshIDMapping.end()) {
+        meshID = iter->second;
+    } else {
         meshID = (uint32_t)m_meshes.size();
-        m_meshes.emplace_back(primitive, 0);
+        m_meshes.emplace_back(object, object->getBvhRootNode());
+        m_meshIDMapping[object.get()] = meshID;
     }
 
-    auto newChild = std::unique_ptr<SceneNode>(new SceneNode{
-        parent,
+    auto newChild = std::make_unique<SceneNode>(SceneNode{ parent,
         {},
+        object->getBounds(),
         transform,
-        meshID });
+        meshID,
+        object->getBvhRootNode() });
     SceneNode& newChildRef = *newChild.get();
-    //newChild->transform = transform;
-    //newChild->parent = parent;
-    //newChild->mesh = meshId;
     parent->children.push_back(std::move(newChild));
     return newChildRef;
 }

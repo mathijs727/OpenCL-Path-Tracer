@@ -9,4 +9,5 @@ target_sources(raytracer
 		"${CMAKE_CURRENT_LIST_DIR}/refit_bvh.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/sbvh.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/top_bvh.cpp"
+		"${CMAKE_CURRENT_LIST_DIR}/top_bvh_build.cpp"
 )

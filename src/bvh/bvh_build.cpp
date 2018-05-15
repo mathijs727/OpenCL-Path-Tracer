@@ -158,6 +158,7 @@ BvhBuildReturnType buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl
             size_t splitIndex = performObjectSplitInPlace(primitives, *split);
             auto leftPrims = primitives.subspan(0, splitIndex);
             auto rightPrims = primitives.subspan(splitIndex, primitives.length() - splitIndex);
+            assert(leftPrims.size() > 0 && rightPrims.size() > 0);
             return { { leftPrims, split->leftBounds, rightPrims, split->rightBounds } };
         } else {
             return {};

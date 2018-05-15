@@ -93,6 +93,9 @@ void Mesh::addSubMesh(
         vertex.normal = normal;
         vertex.texCoord = texCoords;
         m_vertices.push_back(vertex);
+
+        // Grow bounds
+        m_bounds.fit(position);
     }
 
     // add all of the faces data
@@ -188,9 +191,9 @@ void Mesh::loadFromFile(
         Timer bvhBuildTimer;
 
         // Create a BVH for the mesh
-        //std::tie(m_bvhRootNode, m_triangles, m_bvhNodes) = buildBinnedBVH(m_vertices, m_triangles);
+        std::tie(m_bvhRootNode, m_triangles, m_bvhNodes) = buildBinnedBVH(m_vertices, m_triangles);
         //std::tie(m_bvhRootNode, m_triangles, m_bvhNodes) = buildBinnedFastBVH(m_vertices, m_triangles);
-        std::tie(m_bvhRootNode, m_triangles, m_bvhNodes) = buildSpatialSplitBVH(m_vertices, m_triangles);
+        //std::tie(m_bvhRootNode, m_triangles, m_bvhNodes) = buildSpatialSplitBVH(m_vertices, m_triangles);
 
         //SbvhBuilder bvhBuilder;
         //m_bvhRootNode = bvhBuilder.build(m_vertices, m_triangles, m_bvhNodes);

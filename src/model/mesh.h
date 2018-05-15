@@ -34,6 +34,7 @@ public:
 
     uint32_t getBvhRootNode() const override { return m_bvhRootNode; };
 
+    AABB getBounds() const override { return m_bounds; }
     bool isDynamic() const override { return false; };
     uint32_t maxNumVertices() const override { return (uint32_t)m_vertices.size(); };
     uint32_t maxNumTriangles() const override { return (uint32_t)m_triangles.size(); };
@@ -66,6 +67,7 @@ private:
     std::vector<Material> m_materials;
     std::vector<SubBvhNode> m_bvhNodes;
 
+    AABB m_bounds;
     uint32_t m_bvhRootNode;
 };
 }

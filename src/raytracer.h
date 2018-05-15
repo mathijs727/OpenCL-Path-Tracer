@@ -1,6 +1,6 @@
 #pragma once
-#include "bvh/top_bvh.h"
 #include "model/material.h"
+#include "scene.h"
 #include "texture.h"
 #include "vertices.h"
 #include <memory>

@@ -1,5 +1,7 @@
 #include "raytracer.h"
 
+#include "bvh/top_bvh.h"
+#include "bvh/top_bvh_build.h"
 #include "camera.h"
 #include "opencl/cl_gl_includes.h"
 #include "opencl/cl_helpers.h"
@@ -190,23 +192,23 @@ void RayTracer::setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray&
     uint32_t numMaterials = 0;
     uint32_t numBvhNodes = 0;
     for (const auto& meshBvhPair : scene->getMeshes()) {
-        auto meshID = meshBvhPair.meshID;
+        auto meshPtr = meshBvhPair.meshPtr;
 
-        if (meshID->isDynamic()) {
-            numVertices += meshID->maxNumVertices();
-            numTriangles += meshID->maxNumTriangles();
-            numMaterials += meshID->maxNumMaterials();
-            numBvhNodes += meshID->maxNumBvhNodes();
+        if (meshPtr->isDynamic()) {
+            numVertices += meshPtr->maxNumVertices();
+            numTriangles += meshPtr->maxNumTriangles();
+            numMaterials += meshPtr->maxNumMaterials();
+            numBvhNodes += meshPtr->maxNumBvhNodes();
         } else {
-            numVertices += (uint32_t)meshID->getVertices().size();
-            numTriangles += (uint32_t)meshID->getTriangles().size();
-            numMaterials += (uint32_t)meshID->getMaterials().size();
-            numBvhNodes += (uint32_t)meshID->getBvhNodes().size();
+            numVertices += (uint32_t)meshPtr->getVertices().size();
+            numTriangles += (uint32_t)meshPtr->getTriangles().size();
+            numMaterials += (uint32_t)meshPtr->getMaterials().size();
+            numBvhNodes += (uint32_t)meshPtr->getBvhNodes().size();
 
-            m_numStaticVertices += (uint32_t)meshID->getVertices().size();
-            m_numStaticTriangles += (uint32_t)meshID->getTriangles().size();
-            m_numStaticMaterials += (uint32_t)meshID->getMaterials().size();
-            m_numStaticBvhNodes += (uint32_t)meshID->getBvhNodes().size();
+            m_numStaticVertices += (uint32_t)meshPtr->getVertices().size();
+            m_numStaticTriangles += (uint32_t)meshPtr->getTriangles().size();
+            m_numStaticMaterials += (uint32_t)meshPtr->getMaterials().size();
+            m_numStaticBvhNodes += (uint32_t)meshPtr->getBvhNodes().size();
         }
     }
 
@@ -215,30 +217,30 @@ void RayTracer::setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray&
 
     // Collect all static geometry and upload it to the GPU
     for (auto& meshBvhPair : scene->getMeshes()) {
-        auto meshID = meshBvhPair.meshID;
-        if (meshID->isDynamic())
+        auto meshPtr = meshBvhPair.meshPtr;
+        if (meshPtr->isDynamic())
             continue;
 
         // TODO: use memcpy instead of looping over vertices (faster?)
         uint32_t startVertex = (uint32_t)m_verticesHost.size();
-        for (auto& vertex : meshID->getVertices()) {
+        for (auto& vertex : meshPtr->getVertices()) {
             m_verticesHost.push_back(vertex);
         }
 
         uint32_t startMaterial = (uint32_t)m_materialsHost.size();
-        for (auto& material : meshID->getMaterials()) {
+        for (auto& material : meshPtr->getMaterials()) {
             m_materialsHost.push_back(material);
         }
 
         uint32_t startTriangle = (uint32_t)m_trianglesHost.size();
-        for (auto& triangle : meshID->getTriangles()) {
+        for (auto& triangle : meshPtr->getTriangles()) {
             m_trianglesHost.push_back(triangle);
             m_trianglesHost.back().indices += startVertex;
             m_trianglesHost.back().materialIndex += startMaterial;
         }
 
         uint32_t startBvhNode = (uint32_t)m_subBvhNodesHost.size();
-        for (auto& bvhNode : meshID->getBvhNodes()) {
+        for (auto& bvhNode : meshPtr->getBvhNodes()) {
             m_subBvhNodesHost.push_back(bvhNode);
             auto& newNode = m_subBvhNodesHost.back();
             if (newNode.triangleCount > 0)
@@ -246,7 +248,7 @@ void RayTracer::setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray&
             else
                 newNode.leftChildIndex += startBvhNode;
         }
-        meshBvhPair.bvhOffset = startBvhNode;
+        meshBvhPair.bvhIndexOffset = startBvhNode;
     }
 
     auto queue = m_clContext.getGraphicsQueue();
@@ -523,32 +525,32 @@ void RayTracer::copyNextAnimationFrameData()
 
     // Collect all static geometry and upload it to the GPU
     for (auto& meshBvhPair : m_scene->getMeshes()) {
-        auto meshID = meshBvhPair.meshID;
-        if (!meshID->isDynamic())
+        auto meshPtr = meshBvhPair.meshPtr;
+        if (!meshPtr->isDynamic())
             continue;
 
-        meshID->buildBvh();
+        meshPtr->buildBvh();
 
         // TODO: use memcpy instead of looping over vertices (faster)
         uint32_t startVertex = (uint32_t)m_verticesHost.size();
-        for (const auto& vertex : meshID->getVertices()) {
+        for (const auto& vertex : meshPtr->getVertices()) {
             m_verticesHost.push_back(vertex);
         }
 
         uint32_t startMaterial = (uint32_t)m_materialsHost.size();
-        for (const auto& material : meshID->getMaterials()) {
+        for (const auto& material : meshPtr->getMaterials()) {
             m_materialsHost.push_back(material);
         }
 
         uint32_t startTriangle = (uint32_t)m_trianglesHost.size();
-        for (const auto& triangle : meshID->getTriangles()) {
+        for (const auto& triangle : meshPtr->getTriangles()) {
             m_trianglesHost.push_back(triangle);
             m_trianglesHost.back().indices += startVertex;
             m_trianglesHost.back().materialIndex += startMaterial;
         }
 
         uint32_t startBvhNode = (uint32_t)m_subBvhNodesHost.size();
-        for (const auto& bvhNode : meshID->getBvhNodes()) {
+        for (const auto& bvhNode : meshPtr->getBvhNodes()) {
             m_subBvhNodesHost.push_back(bvhNode);
             auto& newNode = m_subBvhNodesHost.back();
             if (newNode.triangleCount > 0)
@@ -556,7 +558,7 @@ void RayTracer::copyNextAnimationFrameData()
             else
                 newNode.leftChildIndex += startBvhNode;
         }
-        meshBvhPair.bvhOffset = startBvhNode;
+        meshBvhPair.bvhIndexOffset = startBvhNode;
     }
 
     // Get the light emmiting triangles transformed by the scene graph
@@ -574,9 +576,16 @@ void RayTracer::copyNextAnimationFrameData()
     }
 
     // Update the top level BVH and copy it to the GPU on a seperate copy queue
-    m_topBvhNodesHost.clear();
-    auto bvhBuilder = TopLevelBvhBuilder(*m_scene.get());
-    m_topBvhRootNode[copyBuffers] = bvhBuilder.build(m_subBvhNodesHost, m_topBvhNodesHost);
+    //m_topBvhNodesHost.clear();
+    //auto bvhBuilder = TopLevelBvhBuilder(*m_scene.get());
+    //m_topBvhRootNode[copyBuffers] = bvhBuilder.build(m_subBvhNodesHost, m_topBvhNodesHost);
+    std::vector<uint32_t> meshBvhOffsets;
+    for (auto [meshPtr, bvhIndexOffset] : m_scene->getMeshes())
+        meshBvhOffsets.push_back(bvhIndexOffset);
+
+    auto [topBvhRootNodeID, topBvhRootNodes] = buildTopBVH(m_scene->getRootNode(), meshBvhOffsets);
+    m_topBvhRootNode[copyBuffers] = topBvhRootNodeID;
+    m_topBvhNodesHost = std::move(topBvhRootNodes);
     writeToBuffer(copyQueue, m_topBvhBuffers[copyBuffers], gsl::make_span(m_topBvhNodesHost), 0, waitEvents);
 
     if (m_verticesHost.size() > static_cast<size_t>(m_numStaticVertices)) {
@@ -599,12 +608,12 @@ void RayTracer::copyNextAnimationFrameData()
 void RayTracer::collectTransformedLights(const SceneNode* node, const glm::mat4& transform)
 {
     auto newTransform = transform * node->transform.matrix();
-    if (node->meshID != -1) {
-        auto& meshID = m_scene->getMeshes()[node->meshID];
-        auto& vertices = meshID.meshID->getVertices();
-        auto& triangles = meshID.meshID->getTriangles();
-        auto& emissiveTriangles = meshID.meshID->getEmissiveTriangles();
-        auto& materials = meshID.meshID->getMaterials();
+    if (node->meshID) {
+        const auto& mesh = *m_scene->getMeshes()[*node->meshID].meshPtr;
+        auto& vertices = mesh.getVertices();
+        auto& triangles = mesh.getTriangles();
+        auto& emissiveTriangles = mesh.getEmissiveTriangles();
+        auto& materials = mesh.getMaterials();
 
         for (auto& triangleIndex : emissiveTriangles) {
             auto& triangle = triangles[triangleIndex];

@@ -1,11 +1,9 @@
 #include "bvh_spatial_split.h"
-#include "fix_variant.h"
 #include <algorithm>
 #include <array>
 #include <eastl/fixed_vector.h>
 #include <optional>
 #include <tuple>
-#include <variant>
 
 namespace raytracer {
 
@@ -25,8 +23,6 @@ struct SpatialBin {
 };
 
 static std::array<SpatialBin, BVH_SPATIAL_BIN_COUNT> performSpatialBinning(const AABB& nodeBounds, int axis, gsl::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives);
-//static AABB clipTrianglePlanes(int axis, float leftPlane, float rightPlane, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3, const AABB& bounds);
-//static std::pair<AABB, AABB> clipTrianglePlane(int axis, float position, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3, const AABB& bounds);
 static AABB clipTriangleBounds(AABB bounds, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3);
 
 std::optional<SpatialSplit> findSpatialSplitBinned(const AABB& nodeBounds, gsl::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives, gsl::span<const int> axisToConsider)
@@ -158,7 +154,6 @@ static std::array<SpatialBin, BVH_SPATIAL_BIN_COUNT> performSpatialBinning(const
                 binBounds.min[axis] = leftPlane;
                 binBounds.max[axis] = rightPlane;
                 AABB clippedPrimBounds = clipTriangleBounds(binBounds, v1, v2, v3);
-                assert(nodeBounds.fullyContains(binBounds));
                 assert(nodeBounds.fullyContains(clippedPrimBounds));
                 bins[binID].bounds.fit(clippedPrimBounds);
             }
@@ -224,7 +219,7 @@ static AABB clipTriangleBounds(AABB bounds, glm::vec3 v1, glm::vec3 v2, glm::vec
 
                 if (containsCurrent != containsNext) { // Going in / out of the plane
                     auto intersectionOpt = lineAxisAlignedPlaneIntersection(currentVertex, nextVertex, axis, planePos);
-                    assert(intersectionOpt);
+                    assert(intersectionOpt); // Should always find an intersection
                     newVertices.push_back(*intersectionOpt);
                 }
             }
@@ -237,61 +232,5 @@ static AABB clipTriangleBounds(AABB bounds, glm::vec3 v1, glm::vec3 v2, glm::vec
         outBounds.fit(vertex);
     return outBounds;
 }
-
-/*static AABB clipTriangleBounds(AABB bounds, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3)
-{
-    std::vector<glm::vec3> v = { v1, v2, v3 };
-    std::vector<glm::vec3> newV;
-    // Every segment is represented as v[i] + e[i] * t. We find t.
-    for (uint32_t axis = 0; axis < 3; ++axis)
-        for (uint32_t p = 0; p < 2; ++p) {
-            bool minNotMax = p == 0;
-            glm::vec3 plane_normal(0);
-            plane_normal[axis] = 1.f;
-            std::vector<uint8_t> insideV(v.size());
-            float left = bounds.min[axis];
-            float right = bounds.max[axis];
-            for (uint32_t i = 0; i < v.size(); ++i) {
-                if (minNotMax) {
-                    insideV[i] = v[i][axis] >= left;
-                } else {
-                    insideV[i] = v[i][axis] <= right;
-                }
-            }
-            for (uint32_t i = 0; i < v.size(); ++i) {
-                int prevI = (i == 0) ? ((uint32_t)v.size() - 1) : (i - 1);
-                if ((insideV[i] && !insideV[prevI]) || (insideV[prevI] && !insideV[i])) {
-                    auto e = v[i] - v[prevI];
-                    // do line plane intersection
-                    float mag = glm::length(e);
-                    auto normal = e / mag;
-                    float denom = glm::dot(plane_normal, normal);
-                    if (abs(denom) > 0) {
-                        float offset = minNotMax ? left : right;
-                        float t = -(v[i][axis] - offset) / denom;
-                        auto new_v = v[i] + normal * t;
-                        //assert(abs(new_v[axis] - offset) < 0.0001f);
-                        newV.push_back(new_v);
-                    }
-                }
-                if (insideV[i]) {
-                    newV.push_back(v[i]);
-                }
-            }
-            v = std::move(newV);
-            newV.clear();
-        }
-    glm::vec3 min = glm::vec3(std::numeric_limits<float>::max());
-    glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest());
-    for (uint32_t i = 0; i < v.size(); ++i)
-        for (uint32_t ax = 0; ax < 3; ++ax) {
-            min[ax] = glm::min(min[ax], v[i][ax]);
-            max[ax] = glm::max(max[ax], v[i][ax]);
-        }
-    AABB triangleBounds;
-    triangleBounds.min = min;
-    triangleBounds.max = max;
-    return triangleBounds.intersection(bounds); // Prevent floating point drift errors
-}*/
 
 }

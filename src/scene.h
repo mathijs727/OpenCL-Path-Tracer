@@ -6,8 +6,9 @@
 #include "shapes.h"
 #include <gsl/gsl>
 #include <memory>
-#include <vector>
 #include <optional>
+#include <unordered_map>
+#include <vector>
 
 namespace raytracer {
 
@@ -17,18 +18,20 @@ struct SceneNode {
 
     const SceneNode* parent;
     std::vector<std::unique_ptr<SceneNode>> children;
+    AABB bounds;
     Transform transform;
-    uint32_t meshID;
+    std::optional<uint32_t> meshID;
+    std::optional<uint32_t> subBvhRootID;
 };
 
 struct MeshBvhPair {
-    MeshBvhPair(std::shared_ptr<IMesh>& meshID, uint32_t offset)
-        : meshID(meshID)
-        , bvhOffset(offset)
+    MeshBvhPair(std::shared_ptr<IMesh>& meshPtr, uint32_t bvhIndexOffset)
+        : meshPtr(meshPtr)
+        , bvhIndexOffset(bvhIndexOffset)
     {
     }
-    std::shared_ptr<IMesh> meshID;
-    uint32_t bvhOffset; // Offset of meshes bvh into the global bvh array
+    std::shared_ptr<IMesh> meshPtr;
+    uint32_t bvhIndexOffset; // Offset of meshes bvh into the global bvh array
 };
 
 class Scene {
@@ -38,7 +41,7 @@ public:
     Scene();
     ~Scene() = default;
 
-    const SceneNode& addNode(const std::shared_ptr<IMesh> primitive, const Transform& transform = {}, SceneNode* parent = nullptr);
+    const SceneNode& addNode(const std::shared_ptr<IMesh> object, const Transform& transform = {}, SceneNode* parent = nullptr);
 
     void addLight(const Light& light);
 
@@ -51,6 +54,7 @@ private:
     SceneNode m_rootNode;
 
     std::vector<Light> m_lights;
+    std::unordered_map<const IMesh*, uint32_t> m_meshIDMapping;
     std::vector<MeshBvhPair> m_meshes;
 };
 }

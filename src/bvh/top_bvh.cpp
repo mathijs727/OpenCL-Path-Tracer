@@ -20,7 +20,7 @@ uint32_t raytracer::TopLevelBvhBuilder::build(
     std::stack<std::pair<SceneNode&, glm::mat4>> nodeStack;
     nodeStack.push(std::make_pair(std::ref(_scene.getRootNode()), glm::mat4()));
     while (!nodeStack.empty()) {
-        auto[sceneNode, baseTransformMatrix] = nodeStack.top();
+        auto [sceneNode, baseTransformMatrix] = nodeStack.top();
         nodeStack.pop();
         glm::mat4 transformMatrix = baseTransformMatrix * sceneNode.transform.matrix();
 
@@ -29,10 +29,7 @@ uint32_t raytracer::TopLevelBvhBuilder::build(
             nodeStack.push(std::make_pair(std::ref(*sceneNode.children[i].get()), transformMatrix));
         }
 
-        if (sceneNode.meshID == -1)
-            continue;
-
-        if (_scene.getMeshes()[sceneNode.meshID].meshID > 0) {
+        if (sceneNode.meshID && _scene.getMeshes()[*sceneNode.meshID].meshPtr) {
             uint32_t nodeId = (uint32_t)outTopNodes.size();
             outTopNodes.push_back(createNode(&sceneNode, transformMatrix));
             list.push_back(nodeId);
@@ -93,10 +90,13 @@ uint32_t raytracer::TopLevelBvhBuilder::findBestMatch(const std::vector<uint32_t
 
 TopBvhNode raytracer::TopLevelBvhBuilder::createNode(const SceneNode* sceneGraphNode, const glm::mat4 transform)
 {
-    auto& bvhMeshPair = _scene.getMeshes()[sceneGraphNode->meshID];
+    auto& bvhMeshPair = _scene.getMeshes()[*sceneGraphNode->meshID];
+
+    std::cout << "bvhMeshPair.meshPtr->getBvhRootNode(): " << bvhMeshPair.meshPtr->getBvhRootNode() << std::endl;
+    std::cout << "bvhMeshPair.bvhIndexOffset" <<  bvhMeshPair.bvhIndexOffset << std::endl;
 
     TopBvhNode node;
-    node.subBvhNode = bvhMeshPair.meshID->getBvhRootNode() + bvhMeshPair.bvhOffset;
+    node.subBvhNode = bvhMeshPair.meshPtr->getBvhRootNode() + bvhMeshPair.bvhIndexOffset;
     node.bounds = calcTransformedAABB((*_sub_bvh_nodes)[node.subBvhNode].bounds, transform);
     node.invTransform = glm::inverse(transform);
     node.isLeaf = true;
