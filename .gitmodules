@@ -1,3 +1,6 @@
 [submodule "libraries/clRNG"]
 	path = libraries/clRNG
 	url = https://github.com/clMathLibraries/clRNG.git
+[submodule "third_party/eastl"]
+	path = third_party/eastl
+	url = git@github.com:electronicarts/EASTL.git

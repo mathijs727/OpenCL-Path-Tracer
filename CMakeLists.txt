@@ -21,6 +21,8 @@ add_library(assimp INTERFACE)
 target_include_directories(assimp INTERFACE ${ASSIMP_INCLUDE_DIRS})
 target_link_libraries(assimp INTERFACE ${ASSIMP_LIBRARIES})
 
+add_subdirectory("third_party/eastl/")
+
 # Add all "*.cpp" files in the root directory
 add_executable(raytracer "")
 include(src/CMakeLists.txt)
@@ -32,7 +34,8 @@ target_link_libraries(raytracer PRIVATE
 	glfw
 	FreeImage
 	assimp
-	glm)
+	glm
+	EASTL)
 
 target_compile_definitions(raytracer PUBLIC NOMINMAX=1)
 

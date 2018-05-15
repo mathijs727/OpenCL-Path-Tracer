@@ -7,6 +7,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/opencl/CMakeLists.txt)
 target_sources(raytracer
 	PRIVATE
 		"${CMAKE_CURRENT_LIST_DIR}/camera.cpp"
+		"${CMAKE_CURRENT_LIST_DIR}/eastl_alloc.cpp"
 		#"${CMAKE_CURRENT_LIST_DIR}/game.cpp"
 		#"${CMAKE_CURRENT_LIST_DIR}/gloutput.cpp"
 		#"${CMAKE_CURRENT_LIST_DIR}/hdrtexture.cpp"

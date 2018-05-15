@@ -2,6 +2,7 @@
 #include "fix_variant.h"
 #include <algorithm>
 #include <array>
+#include <eastl/fixed_vector.h>
 #include <optional>
 #include <tuple>
 #include <variant>
@@ -84,7 +85,6 @@ std::optional<SpatialSplit> findSpatialSplitBinned(const AABB& nodeBounds, gsl::
 std::pair<AABB, AABB> performSpatialSplit(gsl::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives, const SpatialSplit& split, PrimInsertIter left, PrimInsertIter right)
 {
     AABB leftBounds, rightBounds;
-    size_t leftCount = 0, rightCount = 0;
     for (const PrimitiveData& primitive : primitives) {
         float min = primitive.bounds.min[split.axis];
         float max = primitive.bounds.max[split.axis];
@@ -95,41 +95,31 @@ std::pair<AABB, AABB> performSpatialSplit(gsl::span<const PrimitiveData> primiti
             glm::vec3 v1 = originalPrimitives.vertices[triangle.indices[0]].vertex;
             glm::vec3 v2 = originalPrimitives.vertices[triangle.indices[1]].vertex;
             glm::vec3 v3 = originalPrimitives.vertices[triangle.indices[2]].vertex;
+
+            // Split the triangle (primitives) bounds by the splitting plane
             AABB leftClipBounds = primitive.bounds;
             AABB rightClipBounds = primitive.bounds;
             leftClipBounds.max[split.axis] = split.position;
             rightClipBounds.min[split.axis] = split.position;
-
             auto leftPrimBounds = clipTriangleBounds(leftClipBounds, v1, v2, v3);
             auto rightPrimBounds = clipTriangleBounds(rightClipBounds, v1, v2, v3);
+
             leftBounds.fit(leftPrimBounds);
             rightBounds.fit(rightPrimBounds);
-            //assert(split.leftBounds.fullyContains(leftPrimBounds));
-            //assert(split.rightBounds.fullyContains(rightBounds));
             *left++ = PrimitiveData{ primitive.globalIndex, leftPrimBounds };
             *right++ = PrimitiveData{ primitive.globalIndex, rightPrimBounds };
-
-            leftCount++;
-            rightCount++;
         } else if (max < split.position) {
             // Primitive fully to the left of the split plane
             leftBounds.fit(primitive.bounds);
             *left++ = primitive;
-            leftCount++;
         } else {
             // Primitive fully to the right of the split plane
             rightBounds.fit(primitive.bounds);
             *right++ = primitive;
-            rightCount++;
         }
     }
 
-    assert(leftCount > 0 && rightCount > 0);
-    size_t size = primitives.size();
-    assert(leftCount + rightCount >= size);
-
     return { leftBounds, rightBounds };
-    //return { split.leftBounds, split.rightBounds };
 }
 
 static std::array<SpatialBin, BVH_SPATIAL_BIN_COUNT> performSpatialBinning(const AABB& nodeBounds, int axis, gsl::span<const PrimitiveData> primitives, const OriginalPrimitives& triangleData)
@@ -148,23 +138,6 @@ static std::array<SpatialBin, BVH_SPATIAL_BIN_COUNT> performSpatialBinning(const
         size_t rightBinID = std::min(static_cast<size_t>(xMax), BVH_SPATIAL_BIN_COUNT - 1); // Prevent out of bounds (if centroid on the right bound)
 
         assert(nodeBounds.fullyContains(primitive.bounds));
-
-        /*// Check against the bins left and right bounds to compensate for floating point drift
-        float minLeftBound = nodeBounds.min[axis] + leftBinID * k1Inv;
-        float minRightBound = nodeBounds.min[axis] + (leftBinID + 1) * k1Inv;
-        if (primitive.bounds.min[axis] < minLeftBound)
-            leftBinID--;
-        else if (primitive.bounds.min[axis] > minRightBound)
-            leftBinID++;
-
-
-        // Check against the bins left and right bounds to compensate for floating point drift
-        float maxLeftBound = nodeBounds.min[axis] + rightBinID * k1Inv;
-        float maxRightBound = nodeBounds.min[axis] + (rightBinID + 1) * k1Inv;
-        if (primitive.bounds.max[axis] < maxLeftBound)
-            rightBinID--;
-        else if (primitive.bounds.max[axis] > maxRightBound)
-            rightBinID++;*/
 
         bins[leftBinID].enter++;
         bins[rightBinID].exit++;
@@ -195,7 +168,77 @@ static std::array<SpatialBin, BVH_SPATIAL_BIN_COUNT> performSpatialBinning(const
     return bins;
 }
 
+static std::optional<glm::vec3> lineAxisAlignedPlaneIntersection(glm::vec3 v1, glm::vec3 v2, int axis, float planePos)
+{
+    // Line lies parallel to the plane
+    if (v1[axis] == v2[axis])
+        return {};
+
+    glm::vec3 start, end;
+    if (v1[axis] < planePos) {
+        start = v1;
+        end = v2;
+    } else {
+        start = v2;
+        end = v1;
+    }
+
+    glm::vec3 edge = end - start;
+    float intersectPos = (planePos - start[axis]) / edge[axis];
+    if (intersectPos >= 0.0f && intersectPos <= 1.0f) {
+        return start + intersectPos * edge;
+    } else {
+        return {};
+    }
+}
+
 static AABB clipTriangleBounds(AABB bounds, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3)
+{
+    // Vertices ordered such that the current and next vertex share an edge
+    // Every half plane might "cut off" one vertex and replace it by two vertices.
+    // So the maximum number of vertices is 3 + 8 = 11
+    eastl::fixed_vector<glm::vec3, 11> orderedVertices = { v1, v2, v3 };
+
+    // For each axis
+    for (int axis = 0; axis < 3; axis++) {
+        // For each side of the bounding box along the axis
+        for (size_t p = 0; p < 2; p++) {
+            // Define axis-aligned half plane
+            float planePos = (p == 0 ? bounds.min[axis] : bounds.max[axis]);
+            float planeNormalDirection = (p == 0 ? 1.0f : -1.0f);
+            glm::vec3 planeNormal = glm::vec3(0);
+            planeNormal[axis] = planeNormalDirection;
+
+            // Loop through all the vertices; keep vertices that are inside the half plane and add new vertices at intersections between edges and the half plane
+            eastl::fixed_vector<glm::vec3, 11> newVertices;
+            for (int i = 0; i < orderedVertices.size(); i++) {
+                glm::vec3 currentVertex = orderedVertices[i];
+                glm::vec3 nextVertex = orderedVertices[(i + 1) % orderedVertices.size()];
+
+                // Check whether the current and next node are on the correct side of the half plane
+                bool containsCurrent = (currentVertex[axis] - planePos) * planeNormalDirection >= 0.0f;
+                bool containsNext = (nextVertex[axis] - planePos) * planeNormalDirection >= 0.0f;
+
+                if (containsCurrent)
+                    newVertices.push_back(currentVertex);
+
+                if (containsCurrent != containsNext) { // Going in / out of the plane
+                    auto intersectionOpt = lineAxisAlignedPlaneIntersection(currentVertex, nextVertex, axis, planePos);
+                    assert(intersectionOpt);
+                    newVertices.push_back(*intersectionOpt);
+                }
+            }
+            orderedVertices = std::move(newVertices);
+        }
+    }
+
+    AABB outBounds;
+    for (auto vertex : orderedVertices)
+        outBounds.fit(vertex);
+    return outBounds;
+}
+
+/*static AABB clipTriangleBounds(AABB bounds, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3)
 {
     std::vector<glm::vec3> v = { v1, v2, v3 };
     std::vector<glm::vec3> newV;
@@ -249,127 +292,6 @@ static AABB clipTriangleBounds(AABB bounds, glm::vec3 v1, glm::vec3 v2, glm::vec
     triangleBounds.min = min;
     triangleBounds.max = max;
     return triangleBounds.intersection(bounds); // Prevent floating point drift errors
-}
-
-/*static AABB clipTrianglePlanes(int axis, float leftPlane, float rightPlane, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3, const AABB& inBounds)
-{
-    struct Event {
-        float position;
-        std::optional<glm::vec3> vertex;
-
-        bool operator<(const Event& other) const { return position < other.position; };
-    };
-
-    // Dumb array implementation requires extra indentation, messing with clang-format
-    std::array<Event, 5> events = { { { v1[axis], v1 },
-        { v2[axis], v2 },
-        { v3[axis], v3 },
-        { leftPlane },
-        { rightPlane } } };
-    std::sort(events.begin(), events.end());
-
-    // Simple sweep-plane algorithm to build the bounds of the triangle in between the two planes
-    AABB bounds;
-    std::vector<float> visitedPlanes;
-    std::vector<glm::vec3> visitedVertices;
-    float prevEvent = std::numeric_limits<float>::lowest();
-    for (const auto& ev : events) {
-        assert(ev.position >= prevEvent);
-        prevEvent = ev.position;
-
-        if (ev.vertex) {
-            // Vertex evetn
-            glm::vec3 vertex = *ev.vertex;
-
-            //assert(!(visitedVertices.size() == 2 && (visitedPlanes.size() == 0 || visitedPlanes.size() == 2)));
-
-            // Expand bounds if the vertex is in between the two planes
-            if (visitedPlanes.size() == 1) {
-                bounds.fit(vertex);
-            }
-
-            // Find intersection points between the splitting plane(s) and edge(s) to the previously visited vertices
-            for (glm::vec3 otherVertex : visitedVertices) {
-                glm::vec3 edge = vertex - otherVertex;
-                for (float splittingPlane : visitedPlanes) {
-                    float intersectPosAlongEdge = (splittingPlane - otherVertex[axis]) / edge[axis];
-                    if (intersectPosAlongEdge > 0.0f && intersectPosAlongEdge < 1.0f) {
-                        glm::vec3 intersectPoint = otherVertex + intersectPosAlongEdge * edge;
-                        bounds.fit(intersectPoint);
-                    }
-                }
-            }
-
-            visitedVertices.push_back(vertex);
-        } else {
-            // Split plane event
-            visitedPlanes.push_back(ev.position);
-        }
-    }
-
-    assert(visitedVertices.size() == 3);
-
-    AABB triangleBounds;
-    triangleBounds.fit(v1);
-    triangleBounds.fit(v2);
-    triangleBounds.fit(v3);
-
-    assert(triangleBounds.fullyContains(bounds));
-
-    return bounds.intersection(inBounds);
-}
-
-std::pair<AABB, AABB> clipTrianglePlane(int axis, float planePosition, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3, const AABB& inBounds)
-{
-    struct Event {
-        float position;
-        std::optional<glm::vec3> vertex;
-
-        bool operator<(const Event& other) const { return position < other.position; };
-    };
-
-    // Dumb array implementation requires extra indentation, messing with clang-format
-    std::array<Event, 5> events = { { { v1[axis], v1 },
-        { v2[axis], v2 },
-        { v3[axis], v3 },
-        { planePosition } } };
-    std::sort(events.begin(), events.end());
-
-    // Simple sweep-plane algorithm to build the bounds of the triangle in between the two planes
-    AABB leftBounds, rightBounds;
-    bool passedPlane = false;
-    std::vector<glm::vec3> visitedVertices;
-    for (const auto& ev : events) {
-        if (ev.vertex) {
-            // Vertex evetn
-            glm::vec3 vertex = *ev.vertex;
-
-            // Expand bounds if the vertex is in between the two planes
-            if (passedPlane)
-                leftBounds.fit(vertex);
-            else
-                rightBounds.fit(vertex);
-
-            // Find intersection points between the splitting plane(s) and edge(s) to the previously visited vertices
-            for (glm::vec3 otherVertex : visitedVertices) {
-                glm::vec3 edge = vertex - otherVertex;
-                if (passedPlane) {
-                    float intersectPosAlongEdge = (planePosition - otherVertex[axis]) / edge[axis];
-                    if (intersectPosAlongEdge > 0.0f && intersectPosAlongEdge < 1.0f) {
-                        glm::vec3 intersectPoint = otherVertex + intersectPosAlongEdge * edge;
-                        leftBounds.fit(intersectPoint);
-                        rightBounds.fit(intersectPoint);
-                    }
-                }
-            }
-
-            visitedVertices.push_back(vertex);
-        } else {
-            // Split plane event
-            passedPlane = true;
-        }
-    }
-
-    return { leftBounds.intersection(inBounds), rightBounds.intersection(inBounds) };
 }*/
+
 }
