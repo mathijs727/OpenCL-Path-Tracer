@@ -12,7 +12,7 @@ Make sure that your GPU manufacturers OpenCL SDK is installed:
 Download and install [vcpkg](https://github.com/Microsoft/vcpkg) and use it to install the dependencies:
 
 ```bash
-vcpkg install glew glfw3 freeimage assimp glm eastl
+vcpkg install glew glfw3 freeimage assimp glm
 ```
 
 
@@ -30,4 +30,4 @@ cmake -DCMAKE_TOOLCHAIN_FILE="[PATH_TO_VCPKG]\\scripts\\buildsystems\\vcpkg.cmak
 - FreeImage
 - Assimp
 - glm
-- eastl
+- eastl (included as git submodule)
