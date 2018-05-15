@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <iostream>
+#include <limits>
 #include <numeric>
 #include <optional>
 
@@ -13,10 +14,12 @@ static constexpr size_t BVH_OBJECT_BIN_COUNT = 32;
 struct ObjectBin {
     size_t primCount = 0;
     AABB bounds;
+    float leftPlane = std::numeric_limits<float>::max();
+    float rightPlane = std::numeric_limits<float>::lowest();
 
     ObjectBin operator+(const ObjectBin& other) const
     {
-        return { primCount + other.primCount, bounds + other.bounds };
+        return { primCount + other.primCount, bounds + other.bounds, std::min(leftPlane, other.leftPlane), std::max(rightPlane, other.rightPlane) };
     }
 };
 
@@ -54,7 +57,8 @@ std::optional<ObjectSplit> findObjectSplitBinned(const AABB& nodeBounds, gsl::sp
             // SAH: Surface Area Heuristic
             float sah = mergedLeftBins.primCount * mergedLeftBins.bounds.surfaceArea() + mergedRightBins.primCount * mergedRightBins.bounds.surfaceArea();
             if ((!bestSplit || sah < bestSplit->sah) && sah < currentNodeSAH) { // Lower surface area heuristic is better
-                float position = nodeBounds.min[axis] + splitPosition * (extent[axis] / BVH_OBJECT_BIN_COUNT);
+                assert(mergedLeftBins.rightPlane == mergedRightBins.leftPlane);
+                float position = mergedLeftBins.rightPlane;
                 bestSplit = ObjectSplit{
                     axis,
                     position,
@@ -92,10 +96,17 @@ static std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> performObjectBinning(const AA
 {
     glm::vec3 extent = nodeBounds.max - nodeBounds.min;
 
-    // Loop through the triangles and calculate bin dimensions and primitive counts
-    std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> bins;
     float k1 = BVH_OBJECT_BIN_COUNT / extent[axis];
     float k1Inv = extent[axis] / BVH_OBJECT_BIN_COUNT;
+
+    // Loop through the triangles and calculate bin dimensions and primitive counts
+    std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> bins;
+    for (size_t binID = 0; binID < BVH_OBJECT_BIN_COUNT; binID++) {
+        // Store side planes so we can compare with them without having to worry about floating point drift when recomputing them.
+        bins[binID].leftPlane = binID == 0 ? nodeBounds.min[axis] : nodeBounds.min[axis] + binID * k1Inv;
+        bins[binID].rightPlane = binID == BVH_OBJECT_BIN_COUNT - 1 ? nodeBounds.max[axis] : nodeBounds.min[axis] + (binID + 1) * k1Inv;
+    }
+
     for (const auto& primitive : primitives) {
         // Calculate the bin ID as described in the paper
         float primCenter = primitive.bounds.center()[axis];
@@ -103,11 +114,10 @@ static std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> performObjectBinning(const AA
         size_t binID = std::min(static_cast<size_t>(x), BVH_OBJECT_BIN_COUNT - 1); // Prevent out of bounds (if centroid on the right bound)
 
         // Check against the bins left and right bounds to compensate for floating point drift
-        float leftBound = nodeBounds.min[axis] + binID * k1Inv;
-        float rightBound = nodeBounds.min[axis] + (binID + 1) * k1Inv;
-        if (primCenter < leftBound)
+        // Left (min) bound is inclusive, right (max) bound is exclusve
+        while (primCenter < bins[binID].leftPlane)
             binID--;
-        else if (primCenter >= rightBound)
+        while (primCenter >= bins[binID].rightPlane && binID != BVH_OBJECT_BIN_COUNT - 1)
             binID++;
 
         auto& bin = bins[binID];
