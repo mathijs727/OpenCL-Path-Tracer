@@ -30,7 +30,6 @@ struct AABB {
     bool operator==(const AABB& other) const;
 
     glm::vec3 center() const;
-    glm::vec3 size() const;
     glm::vec3 extent() const;
     float surfaceArea() const;
 };

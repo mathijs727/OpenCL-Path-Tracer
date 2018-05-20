@@ -13,12 +13,9 @@ namespace raytracer {
 struct SpatialSplit {
     int axis;
     float position;
-
-    size_t left;
-    size_t right;
     AABB leftBounds;
     AABB rightBounds;
-    float sah = std::numeric_limits<float>::max();
+    float partialSAH = std::numeric_limits<float>::max();
 };
 
 std::optional<SpatialSplit> findSpatialSplitBinned(

@@ -9,7 +9,7 @@
 
 namespace raytracer {
 
-static constexpr size_t BVH_OBJECT_BIN_COUNT = 32;
+static constexpr int BVH_OBJECT_BIN_COUNT = 32;
 
 struct ObjectBin {
     size_t primCount = 0;
@@ -27,16 +27,14 @@ static std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> performObjectBinning(const AA
 
 std::optional<ObjectSplit> findObjectSplitBinned(const AABB& nodeBounds, gsl::span<const PrimitiveData> primitives, const OriginalPrimitives&, gsl::span<const int> axisToConsider)
 {
-    // Leaf nodes should have at least 3 primitives
-    if (primitives.size() < 4)
-        return {};
-
-    glm::vec3 extent = nodeBounds.max - nodeBounds.min;
-    float currentNodeSAH = nodeBounds.surfaceArea() * primitives.size();
+    glm::vec3 extent = nodeBounds.extent();
 
     // For all three axis
     std::optional<ObjectSplit> bestSplit;
     for (int axis : axisToConsider) {
+        if (extent[axis] <= std::numeric_limits<float>::min())
+            continue;
+
         // Build a histogram based on the position of the bound centers along the given axis
         auto bins = performObjectBinning(nodeBounds, axis, primitives);
 
@@ -55,8 +53,8 @@ std::optional<ObjectSplit> findObjectSplitBinned(const AABB& nodeBounds, gsl::sp
                 continue;
 
             // SAH: Surface Area Heuristic
-            float sah = mergedLeftBins.primCount * mergedLeftBins.bounds.surfaceArea() + mergedRightBins.primCount * mergedRightBins.bounds.surfaceArea();
-            if ((!bestSplit || sah < bestSplit->sah) && sah < currentNodeSAH) { // Lower surface area heuristic is better
+            float partialSAH = mergedLeftBins.primCount * mergedLeftBins.bounds.surfaceArea() + mergedRightBins.primCount * mergedRightBins.bounds.surfaceArea();
+            if (!bestSplit || partialSAH < bestSplit->partialSAH) { // Lower surface area heuristic is better
                 assert(mergedLeftBins.rightPlane == mergedRightBins.leftPlane);
                 float position = mergedLeftBins.rightPlane;
                 bestSplit = ObjectSplit{
@@ -64,7 +62,7 @@ std::optional<ObjectSplit> findObjectSplitBinned(const AABB& nodeBounds, gsl::sp
                     position,
                     mergedLeftBins.bounds,
                     mergedRightBins.bounds,
-                    sah
+                    partialSAH
                 };
             }
         }
@@ -111,7 +109,7 @@ static std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> performObjectBinning(const AA
         // Calculate the bin ID as described in the paper
         float primCenter = primitive.bounds.center()[axis];
         float x = k1 * (primCenter - nodeBounds.min[axis]);
-        size_t binID = std::min(static_cast<size_t>(x), BVH_OBJECT_BIN_COUNT - 1); // Prevent out of bounds (if centroid on the right bound)
+        size_t binID = std::min(static_cast<int>(x), BVH_OBJECT_BIN_COUNT - 1); // Prevent out of bounds (if centroid on the right bound)
 
         // Check against the bins left and right bounds to compensate for floating point drift
         // Left (min) bound is inclusive, right (max) bound is exclusve

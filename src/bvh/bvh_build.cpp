@@ -8,7 +8,10 @@
 
 namespace raytracer {
 
+static constexpr int MIN_PRIMS_PER_LEAF = 3;
 static constexpr float SPATIAL_SPLIT_ALPHA = 1e-05f;
+static constexpr float SAH_TRAVERSAL_COST = 1.5f;
+static constexpr float SAH_INTERSECTION_COST = 1.0f;
 
 static int maxIndex(glm::vec3 vec)
 {
@@ -23,6 +26,12 @@ static int maxIndex(glm::vec3 vec)
         else
             return 2;
     }
+}
+
+static float getSAH(float partialSAH, const AABB& parentBounds)
+{
+    // Partial SAH: SA(B_1)*|P_1| + SA(B_2)*|P_2|
+    return SAH_TRAVERSAL_COST + partialSAH * SAH_INTERSECTION_COST / parentBounds.surfaceArea();
 }
 
 static std::vector<PrimitiveData> generatePrimitives(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
@@ -156,7 +165,11 @@ BvhBuildReturnType buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl
     OriginalPrimitives originalPrimitives{ vertices, triangles };
 
     auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVHInPlace(std::move(primitives), [&](const SubBvhNode& node, gsl::span<PrimitiveData> primitives) -> std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>> {
-        if (auto split = findObjectSplitBinned(node.bounds, primitives, originalPrimitives); split) {
+        if (primitives.size() <= MIN_PRIMS_PER_LEAF)
+            return {};
+
+        float thresholdSAH = primitives.size() * SAH_INTERSECTION_COST;
+        if (auto split = findObjectSplitBinned(node.bounds, primitives, originalPrimitives); split && getSAH(split->partialSAH, node.bounds) < thresholdSAH) {
             size_t splitIndex = performObjectSplitInPlace(primitives, *split);
             auto leftPrims = primitives.subspan(0, splitIndex);
             auto rightPrims = primitives.subspan(splitIndex, primitives.length() - splitIndex);
@@ -181,9 +194,12 @@ BvhBuildReturnType buildBinnedFastBVH(gsl::span<const VertexSceneData> vertices,
     OriginalPrimitives originalPrimitives{ vertices, triangles };
 
     auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVHInPlace(std::move(primitives), [&](const SubBvhNode& node, gsl::span<PrimitiveData> primitives) -> std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>> {
-        glm::vec3 extent = node.bounds.extent();
-        int axis = maxIndex(extent);
-        if (auto split = findObjectSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ axis }); split) {
+        if (primitives.size() <= MIN_PRIMS_PER_LEAF)
+            return {};
+
+        float thresholdSAH = primitives.size() * SAH_INTERSECTION_COST;
+        int axis = maxIndex(node.bounds.extent());
+        if (auto split = findObjectSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ axis }); split && getSAH(split->partialSAH, node.bounds) < thresholdSAH) {
             size_t splitIndex = performObjectSplitInPlace(primitives, *split);
             auto leftPrims = primitives.subspan(0, splitIndex);
             auto rightPrims = primitives.subspan(splitIndex, primitives.length() - splitIndex);
@@ -203,24 +219,25 @@ BvhBuildReturnType buildBinnedFastBVH(gsl::span<const VertexSceneData> vertices,
 
 BvhBuildReturnType buildSpatialSplitBVH(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
 {
-    // using SplitFunc = std::function<std::optional<std::pair<AABB, AABB>>(const SubBvhNode& node, gsl::span<const PrimitiveData>, PrimInsertIter left, PrimInsertIter right)>;
     auto startPrimitives = generatePrimitives(vertices, triangles); // Create primitive refences
     OriginalPrimitives originalPrimitives{ vertices, triangles };
 
     auto rootNodeSurfaceArea = computeBounds(startPrimitives).surfaceArea();
 
     auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVH(std::move(startPrimitives), [&](const SubBvhNode& node, gsl::span<const PrimitiveData> primitives, PrimInsertIter left, PrimInsertIter right) -> std::optional<std::pair<AABB, AABB>> {
-        glm::vec3 extent = node.bounds.extent();
-        float currentSAH = primitives.size() * node.bounds.surfaceArea();
-        if (auto objectSplitOpt = findObjectSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); objectSplitOpt && objectSplitOpt->sah < currentSAH) {
+        if (primitives.size() <= MIN_PRIMS_PER_LEAF)
+            return {};
+
+        float thresholdSAH = primitives.size() * SAH_INTERSECTION_COST;
+        if (auto objectSplitOpt = findObjectSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); objectSplitOpt && getSAH(objectSplitOpt->partialSAH, node.bounds) < thresholdSAH) {
             float alpha = objectSplitOpt->leftBounds.intersection(objectSplitOpt->rightBounds).surfaceArea() / rootNodeSurfaceArea;
             if (alpha > SPATIAL_SPLIT_ALPHA) {
-                if (auto spatialSplitOpt = findSpatialSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); spatialSplitOpt && spatialSplitOpt->sah < currentSAH) {
+                if (auto spatialSplitOpt = findSpatialSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); spatialSplitOpt && getSAH(spatialSplitOpt->partialSAH, node.bounds) < thresholdSAH) {
                     return performSpatialSplit(primitives, originalPrimitives, *spatialSplitOpt, left, right);
                 }
             }
             return performObjectSplit(primitives, originalPrimitives, *objectSplitOpt, left, right);
-        } else if (auto spatialSplitOpt = findSpatialSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); spatialSplitOpt && spatialSplitOpt->sah < currentSAH) {
+        } else if (auto spatialSplitOpt = findSpatialSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); spatialSplitOpt && getSAH(spatialSplitOpt->partialSAH, node.bounds) < thresholdSAH) {
             return performSpatialSplit(primitives, originalPrimitives, *spatialSplitOpt, left, right);
         } else {
             return {};

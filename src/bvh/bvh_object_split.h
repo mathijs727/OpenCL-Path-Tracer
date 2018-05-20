@@ -20,7 +20,7 @@ struct ObjectSplit {
 
     AABB leftBounds;
     AABB rightBounds;
-    float sah = std::numeric_limits<float>::max();
+    float partialSAH = std::numeric_limits<float>::max();
 };
 
 std::optional<ObjectSplit> findObjectSplitBinned(

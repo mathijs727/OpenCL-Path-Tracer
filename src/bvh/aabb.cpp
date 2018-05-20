@@ -64,19 +64,14 @@ glm::vec3 AABB::center() const
     return (min + max) / 2.0f;
 }
 
-glm::vec3 AABB::size() const
+glm::vec3 AABB::extent() const
 {
     return glm::max(glm::vec3(0.0f), max - min);
 }
 
-glm::vec3 AABB::extent() const
-{
-    return max - min;
-}
-
 float AABB::surfaceArea() const
 {
-    glm::vec3 s = size();
-    return 2.0f * (s.x * s.y + s.y * s.z + s.z * s.x);
+    glm::vec3 e = extent();
+    return 2.0f * (e.x * e.y + e.y * e.z + e.z * e.x);
 }
 }
