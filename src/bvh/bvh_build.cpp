@@ -8,6 +8,8 @@
 
 namespace raytracer {
 
+static constexpr float SPATIAL_SPLIT_ALPHA = 1e-05f;
+
 static int maxIndex(glm::vec3 vec)
 {
     if (vec[0] > vec[1]) {
@@ -209,19 +211,16 @@ BvhBuildReturnType buildSpatialSplitBVH(gsl::span<const VertexSceneData> vertice
 
     auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVH(std::move(startPrimitives), [&](const SubBvhNode& node, gsl::span<const PrimitiveData> primitives, PrimInsertIter left, PrimInsertIter right) -> std::optional<std::pair<AABB, AABB>> {
         glm::vec3 extent = node.bounds.extent();
-        if (auto objectSplitOpt = findObjectSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); objectSplitOpt) {
+        float currentSAH = primitives.size() * node.bounds.surfaceArea();
+        if (auto objectSplitOpt = findObjectSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); objectSplitOpt && objectSplitOpt->sah < currentSAH) {
             float alpha = objectSplitOpt->leftBounds.intersection(objectSplitOpt->rightBounds).surfaceArea() / rootNodeSurfaceArea;
-            if (alpha > 1e-05f) {
-                if (auto spatialSplitOpt = findSpatialSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); spatialSplitOpt) {
-                    //if (spatialSplitOpt->sah < objectSplitOpt->sah) {
-                    //std::cout << "SPATIAL SPLIT" << std::endl;
+            if (alpha > SPATIAL_SPLIT_ALPHA) {
+                if (auto spatialSplitOpt = findSpatialSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); spatialSplitOpt && spatialSplitOpt->sah < currentSAH) {
                     return performSpatialSplit(primitives, originalPrimitives, *spatialSplitOpt, left, right);
-                    //}
                 }
             }
             return performObjectSplit(primitives, originalPrimitives, *objectSplitOpt, left, right);
-        } else if (auto spatialSplitOpt = findSpatialSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); spatialSplitOpt) {
-            std::cout << "SPATIAL SPLIT" << std::endl;
+        } else if (auto spatialSplitOpt = findSpatialSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ 0, 1, 2 }); spatialSplitOpt && spatialSplitOpt->sah < currentSAH) {
             return performSpatialSplit(primitives, originalPrimitives, *spatialSplitOpt, left, right);
         } else {
             return {};

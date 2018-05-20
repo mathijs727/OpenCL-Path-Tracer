@@ -99,14 +99,14 @@ static std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> performObjectBinning(const AA
     float k1 = BVH_OBJECT_BIN_COUNT / extent[axis];
     float k1Inv = extent[axis] / BVH_OBJECT_BIN_COUNT;
 
-    // Loop through the triangles and calculate bin dimensions and primitive counts
+    // Store side planes so we can compare with them without having to worry about floating point drift when recomputing them.
     std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> bins;
     for (size_t binID = 0; binID < BVH_OBJECT_BIN_COUNT; binID++) {
-        // Store side planes so we can compare with them without having to worry about floating point drift when recomputing them.
         bins[binID].leftPlane = binID == 0 ? nodeBounds.min[axis] : nodeBounds.min[axis] + binID * k1Inv;
         bins[binID].rightPlane = binID == BVH_OBJECT_BIN_COUNT - 1 ? nodeBounds.max[axis] : nodeBounds.min[axis] + (binID + 1) * k1Inv;
     }
 
+    // Loop through the triangles and calculate bin dimensions and primitive counts
     for (const auto& primitive : primitives) {
         // Calculate the bin ID as described in the paper
         float primCenter = primitive.bounds.center()[axis];

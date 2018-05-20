@@ -93,8 +93,6 @@ static TopBvhNode createNode(const SceneNode& sceneNode, const glm::mat4& transf
     assert(sceneNode.subBvhRootID);
     assert(sceneNode.meshID);
 
-    // bvhMeshPair.meshPtr->getBvhRootNode() + bvhMeshPair.bvhRootNodeID;
-
     TopBvhNode node;
     node.subBvhNode = *sceneNode.subBvhRootID + meshBvhOffsets[*sceneNode.meshID];
     node.bounds = calcTransformedAABB(sceneNode.bounds, transform);

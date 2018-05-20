@@ -14,6 +14,8 @@ struct SpatialSplit {
     int axis;
     float position;
 
+    size_t left;
+    size_t right;
     AABB leftBounds;
     AABB rightBounds;
     float sah = std::numeric_limits<float>::max();
