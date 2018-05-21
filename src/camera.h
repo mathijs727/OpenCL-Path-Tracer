@@ -1,6 +1,6 @@
 #pragma once
 #include "transform.h"
-#include "types.h"
+#include "opencl/cl_helpers.h"
 
 namespace raytracer {
 

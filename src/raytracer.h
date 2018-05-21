@@ -48,8 +48,7 @@ private:
         uint32_t numEmissiveTriangles,
         uint32_t numMaterials,
         uint32_t numSubBvhNodes,
-        uint32_t numTopBvhNodes,
-        uint32_t numLights);
+        uint32_t numTopBvhNodes);
 
     cl::Kernel loadKernel(std::string_view fileName, std::string_view funcName);
 

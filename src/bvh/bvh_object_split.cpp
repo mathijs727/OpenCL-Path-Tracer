@@ -2,10 +2,8 @@
 #include "bvh_build.h"
 #include <algorithm>
 #include <array>
-#include <iostream>
 #include <limits>
 #include <numeric>
-#include <optional>
 
 namespace raytracer {
 

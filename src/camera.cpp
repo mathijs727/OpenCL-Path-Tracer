@@ -1,5 +1,6 @@
 #include "camera.h"
 #include <glm/detail/func_trigonometric.hpp>
+#include <glm/glm.hpp>
 
 namespace raytracer {
 Camera::Camera(const Transform& transform, float fov, float aspectRatio, float focalDistance)

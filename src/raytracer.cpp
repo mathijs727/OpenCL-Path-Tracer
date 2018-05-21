@@ -231,7 +231,7 @@ void RayTracer::initBuffersAndTransferStaticData(std::shared_ptr<Scene> scene, c
     }
 
     initBuffers(numVertices, numTriangles, MAX_NUM_LIGHTS, numMaterials,
-        numBvhNodes, (uint32_t)scene->getMeshes().size() * 2, (uint32_t)scene->getLights().size());
+        numBvhNodes, (uint32_t)scene->getMeshes().size() * 2);
 
     // Collect all static geometry and upload it to the GPU
     for (auto& meshBvhPair : scene->getMeshes()) {
@@ -625,8 +625,7 @@ void RayTracer::initBuffers(
     uint32_t numEmissiveTriangles,
     uint32_t numMaterials,
     uint32_t numSubBvhNodes,
-    uint32_t numTopBvhNodes,
-    uint32_t numLights)
+    uint32_t numTopBvhNodes)
 {
     cl_int err;
 

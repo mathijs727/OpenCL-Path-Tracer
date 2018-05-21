@@ -2,8 +2,6 @@
 #include <algorithm>
 #include <array>
 #include <eastl/fixed_vector.h>
-#include <optional>
-#include <tuple>
 
 namespace raytracer {
 

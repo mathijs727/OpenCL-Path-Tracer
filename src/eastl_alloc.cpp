@@ -1,5 +1,5 @@
 #include "eastl_alloc.h"
-#include <cstdlib> // Malloc
+#include <cstdlib> // contains malloc
 
 void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
 {

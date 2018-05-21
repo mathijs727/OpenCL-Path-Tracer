@@ -1,4 +1,5 @@
 #pragma once
+#include "bvh/aabb.h"
 #include "bvh/bvh_nodes.h"
 #include "material.h"
 #include "vertices.h"

@@ -1,18 +1,12 @@
 #pragma once
 #include "opencl/cl_gl_includes.h"
-#include "types.h"
+#include "opencl/cl_helpers.h"
 #include <glm/glm.hpp>
 
 namespace raytracer {
 struct AABB {
-    union {
-        glm::vec3 min;
-        cl_float3 __min_cl;
-    };
-    union {
-        glm::vec3 max;
-        cl_float3 __max_cl;
-    };
+    CL_VEC3(min);
+    CL_VEC3(max);
 
     AABB();
     AABB(glm::vec3 min, glm::vec3 max);

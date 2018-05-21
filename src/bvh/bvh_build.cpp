@@ -1,4 +1,5 @@
 #include "bvh_build.h"
+#include "aabb.h"
 #include "bvh_allocator.h"
 #include "bvh_object_split.h"
 #include "bvh_spatial_split.h"

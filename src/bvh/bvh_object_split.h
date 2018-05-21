@@ -1,18 +1,12 @@
 #pragma once
 #include "aabb.h"
 #include "bvh_nodes.h"
-#include "types.h"
-#include "vertices.h"
-#include <cstdint>
+#include "opencl/cl_helpers.h"
 #include <gsl/gsl>
 #include <limits>
 #include <optional>
-#include <tuple>
-#include <vector>
 
 namespace raytracer {
-
-//std::tuple<uint32_t, std::vector<TriangleSceneData>, std::vector<SubBVHNode>> buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles);
 
 struct ObjectSplit {
     int axis;

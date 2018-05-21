@@ -1,9 +1,7 @@
 #pragma once
-#include "light.h"
 #include "model/material.h"
 #include "model/mesh.h"
 #include "ray.h"
-#include "shapes.h"
 #include <gsl/gsl>
 #include <memory>
 #include <optional>
@@ -43,17 +41,13 @@ public:
 
     const SceneNode& addNode(const std::shared_ptr<IMesh> object, const Transform& transform = {}, SceneNode* parent = nullptr);
 
-    void addLight(const Light& light);
-
     SceneNode& getRootNode() { return m_rootNode; }
     const SceneNode& getRootNode() const { return m_rootNode; }
-    gsl::span<const Light> getLights() const { return m_lights; };
     gsl::span<MeshBvhPair> getMeshes() { return m_meshes; };
 
 private:
     SceneNode m_rootNode;
 
-    std::vector<Light> m_lights;
     std::unordered_map<const IMesh*, uint32_t> m_meshIDMapping;
     std::vector<MeshBvhPair> m_meshes;
 };

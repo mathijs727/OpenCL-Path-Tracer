@@ -1,7 +1,6 @@
 #pragma once
 #include "bvh_nodes.h"
 #include "model/mesh.h"
-#include "types.h"
 #include "vertices.h"
 #include <gsl/gsl>
 

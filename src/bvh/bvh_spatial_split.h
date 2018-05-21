@@ -1,12 +1,9 @@
 #pragma once
 #include "aabb.h"
 #include "bvh_nodes.h"
-#include "vertices.h"
-#include <cstdint>
 #include <gsl/gsl>
 #include <optional>
 #include <tuple>
-#include <vector>
 
 // Spatial split BVH
 // http://www.nvidia.com/docs/IO/77714/sbvh.pdf

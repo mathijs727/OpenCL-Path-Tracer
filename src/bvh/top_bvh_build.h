@@ -1,8 +1,7 @@
 #pragma once
 #include "bvh_nodes.h"
-#include "types.h"
-#include <glm/glm.hpp>
 #include <gsl/gsl>
+#include <tuple>
 #include <vector>
 
 namespace raytracer {

@@ -1,10 +1,10 @@
 #include "mesh.h"
 #include "bvh/bvh_build.h"
+#include "mesh_helpers.h"
 #include "timer.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
-#include <cassert>
 #include <fstream>
 #include <iostream>
 #include <stack>
@@ -111,10 +111,6 @@ void Mesh::addSubMesh(
         triangle.indices = face + vertexOffset;
         triangle.materialIndex = materialId;
         m_triangles.push_back(triangle);
-
-        // Doesnt work if SBVH is gonna mess up triangle order anyways
-        //if (emissive)
-        //	_emissive_triangles.push_back((uint32_t)_triangles.size() - 1);
     }
 }
 
@@ -166,9 +162,6 @@ void Mesh::loadFromFile(
             glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
             for (unsigned i = 0; i < current.node->mNumMeshes; ++i) {
                 addSubMesh(scene, current.node->mMeshes[i], cur_transform, path, textureArray, overrideMaterial);
-                //if (!success) std::cout << "Mesh failed loading! reason: " << importer.GetErrorString() << std::endl;
-                //else std::cout << "Mesh imported! vertices: " << mesh._vertices.size() << ", indices: " << mesh._faces.size() << std::endl;
-                //out_vec.push_back(mesh);
             }
             for (unsigned i = 0; i < current.node->mNumChildren; ++i) {
                 stack.push(StackElement(current.node->mChildren[i], cur_transform));

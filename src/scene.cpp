@@ -37,8 +37,4 @@ const SceneNode& Scene::addNode(std::shared_ptr<IMesh> object, const Transform& 
     return newChildRef;
 }
 
-void Scene::addLight(const Light& light)
-{
-    m_lights.push_back(light);
-}
 }

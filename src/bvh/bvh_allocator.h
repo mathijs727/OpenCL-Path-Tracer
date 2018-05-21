@@ -1,6 +1,5 @@
 #pragma once
 #include "bvh_nodes.h"
-#include <cstdint>
 #include <vector>
 
 namespace raytracer {

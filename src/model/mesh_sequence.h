@@ -1,11 +1,11 @@
 #pragma once
-#include "bvh/bvh_nodes.h"
 #include "imesh.h"
+#include "material.h"
 #include "texture.h"
 #include "transform.h"
-#include "types.h"
 #include "vertices.h"
-#include <gsl/gsl_util>
+#include <glm/glm.hpp>
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -19,7 +19,6 @@ public:
     MeshSequence(std::string_view fileName, const Transform& transform, bool refitting, UniqueTextureArray& textureArray);
     MeshSequence(gsl::span<std::string_view> files, bool refitting, UniqueTextureArray& textureArray);
     MeshSequence(gsl::span<std::string_view> files, const Transform& transform, bool refitting, UniqueTextureArray& textureArray);
-    //MeshSequence() = default;
     ~MeshSequence() = default;
 
     void goToNextFrame();

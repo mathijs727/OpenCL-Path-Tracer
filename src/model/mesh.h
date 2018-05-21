@@ -1,12 +1,9 @@
 #pragma once
 #include "imesh.h"
 #include "material.h"
-#include "mesh_helpers.h"
-#include "shapes.h"
 #include "texture.h"
 #include "transform.h"
 #include "vertices.h"
-
 #include <glm/glm.hpp>
 #include <optional>
 #include <string_view>

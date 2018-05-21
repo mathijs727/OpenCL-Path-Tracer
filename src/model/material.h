@@ -1,21 +1,9 @@
 #pragma once
-#include "light.h"
 #include "texture.h"
-#include "types.h"
-#include <algorithm>
+#include "opencl/cl_helpers.h"
 #include <glm/glm.hpp>
-#include <iostream>
-#include <unordered_map>
-#include <vector>
-
-#define RAYTRACER_EPSILON 0.0001f
-
-namespace Tmpl8 {
-class Surface;
-}
 
 namespace raytracer {
-class Scene;
 
 struct Material {
     enum class MaterialType : cl_int {

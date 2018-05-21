@@ -1,5 +1,5 @@
 #pragma once
-#include "types.h"
+#include "opencl/cl_helpers.h"
 
 union PixelRGBA {
     uint32_t value;

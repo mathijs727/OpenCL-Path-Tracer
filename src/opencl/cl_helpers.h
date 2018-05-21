@@ -2,6 +2,12 @@
 #include <glm/glm.hpp>
 #include <string_view>
 
+#define CL_VEC3(NAME)                  \
+    union {                            \
+        glm::vec3 NAME;                \
+        cl_float3 __cl_padding_##NAME; \
+    }
+
 #ifdef _DEBUG
 #define checkClErr(ERROR_CODE, MESSAGE) __checkClErr(ERROR_CODE, __FILE__, __LINE__, MESSAGE)
 #else

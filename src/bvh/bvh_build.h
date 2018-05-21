@@ -1,9 +1,7 @@
 #pragma once
-#include "aabb.h"
 #include "bvh_nodes.h"
 #include "vertices.h"
 #include <gsl/gsl>
-#include <optional>
 #include <tuple>
 #include <vector>
 
