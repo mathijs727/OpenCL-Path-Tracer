@@ -61,12 +61,14 @@ struct KernelData {
 
 namespace raytracer {
 RayTracer::RayTracer(int width, int height, std::shared_ptr<Scene> scene, const UniqueTextureArray& materialTextures, const UniqueTextureArray& skydomeTextures, GLuint outputTarget)
-    : m_samplesPerPixel(0)
+    : m_clContext()
+    , m_scene(scene)
+    , m_samplesPerPixel(0)
     , m_screenWidth(width)
     , m_screenHeight(height)
-    , m_clContext()
+    , m_topBvhRootNode{ 0, 0 }
+    , m_numEmissiveTriangles{ 0, 0 }
 {
-
     m_generateRaysKernel = loadKernel("../../assets/cl/kernel.cl", "generatePrimaryRays");
     m_intersectShadowsKernel = loadKernel("../../assets/cl/kernel.cl", "intersectShadows");
     m_intersectWalkKernel = loadKernel("../../assets/cl/kernel.cl", "intersectWalk");
@@ -74,15 +76,9 @@ RayTracer::RayTracer(int width, int height, std::shared_ptr<Scene> scene, const 
     m_updateKernelDataKernel = loadKernel("../../assets/cl/kernel.cl", "updateKernelData");
     m_accumulateKernel = loadKernel("../../assets/cl/accumulate.cl", "accumulate");
 
-    m_topBvhRootNode[0] = 0;
-    m_topBvhRootNode[1] = 0;
-
-    m_numEmissiveTriangles[0] = 0;
-    m_numEmissiveTriangles[1] = 0;
-
-    setScene(scene, materialTextures);
-    setSkydome(skydomeTextures);
-    setTarget(outputTarget);
+    initBuffersAndTransferStaticData(scene, materialTextures);
+    initAndTransferSkydome(skydomeTextures);
+    initTarget(outputTarget);
 }
 
 RayTracer::~RayTracer()
@@ -154,15 +150,40 @@ void RayTracer::rayTrace(const Camera& camera)
 #endif
 }
 
-void RayTracer::setSkydome(const UniqueTextureArray& skydomeTextureArray)
+void RayTracer::initAndTransferSkydome(const UniqueTextureArray& skydomeTextureArray)
 {
     m_skydomeTextures = std::make_unique<CLTextureArray>(skydomeTextureArray, m_clContext, 4000, 2000, true);
+}
+
+void RayTracer::initTarget(GLuint glTexture)
+{
+    cl_int err;
+#ifndef OPENCL_GL_INTEROP
+    m_clOutputImage = cl::Image2D(_context,
+        CL_MEM_WRITE_ONLY,
+        cl::ImageFormat(CL_RGBA, CL_SNORM_INT8),
+        m_screenWidth,
+        m_screenHeight,
+        0,
+        0,
+        &err);
+    checkClErr(err, "Image2D");
+
+    m_glOutputImage = glTexture;
+    size_t size = m_screenWidth * m_screenHeight * 4;
+    std::cout << "Output image cpu size: " << size << std::endl;
+    float* mem = new float[size];
+    m_cpuOutputImage = std::unique_ptr<float[]>(mem); // std::make_unique<float[]>(size);
+#else
+    m_clGLInteropOutputImage = cl::ImageGL(m_clContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, glTexture, &err);
+    checkClErr(err, "ImageGL");
+#endif
 }
 
 void RayTracer::frameTick()
 {
     // Lot of CPU work
-    copyNextAnimationFrameData();
+    transferDynamicData();
 
     m_activeBuffer = (m_activeBuffer + 1) % 2;
 }
@@ -177,10 +198,8 @@ int RayTracer::getMaxSamplesPerPixel() const
     return MAX_SAMPLES_PER_PIXEL;
 }
 
-void RayTracer::setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray& textureArray)
+void RayTracer::initBuffersAndTransferStaticData(std::shared_ptr<Scene> scene, const UniqueTextureArray& textureArray)
 {
-    m_scene = scene;
-
     // Initialize buffers
     m_numStaticVertices = 0;
     m_numStaticTriangles = 0;
@@ -267,31 +286,6 @@ void RayTracer::setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray&
     frameTick();
 }
 
-void RayTracer::setTarget(GLuint glTexture)
-{
-    cl_int err;
-#ifndef OPENCL_GL_INTEROP
-    m_clOutputImage = cl::Image2D(_context,
-        CL_MEM_WRITE_ONLY,
-        cl::ImageFormat(CL_RGBA, CL_SNORM_INT8),
-        m_screenWidth,
-        m_screenHeight,
-        0,
-        0,
-        &err);
-    checkClErr(err, "Image2D");
-
-    m_glOutputImage = glTexture;
-    size_t size = m_screenWidth * m_screenHeight * 4;
-    std::cout << "Output image cpu size: " << size << std::endl;
-    float* mem = new float[size];
-    m_cpuOutputImage = std::unique_ptr<float[]>(mem); // std::make_unique<float[]>(size);
-#else
-    m_clGLInteropOutputImage = cl::ImageGL(m_clContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, glTexture, &err);
-    checkClErr(err, "ImageGL");
-#endif
-}
-
 void RayTracer::traceRays(const Camera& camera)
 {
     auto queue = m_clContext.getGraphicsQueue();
@@ -313,9 +307,6 @@ void RayTracer::traceRays(const Camera& camera)
     data.numShadowRays = 0;
     data.maxRays = MAX_ACTIVE_RAYS;
     data.newRays = 0;
-
-    //for (int i = 0; i < 6; i++)
-    //	data._skydomeTextureIndices[i] = _skydome_tex_indices[i];
 
     cl_int err = queue.enqueueWriteBuffer(
         m_kernelDataBuffer,
@@ -503,7 +494,7 @@ void RayTracer::calculateAverageGrayscale()
               << std::endl;
 }
 
-void RayTracer::copyNextAnimationFrameData()
+void RayTracer::transferDynamicData()
 {
     auto graphicsQueue = m_clContext.getGraphicsQueue();
     auto copyQueue = m_clContext.getCopyQueue();
@@ -567,18 +558,16 @@ void RayTracer::copyNextAnimationFrameData()
     m_numEmissiveTriangles[copyBuffers] = (uint32_t)m_emissiveTrianglesHost.size();
     writeToBuffer(copyQueue, m_emissiveTrianglesBuffers[copyBuffers], gsl::make_span(m_emissiveTrianglesHost), 0, waitEvents);
 
-    if (m_verticesHost.size() > static_cast<size_t>(m_numStaticVertices)) // Dont copy if we dont have any dynamic geometry
+    if (m_verticesHost.size() > static_cast<size_t>(m_numStaticVertices)) // Only copy if there is any dynamic geometry
     {
+        // Dynamic data is appended after the static data
         writeToBuffer(copyQueue, m_verticesBuffers[copyBuffers], gsl::make_span(m_verticesHost), m_numStaticVertices, waitEvents);
         writeToBuffer(copyQueue, m_trianglesBuffers[copyBuffers], gsl::make_span(m_trianglesHost), m_numStaticTriangles, waitEvents);
         writeToBuffer(copyQueue, m_materialsBuffers[copyBuffers], gsl::make_span(m_materialsHost), m_numStaticMaterials, waitEvents);
         writeToBuffer(copyQueue, m_subBvhBuffers[copyBuffers], gsl::make_span(m_subBvhNodesHost), m_numStaticBvhNodes, waitEvents);
     }
 
-    // Update the top level BVH and copy it to the GPU on a seperate copy queue
-    //m_topBvhNodesHost.clear();
-    //auto bvhBuilder = TopLevelBvhBuilder(*m_scene.get());
-    //m_topBvhRootNode[copyBuffers] = bvhBuilder.build(m_subBvhNodesHost, m_topBvhNodesHost);
+    // Update the top level BVH and copy it to the GPU on a separate copy queue
     std::vector<uint32_t> meshBvhOffsets;
     for (auto [meshPtr, bvhIndexOffset] : m_scene->getMeshes())
         meshBvhOffsets.push_back(bvhIndexOffset);

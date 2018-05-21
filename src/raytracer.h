@@ -29,9 +29,9 @@ public:
     int getMaxSamplesPerPixel() const;
 
 private:
-    void setScene(std::shared_ptr<Scene> scene, const UniqueTextureArray& textureArray);
-    void setSkydome(const UniqueTextureArray& skydomeTextureArray);
-    void setTarget(GLuint glTexture);
+    void initBuffersAndTransferStaticData(std::shared_ptr<Scene> scene, const UniqueTextureArray& textureArray);
+    void initAndTransferSkydome(const UniqueTextureArray& skydomeTextureArray);
+    void initTarget(GLuint glTexture);
 
     void traceRays(const Camera& camera);
 
@@ -39,7 +39,7 @@ private:
     void clearAccumulationBuffer();
     void calculateAverageGrayscale();
 
-    void copyNextAnimationFrameData();
+    void transferDynamicData();
     void collectTransformedLights(const SceneNode* node, const glm::mat4& transform);
 
     void initBuffers(

@@ -94,7 +94,7 @@ void MeshSequence::buildBvh()
         m_bvhNodes.clear();
 
         // Create a new bvh using the fast binned builder
-        //std::tie(m_bvhRootNode, frame.triangles, m_bvhNodes) = buildBinnedBVH(frame.vertices, frame.triangles);
+        std::tie(m_bvhRootNode, frame.triangles, m_bvhNodes) = buildBinnedFastBVH(frame.vertices, frame.triangles);
     }
 }
 
@@ -225,8 +225,9 @@ void MeshSequence::loadFiles(gsl::span<std::string_view> files, const Transform&
 
     if (m_refitting) {
         auto& f0 = m_frames[0];
-        SbvhBuilder builder;
-        m_bvhRootNode = builder.build(f0.vertices, f0.triangles, m_bvhNodes);
+        //SbvhBuilder builder;
+        //m_bvhRootNode = builder.build(f0.vertices, f0.triangles, m_bvhNodes);
+        std::tie(m_bvhRootNode, f0.triangles, m_bvhNodes) = buildSpatialSplitBVH(f0.vertices, f0.triangles);
     }
 }
 }

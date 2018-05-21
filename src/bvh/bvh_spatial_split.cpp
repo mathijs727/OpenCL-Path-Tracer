@@ -275,7 +275,7 @@ static std::optional<AABB> clipTriangleBounds(AABB bounds, glm::vec3 v1, glm::ve
     // For each axis
     for (int axis = 0; axis < 3; axis++) {
         // For each side of the bounding box along the axis
-        for (size_t p = 0; p < 2; p++) {
+        for (int p = 0; p < 2; p++) {
             // Define axis-aligned half plane
             float planePos = (p == 0 ? bounds.min[axis] : bounds.max[axis]);
             float planeNormalDirection = (p == 0 ? 1.0f : -1.0f);
