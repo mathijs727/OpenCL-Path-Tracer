@@ -1,5 +1,5 @@
 #pragma once
-#include "texture.h"
+#include "opencl/texture.h"
 #include "opencl/cl_helpers.h"
 #include <glm/glm.hpp>
 

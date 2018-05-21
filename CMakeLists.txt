@@ -22,6 +22,7 @@ target_include_directories(assimp INTERFACE ${ASSIMP_INCLUDE_DIRS})
 target_link_libraries(assimp INTERFACE ${ASSIMP_LIBRARIES})
 
 add_subdirectory("third_party/eastl/")
+add_subdirectory("third_party/clRNG/")
 
 # Add all "*.cpp" files in the root directory
 add_executable(raytracer "")
@@ -35,21 +36,9 @@ target_link_libraries(raytracer PRIVATE
 	FreeImage
 	assimp
 	glm
-	EASTL)
-
+	EASTL
+	clRNG)
 target_compile_definitions(raytracer PUBLIC NOMINMAX=1)
-
-# Include clRNG as part of the project because it does not have a FindclRNG file.
-# Also, the code on the master branch does not compile with the latest version of gcc (7.2.0) because
-# of -Wexpansion-to-defined warnings which got turned into errors (-wall -pedantic-errors).
-set(BUILD_SHARED_LIBRARY OFF)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/libraries/clRNG/src/)
-target_include_directories(raytracer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/libraries/clRNG/src/include/)
-target_link_libraries(raytracer PRIVATE clRNG)
-
-
-# AVX2 support (Intel Haswell and higher)
-#set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-msse4.1")
 
 set_target_properties(raytracer PROPERTIES
     CXX_STANDARD 17# Require C++ 17

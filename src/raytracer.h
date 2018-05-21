@@ -1,7 +1,7 @@
 #pragma once
 #include "model/material.h"
 #include "scene.h"
-#include "texture.h"
+#include "opencl/texture.h"
 #include "vertices.h"
 #include <memory>
 #include <string_view>

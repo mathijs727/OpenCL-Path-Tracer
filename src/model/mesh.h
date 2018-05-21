@@ -1,7 +1,7 @@
 #pragma once
 #include "imesh.h"
 #include "material.h"
-#include "texture.h"
+#include "opencl/texture.h"
 #include "transform.h"
 #include "vertices.h"
 #include <glm/glm.hpp>
