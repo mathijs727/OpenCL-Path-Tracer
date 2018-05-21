@@ -63,16 +63,16 @@ static cl_ulong clrngLfsr113NextState(clrngLfsr113StreamState *currentState) {
 	cl_ulong b;
 
 	b = (((currentState->g[0] << 6) ^ currentState->g[0]) >> 13);
-	currentState->g[0] = (((currentState->g[0] & 4294967294U) << 18) ^ b);
+	currentState->g[0] = (cl_uint)(((currentState->g[0] & 4294967294U) << 18) ^ b);
 
 	b = (((currentState->g[1] << 2) ^ currentState->g[1]) >> 27);
-	currentState->g[1] = (((currentState->g[1] & 4294967288U) << 2) ^ b);
+	currentState->g[1] = (cl_uint)(((currentState->g[1] & 4294967288U) << 2) ^ b);
 
 	b = (((currentState->g[2] << 13) ^ currentState->g[2]) >> 21);
-	currentState->g[2] = (((currentState->g[2] & 4294967280U) << 7) ^ b);
+	currentState->g[2] = (cl_uint)(((currentState->g[2] & 4294967280U) << 7) ^ b);
 
 	b = (((currentState->g[3] << 3) ^ currentState->g[3]) >> 12);
-	currentState->g[3] = (((currentState->g[3] & 4294967168U) << 13) ^ b);
+	currentState->g[3] = (cl_uint)(((currentState->g[3] & 4294967168U) << 13) ^ b);
 
 	return (currentState->g[0] ^ currentState->g[1] ^ currentState->g[2] ^ currentState->g[3]);
 
@@ -85,7 +85,7 @@ static cl_ulong clrngLfsr113NextState(clrngLfsr113StreamState *currentState) {
 #define IMPLEMENT_GENERATE_FOR_TYPE(fptype) \
 	\
 	fptype clrngLfsr113RandomU01_##fptype(clrngLfsr113Stream* stream) { \
-	    return clrngLfsr113NextState(&stream->current) * Lfsr113_NORM_##fptype; \
+	    return (fptype)(clrngLfsr113NextState(&stream->current) * Lfsr113_NORM_##fptype); \
 	} \
 	\
 	cl_int clrngLfsr113RandomInteger_##fptype(clrngLfsr113Stream* stream, cl_int i, cl_int j) { \

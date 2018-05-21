@@ -127,7 +127,7 @@ static cl_ulong clrngMrg32k3aNextState(clrngMrg32k3aStreamState* currentState)
 #define IMPLEMENT_GENERATE_FOR_TYPE(fptype) \
 	\
 	fptype clrngMrg32k3aRandomU01_##fptype(clrngMrg32k3aStream* stream) { \
-	    return clrngMrg32k3aNextState(&stream->current) * Mrg32k3a_NORM_##fptype; \
+	    return (fptype)(clrngMrg32k3aNextState(&stream->current) * Mrg32k3a_NORM_##fptype); \
 	} \
 	\
 	cl_int clrngMrg32k3aRandomInteger_##fptype(clrngMrg32k3aStream* stream, cl_int i, cl_int j) { \

@@ -44,3 +44,7 @@ add_library(clRNG
 	"src/philox432.c")
 target_include_directories(clRNG PUBLIC "${CMAKE_CURRENT_LIST_DIR}/include/")
 target_link_libraries(clRNG PUBLIC OpenCL::OpenCL)
+
+if (WIN32)
+	target_compile_definitions(clRNG PRIVATE _CRT_SECURE_NO_WARNINGS=1)
+endif()# WIN32

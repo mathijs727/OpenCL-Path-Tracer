@@ -94,7 +94,7 @@ GLuint GLOutput::loadShader(const char* fileName, GLenum type)
         (std::istreambuf_iterator<char>()));
     GLuint shader = glCreateShader(type);
     const char* source = prog.c_str();
-    GLint sourceSize = prog.size();
+    GLint sourceSize = static_cast<GLint>(prog.size());
     glShaderSource(shader, 1, &source, &sourceSize);
     glCompileShader(shader);
 

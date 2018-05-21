@@ -148,7 +148,7 @@ static cl_uint clrngMrg31k3pNextState(clrngMrg31k3pStreamState* currentState)
 #define IMPLEMENT_GENERATE_FOR_TYPE(fptype) \
 	\
 	fptype clrngMrg31k3pRandomU01_##fptype(clrngMrg31k3pStream* stream) { \
-	    return clrngMrg31k3pNextState(&stream->current) * mrg31k3p_NORM_##fptype; \
+	    return (fptype)(clrngMrg31k3pNextState(&stream->current) * mrg31k3p_NORM_##fptype); \
 	} \
 	\
 	cl_int clrngMrg31k3pRandomInteger_##fptype(clrngMrg31k3pStream* stream, cl_int i, cl_int j) { \
