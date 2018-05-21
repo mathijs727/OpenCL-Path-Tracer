@@ -8,12 +8,12 @@ class BVHAllocator {
 public:
     uint32_t allocatePair();
 
-    const SubBvhNode& operator[](uint32_t i) const;
-    SubBvhNode& operator[](uint32_t i);
+    const SubBVHNode& operator[](uint32_t i) const;
+    SubBVHNode& operator[](uint32_t i);
 
-    std::vector<SubBvhNode>&& getNodesMove();
+    std::vector<SubBVHNode>&& getNodesMove();
 
 private:
-    std::vector<SubBvhNode> m_nodes;
+    std::vector<SubBVHNode> m_nodes;
 };
 }

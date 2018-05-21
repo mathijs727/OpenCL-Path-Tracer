@@ -9,7 +9,7 @@
 using namespace raytracer;
 
 uint32_t raytracer::TopLevelBvhBuilder::build(
-    std::vector<SubBvhNode>& subBvhNodes,
+    std::vector<SubBVHNode>& subBvhNodes,
     std::vector<TopBvhNode>& outTopNodes)
 {
     _sub_bvh_nodes = &subBvhNodes;
@@ -93,7 +93,7 @@ TopBvhNode raytracer::TopLevelBvhBuilder::createNode(const SceneNode* sceneGraph
     auto& bvhMeshPair = _scene.getMeshes()[*sceneGraphNode->meshID];
 
     std::cout << "bvhMeshPair.meshPtr->getBvhRootNode(): " << bvhMeshPair.meshPtr->getBvhRootNode() << std::endl;
-    std::cout << "bvhMeshPair.bvhIndexOffset" <<  bvhMeshPair.bvhIndexOffset << std::endl;
+    std::cout << "bvhMeshPair.bvhIndexOffset" << bvhMeshPair.bvhIndexOffset << std::endl;
 
     TopBvhNode node;
     node.subBvhNode = bvhMeshPair.meshPtr->getBvhRootNode() + bvhMeshPair.bvhIndexOffset;

@@ -87,8 +87,8 @@ private:
     std::vector<TriangleSceneData> m_trianglesHost;
     std::vector<EmissiveTriangle> m_emissiveTrianglesHost;
     std::vector<Material> m_materialsHost;
-    std::vector<TopBvhNode> m_topBvhNodesHost;
-    std::vector<SubBvhNode> m_subBvhNodesHost;
+    std::vector<TopBVHNode> m_topBvhNodesHost;
+    std::vector<SubBVHNode> m_subBvhNodesHost;
 
     unsigned m_activeBuffer = 0;
     cl_uint m_numStaticVertices;

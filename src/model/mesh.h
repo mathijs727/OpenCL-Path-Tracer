@@ -29,7 +29,7 @@ public:
     gsl::span<const VertexSceneData> getVertices() const override { return m_vertices; }
     gsl::span<const TriangleSceneData> getTriangles() const override { return m_triangles; }
     gsl::span<const Material> getMaterials() const override { return m_materials; }
-    gsl::span<const SubBvhNode> getBvhNodes() const override { return m_bvhNodes; }
+    gsl::span<const SubBVHNode> getBvhNodes() const override { return m_bvhNodes; }
     gsl::span<const uint32_t> getEmissiveTriangles() const override { return m_emissiveTriangles; }
 
     uint32_t getBvhRootNode() const override { return m_bvhRootNode; };
@@ -65,7 +65,7 @@ private:
     std::vector<TriangleSceneData> m_triangles;
     std::vector<uint32_t> m_emissiveTriangles;
     std::vector<Material> m_materials;
-    std::vector<SubBvhNode> m_bvhNodes;
+    std::vector<SubBVHNode> m_bvhNodes;
 
     AABB m_bounds;
     uint32_t m_bvhRootNode;

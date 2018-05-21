@@ -681,25 +681,25 @@ void RayTracer::initBuffers(
 
     m_subBvhBuffers[0] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
-        std::max(1u, numSubBvhNodes) * sizeof(SubBvhNode),
+        std::max(1u, numSubBvhNodes) * sizeof(SubBVHNode),
         NULL,
         &err);
     m_subBvhBuffers[1] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
-        std::max(1u, numSubBvhNodes) * sizeof(SubBvhNode),
+        std::max(1u, numSubBvhNodes) * sizeof(SubBVHNode),
         NULL,
         &err);
     checkClErr(err, "Buffer::Buffer()");
 
     m_topBvhBuffers[0] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
-        numTopBvhNodes * sizeof(TopBvhNode), // TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
+        numTopBvhNodes * sizeof(TopBVHNode), // TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
         NULL,
         &err);
     checkClErr(err, "Buffer::Buffer()");
     m_topBvhBuffers[1] = cl::Buffer(m_clContext,
         CL_MEM_READ_ONLY,
-        numTopBvhNodes * sizeof(TopBvhNode), // TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
+        numTopBvhNodes * sizeof(TopBVHNode), // TODO: Make this dynamic so we dont have a fixed max of 256 top level BVH nodes.
         NULL,
         &err);
     checkClErr(err, "Buffer::Buffer()");

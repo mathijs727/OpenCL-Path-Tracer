@@ -223,7 +223,7 @@ void Mesh::storeBvh(const char* fileName)
     // BVH nodes
     uint32_t numNodes = (uint32_t)m_bvhNodes.size();
     outFile.write((char*)&numNodes, 4);
-    outFile.write((char*)m_bvhNodes.data(), numNodes * sizeof(SubBvhNode));
+    outFile.write((char*)m_bvhNodes.data(), numNodes * sizeof(SubBVHNode));
 
     // Triangles
     uint32_t numTriangles = (uint32_t)m_triangles.size();
@@ -258,7 +258,7 @@ bool Mesh::loadBvh(const char* fileName)
     uint32_t numNodes;
     inFile.read((char*)&numNodes, 4);
     m_bvhNodes.resize(numNodes);
-    inFile.read((char*)m_bvhNodes.data(), numNodes * sizeof(SubBvhNode));
+    inFile.read((char*)m_bvhNodes.data(), numNodes * sizeof(SubBVHNode));
 
     // Read triangles
     uint32_t numTriangles;

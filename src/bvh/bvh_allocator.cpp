@@ -10,17 +10,17 @@ uint32_t BVHAllocator::allocatePair()
     return leftIndex;
 }
 
-const SubBvhNode& BVHAllocator::operator[](uint32_t i) const
+const SubBVHNode& BVHAllocator::operator[](uint32_t i) const
 {
     return m_nodes[i];
 }
 
-SubBvhNode& BVHAllocator::operator[](uint32_t i)
+SubBVHNode& BVHAllocator::operator[](uint32_t i)
 {
     return m_nodes[i];
 }
 
-std::vector<SubBvhNode>&& BVHAllocator::getNodesMove()
+std::vector<SubBVHNode>&& BVHAllocator::getNodesMove()
 {
     return std::move(m_nodes);
 }

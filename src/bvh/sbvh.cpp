@@ -36,7 +36,7 @@ raytracer::AABB clipBounds(raytracer::AABB clipper, raytracer::AABB clippee)
 uint32_t raytracer::SbvhBuilder::build(
     std::vector<VertexSceneData>& vertices,
     std::vector<TriangleSceneData>& triangles,
-    std::vector<SubBvhNode>& outBvhNodes)
+    std::vector<SubBVHNode>& outBvhNodes)
 {
 
     _totalSplits = 0;

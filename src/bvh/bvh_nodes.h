@@ -17,7 +17,7 @@ struct PrimitiveData {
 };
 using PrimInsertIter = std::insert_iterator<std::vector<PrimitiveData>>;
 
-struct TopBvhNode {
+struct TopBVHNode {
     AABB bounds;
     glm::mat4 invTransform;
     union {
@@ -32,7 +32,7 @@ struct TopBvhNode {
     uint32_t __padding_cl; // Make the struct 16 byte aligned
 };
 
-struct SubBvhNode {
+struct SubBVHNode {
     AABB bounds;
     union {
         uint32_t leftChildIndex;
@@ -41,7 +41,7 @@ struct SubBvhNode {
     uint32_t triangleCount;
     uint32_t __padding_cl[2];
 
-    SubBvhNode()
+    SubBVHNode()
     {
         leftChildIndex = 0;
         triangleCount = 0;

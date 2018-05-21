@@ -12,7 +12,7 @@
 
 namespace raytracer {
 
-//std::tuple<uint32_t, std::vector<TriangleSceneData>, std::vector<SubBvhNode>> buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles);
+//std::tuple<uint32_t, std::vector<TriangleSceneData>, std::vector<SubBVHNode>> buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles);
 
 struct ObjectSplit {
     int axis;

@@ -87,8 +87,7 @@ void MeshSequence::buildBvh()
 
     MeshFrame& frame = m_frames[m_currentFrame];
     if (m_refitting) {
-        RefittingBvhBuilder bvhUpdater;
-        bvhUpdater.update(frame.vertices, frame.triangles, m_bvhNodes);
+        refitBVH(m_bvhNodes, m_bvhRootNode, frame.vertices, frame.triangles);
     } else {
         // Clear bvh nodes list
         m_bvhNodes.clear();

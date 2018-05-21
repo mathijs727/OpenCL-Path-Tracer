@@ -27,7 +27,7 @@ public:
     gsl::span<const VertexSceneData> getVertices() const override { return m_frames[m_currentFrame].vertices; }
     gsl::span<const TriangleSceneData> getTriangles() const override { return m_frames[m_currentFrame].triangles; }
     gsl::span<const Material> getMaterials() const override { return m_frames[m_currentFrame].materials; }
-    gsl::span<const SubBvhNode> getBvhNodes() const override { return m_bvhNodes; }
+    gsl::span<const SubBVHNode> getBvhNodes() const override { return m_bvhNodes; }
 
     gsl::span<const uint32_t> getEmissiveTriangles() const override { return {}; } // Not implemented yet
 
@@ -63,7 +63,7 @@ private:
     bool m_bvhNeedsUpdate = false;
 
     bool m_refitting;
-    std::vector<SubBvhNode> m_bvhNodes;
+    std::vector<SubBVHNode> m_bvhNodes;
     uint32_t m_bvhRootNode;
 
     unsigned m_currentFrame = 0;

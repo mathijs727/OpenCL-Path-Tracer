@@ -10,7 +10,7 @@ public:
     virtual gsl::span<const VertexSceneData> getVertices() const = 0;
     virtual gsl::span<const TriangleSceneData> getTriangles() const = 0;
     virtual gsl::span<const Material> getMaterials() const = 0;
-    virtual gsl::span<const SubBvhNode> getBvhNodes() const = 0;
+    virtual gsl::span<const SubBVHNode> getBvhNodes() const = 0;
     virtual gsl::span<const uint32_t> getEmissiveTriangles() const = 0;
 
     virtual AABB getBounds() const = 0;

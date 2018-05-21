@@ -27,6 +27,6 @@ private:
     uint32_t m_rootNode;
     gsl::span<const VertexSceneData> m_vertices;
     gsl::span<const TriangleSceneData> m_triangles;
-    gsl::span<const SubBvhNode> m_bvhNodes;
+    gsl::span<const SubBVHNode> m_bvhNodes;
 };
 }

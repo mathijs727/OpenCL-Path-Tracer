@@ -4,14 +4,14 @@
 
 namespace raytracer {
 
-static uint32_t findBestMatch(gsl::span<const TopBvhNode> allNodes, gsl::span<uint32_t> indicesToConsider, uint32_t thisNodeID);
-static TopBvhNode createNode(const SceneNode& sceneNode, const glm::mat4& transform, gsl::span<const uint32_t> meshBvhOffsets);
-static TopBvhNode mergeNodes(uint32_t aID, const TopBvhNode nodeA, uint32_t bID, const TopBvhNode nodeB);
+static uint32_t findBestMatch(gsl::span<const TopBVHNode> allNodes, gsl::span<uint32_t> indicesToConsider, uint32_t thisNodeID);
+static TopBVHNode createNode(const SceneNode& sceneNode, const glm::mat4& transform, gsl::span<const uint32_t> meshBvhOffsets);
+static TopBVHNode mergeNodes(uint32_t aID, const TopBVHNode nodeA, uint32_t bID, const TopBVHNode nodeB);
 static AABB calcTransformedAABB(const AABB& bounds, glm::mat4 transform);
 
 BvhBuildReturnType buildTopBVH(const SceneNode& rootSceneNode, gsl::span<const uint32_t> meshBvhOffsets)
 {
-    std::vector<TopBvhNode> outBvhNodes;
+    std::vector<TopBVHNode> outBvhNodes;
 
     // Add the scene graph nodes to the top-level BVH buffer
     std::vector<uint32_t> list;
@@ -63,7 +63,7 @@ BvhBuildReturnType buildTopBVH(const SceneNode& rootSceneNode, gsl::span<const u
     return { rootNode, outBvhNodes }; // Root node is at the end
 }
 
-static float calcCombinedSurfaceArea(const TopBvhNode& a, const TopBvhNode& b)
+static float calcCombinedSurfaceArea(const TopBVHNode& a, const TopBVHNode& b)
 {
     AABB bounds = a.bounds + b.bounds;
     glm::vec3 extents = bounds.max - bounds.min;
@@ -73,7 +73,7 @@ static float calcCombinedSurfaceArea(const TopBvhNode& a, const TopBvhNode& b)
     return 2.0f * (leftArea + topArea + backArea);
 }
 
-static uint32_t findBestMatch(gsl::span<const TopBvhNode> allNodes, gsl::span<uint32_t> indicesToConsider, uint32_t thisNodeID)
+static uint32_t findBestMatch(gsl::span<const TopBVHNode> allNodes, gsl::span<uint32_t> indicesToConsider, uint32_t thisNodeID)
 {
     auto iter = std::min_element(indicesToConsider.begin(), indicesToConsider.end(), [&](uint32_t a, uint32_t b) -> bool {
         if (a == thisNodeID)
@@ -88,12 +88,12 @@ static uint32_t findBestMatch(gsl::span<const TopBvhNode> allNodes, gsl::span<ui
     return *iter;
 }
 
-static TopBvhNode createNode(const SceneNode& sceneNode, const glm::mat4& transform, gsl::span<const uint32_t> meshBvhOffsets)
+static TopBVHNode createNode(const SceneNode& sceneNode, const glm::mat4& transform, gsl::span<const uint32_t> meshBvhOffsets)
 {
     assert(sceneNode.subBvhRootID);
     assert(sceneNode.meshID);
 
-    TopBvhNode node;
+    TopBVHNode node;
     node.subBvhNode = *sceneNode.subBvhRootID + meshBvhOffsets[*sceneNode.meshID];
     node.bounds = calcTransformedAABB(sceneNode.bounds, transform);
     node.invTransform = glm::inverse(transform);
@@ -101,9 +101,9 @@ static TopBvhNode createNode(const SceneNode& sceneNode, const glm::mat4& transf
     return node;
 }
 
-static TopBvhNode mergeNodes(uint32_t nodeAIndex, const TopBvhNode nodeA, uint32_t nodeBIndex, const TopBvhNode nodeB)
+static TopBVHNode mergeNodes(uint32_t nodeAIndex, const TopBVHNode nodeA, uint32_t nodeBIndex, const TopBVHNode nodeB)
 {
-    TopBvhNode node;
+    TopBVHNode node;
     node.bounds = nodeA.bounds + nodeB.bounds;
     node.invTransform = glm::mat4(); // Identity
     node.leftChildIndex = nodeAIndex;

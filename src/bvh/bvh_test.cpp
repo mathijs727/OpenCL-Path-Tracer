@@ -4,7 +4,7 @@
 
 namespace raytracer {
 
-void traverse(std::vector<SubBvhNode>& bvhNodes)
+void traverse(std::vector<SubBVHNode>& bvhNodes)
 {
 }
 

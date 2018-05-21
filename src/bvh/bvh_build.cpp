@@ -58,14 +58,14 @@ static AABB computeBounds(gsl::span<const PrimitiveData> primitives)
     return bounds;
 }
 
-using SplitFunc = std::function<std::optional<std::pair<AABB, AABB>>(const SubBvhNode& node, gsl::span<const PrimitiveData>, PrimInsertIter left, PrimInsertIter right)>;
-static std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBvhNode>> buildBVH(std::vector<PrimitiveData>&& startPrimitives, SplitFunc&& splitFunc)
+using SplitFunc = std::function<std::optional<std::pair<AABB, AABB>>(const SubBVHNode& node, gsl::span<const PrimitiveData>, PrimInsertIter left, PrimInsertIter right)>;
+static std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBVHNode>> buildBVH(std::vector<PrimitiveData>&& startPrimitives, SplitFunc&& splitFunc)
 {
     BVHAllocator nodeAllocator;
     std::vector<PrimitiveData> outPrimitives;
 
     uint32_t rootNodeID = nodeAllocator.allocatePair();
-    SubBvhNode& rootNode = nodeAllocator[rootNodeID];
+    SubBVHNode& rootNode = nodeAllocator[rootNodeID];
     rootNode.bounds = computeBounds(startPrimitives);
     rootNode.firstTriangleIndex = 0;
     rootNode.triangleCount = static_cast<uint32_t>(startPrimitives.size());
@@ -107,13 +107,13 @@ static std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBvhNode>>
     return { rootNodeID, std::move(outPrimitives), std::move(nodeAllocator.getNodesMove()) };
 }
 
-using InPlaceSplitFunc = std::function<std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>>(const SubBvhNode& node, gsl::span<PrimitiveData>)>;
-static std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBvhNode>> buildBVHInPlace(std::vector<PrimitiveData>&& startPrimitives, InPlaceSplitFunc&& splitFunc)
+using InPlaceSplitFunc = std::function<std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>>(const SubBVHNode& node, gsl::span<PrimitiveData>)>;
+static std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBVHNode>> buildBVHInPlace(std::vector<PrimitiveData>&& startPrimitives, InPlaceSplitFunc&& splitFunc)
 {
     BVHAllocator nodeAllocator;
 
     uint32_t rootNodeID = nodeAllocator.allocatePair();
-    SubBvhNode& rootNode = nodeAllocator[rootNodeID];
+    SubBVHNode& rootNode = nodeAllocator[rootNodeID];
     rootNode.bounds = computeBounds(startPrimitives);
     rootNode.firstTriangleIndex = 0;
     rootNode.triangleCount = static_cast<uint32_t>(startPrimitives.size());
@@ -164,7 +164,7 @@ BvhBuildReturnType buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl
     auto primitives = generatePrimitives(vertices, triangles); // Create primitive refences
     OriginalPrimitives originalPrimitives{ vertices, triangles };
 
-    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVHInPlace(std::move(primitives), [&](const SubBvhNode& node, gsl::span<PrimitiveData> primitives) -> std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>> {
+    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVHInPlace(std::move(primitives), [&](const SubBVHNode& node, gsl::span<PrimitiveData> primitives) -> std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>> {
         if (primitives.size() <= MIN_PRIMS_PER_LEAF)
             return {};
 
@@ -193,7 +193,7 @@ BvhBuildReturnType buildBinnedFastBVH(gsl::span<const VertexSceneData> vertices,
     auto primitives = generatePrimitives(vertices, triangles); // Create primitive refences
     OriginalPrimitives originalPrimitives{ vertices, triangles };
 
-    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVHInPlace(std::move(primitives), [&](const SubBvhNode& node, gsl::span<PrimitiveData> primitives) -> std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>> {
+    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVHInPlace(std::move(primitives), [&](const SubBVHNode& node, gsl::span<PrimitiveData> primitives) -> std::optional<std::tuple<gsl::span<PrimitiveData>, AABB, gsl::span<PrimitiveData>, AABB>> {
         if (primitives.size() <= MIN_PRIMS_PER_LEAF)
             return {};
 
@@ -224,7 +224,7 @@ BvhBuildReturnType buildSpatialSplitBVH(gsl::span<const VertexSceneData> vertice
 
     auto rootNodeSurfaceArea = computeBounds(startPrimitives).surfaceArea();
 
-    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVH(std::move(startPrimitives), [&](const SubBvhNode& node, gsl::span<const PrimitiveData> primitives, PrimInsertIter left, PrimInsertIter right) -> std::optional<std::pair<AABB, AABB>> {
+    auto [rootNodeID, reorderedPrimitives, bvhNodes] = buildBVH(std::move(startPrimitives), [&](const SubBVHNode& node, gsl::span<const PrimitiveData> primitives, PrimInsertIter left, PrimInsertIter right) -> std::optional<std::pair<AABB, AABB>> {
         if (primitives.size() <= MIN_PRIMS_PER_LEAF)
             return {};
 
