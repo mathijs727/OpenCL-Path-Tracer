@@ -1,6 +1,5 @@
 #include "raytracer.h"
 
-#include "bvh/top_bvh.h"
 #include "bvh/top_bvh_build.h"
 #include "camera.h"
 #include "opencl/cl_gl_includes.h"

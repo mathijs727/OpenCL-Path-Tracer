@@ -1,7 +1,6 @@
 #include "mesh_sequence.h"
 #include "bvh/bvh_build.h"
 #include "bvh/refit_bvh.h"
-#include "bvh/sbvh.h"
 #include "mesh_helpers.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>

@@ -1,6 +1,5 @@
 #include "mesh.h"
 #include "bvh/bvh_build.h"
-#include "bvh/sbvh.h"
 #include "timer.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
