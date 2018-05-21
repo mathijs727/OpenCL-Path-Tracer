@@ -20,6 +20,7 @@ target_link_libraries(FreeImage INTERFACE ${FREEIMAGE_LIBRARIES})
 add_library(assimp INTERFACE)
 target_include_directories(assimp INTERFACE ${ASSIMP_INCLUDE_DIRS})
 target_link_libraries(assimp INTERFACE ${ASSIMP_LIBRARIES})
+target_compile_options(assimp INTERFACE "-Wno-pragma-pack")
 
 add_subdirectory("third_party/eastl/")
 add_subdirectory("third_party/clRNG/")

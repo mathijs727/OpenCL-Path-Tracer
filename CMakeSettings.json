@@ -60,7 +60,7 @@
         },
         {
           "name": "CMAKE_CXX_FLAGS",
-          "value": "/std:c++17 /EHa"
+          "value": "/std:c++17 /EHa -Wno-unknown-argument"
         }
       ]
     },
@@ -89,7 +89,7 @@
         },
         {
           "name": "CMAKE_CXX_FLAGS",
-          "value": "/std:c++17 /EHa"
+          "value": "/std:c++17 /EHa -Wno-unknown-argument"
         }
       ]
     }
