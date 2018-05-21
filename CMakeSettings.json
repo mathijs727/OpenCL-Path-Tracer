@@ -2,7 +2,7 @@
   // See https://go.microsoft.com//fwlink//?linkid=834763 for more information about this file.
   "configurations": [
     {
-      "name": "x64-Debug",
+      "name": "msvc-debug",
       "generator": "Ninja",
       "configurationType": "Debug",
       "inheritEnvironments": [ "msvc_x64_x64" ],
@@ -19,7 +19,7 @@
       ]
     },
     {
-      "name": "x64-Release",
+      "name": "msvc-release",
       "generator": "Ninja",
       "configurationType": "RelWithDebInfo",
       "inheritEnvironments": [ "msvc_x64_x64" ],
@@ -32,6 +32,64 @@
         {
           "name": "CMAKE_TOOLCHAIN_FILE",
           "value": "C:\\Users\\Mathijs\\tools\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake"
+        }
+      ]
+    },
+    {
+      "name": "clang-debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${workspaceRoot}\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "CMAKE_TOOLCHAIN_FILE",
+          "value": "C:\\Users\\Mathijs\\tools\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake"
+        },
+        {
+          "name": "CMAKE_C_COMPILER",
+          "value": "clang-cl"
+        },
+        {
+          "name": "CMAKE_CXX_COMPILER",
+          "value": "clang-cl"
+        },
+        {
+          "name": "CMAKE_CXX_FLAGS",
+          "value": "/std:c++17 /EHa"
+        }
+      ]
+    },
+    {
+      "name": "clang-release",
+      "generator": "Ninja",
+      "configurationType": "RelWithDebInfo",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${workspaceRoot}\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "CMAKE_TOOLCHAIN_FILE",
+          "value": "C:\\Users\\Mathijs\\tools\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake"
+        },
+        {
+          "name": "CMAKE_C_COMPILER",
+          "value": "clang-cl"
+        },
+        {
+          "name": "CMAKE_CXX_COMPILER",
+          "value": "clang-cl"
+        },
+        {
+          "name": "CMAKE_CXX_FLAGS",
+          "value": "/std:c++17 /EHa"
         }
       ]
     }

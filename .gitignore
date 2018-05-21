@@ -1,12 +1,12 @@
 # CMake build folder
-build/
-build_xcode/
+build*
 xcode_build/
 build_make/
 *.exe
 *.sublime-workspace
 *.sublime-project
 *.DS_Store
+CMakeSettings.json
 
 # Dont include .bvh files (BVH cache) because they might not be cross platform (32 bit vs 64 bit?)
 *.bvh

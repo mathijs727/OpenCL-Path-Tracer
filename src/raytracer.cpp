@@ -598,10 +598,10 @@ void RayTracer::collectTransformedLights(const SceneNode* node, const glm::mat4&
     auto newTransform = transform * node->transform.matrix();
     if (node->meshID) {
         const auto& mesh = *m_scene->getMeshes()[*node->meshID].meshPtr;
-        auto& vertices = mesh.getVertices();
-        auto& triangles = mesh.getTriangles();
-        auto& emissiveTriangles = mesh.getEmissiveTriangles();
-        auto& materials = mesh.getMaterials();
+        auto vertices = mesh.getVertices();
+        auto triangles = mesh.getTriangles();
+        auto emissiveTriangles = mesh.getEmissiveTriangles();
+        auto materials = mesh.getMaterials();
 
         for (auto& triangleIndex : emissiveTriangles) {
             auto& triangle = triangles[triangleIndex];

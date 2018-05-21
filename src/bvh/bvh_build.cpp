@@ -125,7 +125,7 @@ static std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBVHNode>>
         gsl::span<PrimitiveData> primitives;
     };
     std::stack<StackItem> stack;
-    stack.push({ rootNodeID, 0, std::move(startPrimitives) });
+    stack.push(StackItem { rootNodeID, 0, gsl::make_span(startPrimitives) });
 
     while (!stack.empty()) {
         // Can't use structured bindings because we want to move the primitives instead of copying them.

@@ -209,5 +209,7 @@ static int setenv(std::string_view name, std::string_view value, int overwrite)
             return errcode;
     }
     return _putenv_s(name.data(), value.data());
+#else
+    return 0;
 #endif
 }

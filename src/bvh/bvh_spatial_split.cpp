@@ -1,7 +1,7 @@
 #include "bvh_spatial_split.h"
+#include "EASTL/fixed_vector.h"
 #include <algorithm>
 #include <array>
-#include <eastl/fixed_vector.h>
 
 namespace raytracer {
 

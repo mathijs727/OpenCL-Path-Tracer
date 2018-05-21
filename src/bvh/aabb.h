@@ -10,8 +10,8 @@ struct AABB {
 
     AABB();
     AABB(glm::vec3 min, glm::vec3 max);
-    AABB(const AABB&) = default;
-    AABB& operator=(const AABB&) = default;
+    AABB(const AABB& other) : min(other.min), max(other.max){};// For some reason "= default" creates runtime crashes on Windows with clang-cl
+    AABB& operator=(const AABB& other) = default;
 
     void fit(glm::vec3 vec);
     void fit(const AABB& other);

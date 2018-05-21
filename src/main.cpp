@@ -103,13 +103,13 @@ void createScene(Scene& scene, UniqueTextureArray& textureArray)
         scene.addNode(lightPlane, transform);
     }
 
-    /*// Sponza
+    // Sponza
     {
         Transform transform;
         transform.scale = glm::vec3(0.005f);
         auto sponza = std::make_shared<Mesh>("../../assets/3dmodels/sponza-crytek/sponza.obj", textureArray);
         scene.addNode(sponza, transform);
-    }*/
+    }
 
     // Stanford bunny
     {
