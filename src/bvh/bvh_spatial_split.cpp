@@ -66,6 +66,8 @@ std::optional<SpatialSplit> findSpatialSplitBinned(const AABB& nodeBounds, gsl::
                 bestSplit = SpatialSplit{
                     axis,
                     position,
+                    enterCount,
+                    exitCount,
                     mergedLeftBins.bounds,
                     mergedRightBins.bounds,
                     partialSAH
@@ -82,6 +84,10 @@ std::optional<SpatialSplit> findSpatialSplitBinned(const AABB& nodeBounds, gsl::
 
 std::pair<AABB, AABB> performSpatialSplit(gsl::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives, const SpatialSplit& split, PrimInsertIter left, PrimInsertIter right)
 {
+    // http://www.nvidia.com/docs/IO/77714/sbvh.pdf
+    // Reference unsplitting
+    float splitCost = split.leftBounds.surfaceArea() * split.leftCount + split.rightBounds.surfaceArea() * split.rightCount;
+
     AABB leftBounds, rightBounds;
     int leftCount = 0, rightCount = 0;
     for (const PrimitiveData& primitive : primitives) {
@@ -89,31 +95,51 @@ std::pair<AABB, AABB> performSpatialSplit(gsl::span<const PrimitiveData> primiti
         float max = primitive.bounds.max[split.axis];
 
         if (min < split.position && max > split.position) {
-            // Primitive getting split by the plane
-            auto triangle = originalPrimitives.triangles[primitive.globalIndex];
-            glm::vec3 v1 = originalPrimitives.vertices[triangle.indices[0]].vertex;
-            glm::vec3 v2 = originalPrimitives.vertices[triangle.indices[1]].vertex;
-            glm::vec3 v3 = originalPrimitives.vertices[triangle.indices[2]].vertex;
 
-            // Split the triangle (primitives) bounds by the splitting plane
-            AABB leftClipBounds = primitive.bounds;
-            AABB rightClipBounds = primitive.bounds;
-            leftClipBounds.max[split.axis] = split.position;
-            rightClipBounds.min[split.axis] = split.position;
+            // Reference unsplitting
+            float cost1 = (split.leftBounds + primitive.bounds).surfaceArea() * split.leftCount + split.rightBounds.surfaceArea() * (split.rightCount - 1);
+            float cost2 = split.leftBounds.surfaceArea() * (split.leftCount - 1) + (split.rightBounds + primitive.bounds).surfaceArea() * split.rightCount;
+            float optimalUnsplitCost = std::min(cost1, cost2);
+            if (optimalUnsplitCost < splitCost) { // Unsplitting
+                if (cost1 < cost2) {
+                    // Left
+                    leftBounds.fit(primitive.bounds);
+                    *left++ = primitive;
+                    leftCount++;
+                } else {
+                    // Right
+                    rightBounds.fit(primitive.bounds);
+                    *right++ = primitive;
+                    rightCount++;
+                }
+            } else { // Splitting
+                // Primitive getting split by the plane
+                auto triangle = originalPrimitives.triangles[primitive.globalIndex];
+                glm::vec3 v1 = originalPrimitives.vertices[triangle.indices[0]].vertex;
+                glm::vec3 v2 = originalPrimitives.vertices[triangle.indices[1]].vertex;
+                glm::vec3 v3 = originalPrimitives.vertices[triangle.indices[2]].vertex;
 
-            auto leftPrimBoundsOpt = clipTriangleBounds(leftClipBounds, v1, v2, v3);
-            auto rightPrimBoundsOpt = clipTriangleBounds(rightClipBounds, v1, v2, v3);
-            if (leftPrimBoundsOpt) {
-                leftBounds.fit(*leftPrimBoundsOpt);
-                *left++ = PrimitiveData{ primitive.globalIndex, *leftPrimBoundsOpt };
-                leftCount++;
+                // Split the triangle (primitives) bounds by the splitting plane
+                AABB leftClipBounds = primitive.bounds;
+                AABB rightClipBounds = primitive.bounds;
+                leftClipBounds.max[split.axis] = split.position;
+                rightClipBounds.min[split.axis] = split.position;
+
+                auto leftPrimBoundsOpt = clipTriangleBounds(leftClipBounds, v1, v2, v3);
+                auto rightPrimBoundsOpt = clipTriangleBounds(rightClipBounds, v1, v2, v3);
+
+                if (leftPrimBoundsOpt) {
+                    leftBounds.fit(*leftPrimBoundsOpt);
+                    *left++ = PrimitiveData{ primitive.globalIndex, *leftPrimBoundsOpt };
+                    leftCount++;
+                }
+
+                if (rightPrimBoundsOpt) {
+                    rightBounds.fit(*rightPrimBoundsOpt);
+                    *right++ = PrimitiveData{ primitive.globalIndex, *rightPrimBoundsOpt };
+                    rightCount++;
+                }
             }
-            if (rightPrimBoundsOpt) {
-                rightBounds.fit(*rightPrimBoundsOpt);
-                *right++ = PrimitiveData{ primitive.globalIndex, *rightPrimBoundsOpt };
-                rightCount++;
-            }
-            //assert(leftPrimBoundsOpt || rightPrimBoundsOpt);
         } else if (max < split.position) {
             // Primitive fully to the left of the split plane
             leftBounds.fit(primitive.bounds);
@@ -217,6 +243,7 @@ static std::optional<glm::vec3> lineAxisAlignedPlaneIntersection(glm::vec3 v1, g
     if (v1[axis] == v2[axis])
         return {};
 
+    // Sort the two vertices along the axis (start = left, end = right)
     glm::vec3 start, end;
     if (v1[axis] < v2[axis]) {
         start = v1;
@@ -228,9 +255,9 @@ static std::optional<glm::vec3> lineAxisAlignedPlaneIntersection(glm::vec3 v1, g
 
     glm::vec3 edge = end - start;
     float intersectPos = (planePos - start[axis]) / edge[axis];
-    if (intersectPos >= 0.0f && intersectPos <= 1.0f) {
+    if (intersectPos >= 0.0f && intersectPos <= 1.0f) { // Intersection before / after endpoint of the line
         glm::vec3 intersection = start + intersectPos * edge;
-        intersection[axis] = planePos;
+        intersection[axis] = planePos; // Make up for numerical inaccuracies
         return intersection;
     } else {
         return {};
@@ -239,9 +266,10 @@ static std::optional<glm::vec3> lineAxisAlignedPlaneIntersection(glm::vec3 v1, g
 
 static std::optional<AABB> clipTriangleBounds(AABB bounds, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3)
 {
-    // Vertices ordered such that the current and next vertex share an edge
-    // Every half plane might "cut off" one vertex and replace it by two vertices.
+    // Vertices ordered such that vertices n and n+1 share an edge (wrapping around, so vertex N-1 and 0 also shared an edge)
+    // Worst-case scenario: every half plane might "cut off" one vertex and replace it by two vertices;
     // So the maximum number of vertices is 3 + 8 = 11
+    // Use eastl::fixed_vector to prevent dynamic memory allocation (which is very slow)
     eastl::fixed_vector<glm::vec3, 11> orderedVertices = { v1, v2, v3 };
 
     // For each axis

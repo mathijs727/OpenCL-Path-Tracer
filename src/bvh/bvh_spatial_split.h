@@ -8,11 +8,15 @@
 #include <tuple>
 #include <vector>
 
+// Spatial split BVH
+// http://www.nvidia.com/docs/IO/77714/sbvh.pdf
+
 namespace raytracer {
 
 struct SpatialSplit {
     int axis;
     float position;
+    size_t leftCount, rightCount;
     AABB leftBounds;
     AABB rightBounds;
     float partialSAH = std::numeric_limits<float>::max();
