@@ -23,7 +23,7 @@ void createScene(Scene& scene, UniqueTextureArray& textureArray);
 void createSkydome(std::string_view fileName, bool isLinear, float brightnessMultiplier, UniqueTextureArray& textureArray);
 
 void cameraLookHandler(Camera& camera, glm::dvec2 mousePosition);
-void cameraMoveHandler(Camera& camera, const Window& window, double dt);
+void cameraMoveHandler(Camera& camera, const ui::Window& window, double dt);
 
 int main(int argc, char* argv[])
 {
@@ -49,10 +49,10 @@ int main(int argc, char* argv[])
     createSkydome("../../assets/skydome/DF360_005_Ref.hdr", true, 75.0f, skydomeTextures);
 
     // Window creates OpenGL context so all OpenGL code should come afterwards.
-    Window window(screenWidth, screenHeight, "Hello world!");
+    ui::Window window(screenWidth, screenHeight, "Hello world!");
     GLOutput output(screenWidth, screenHeight);
 
-    bool mouseCaptured = true;
+    bool mouseCaptured = false;
     window.setMouseCapture(mouseCaptured);
     window.registerMouseMoveCallback([&](glm::dvec2 mousePosition) {
         if (mouseCaptured) {
@@ -155,7 +155,7 @@ void cameraLookHandler(Camera& camera, glm::dvec2 mousePosition)
     }
 }
 
-void cameraMoveHandler(Camera& camera, const Window& window, double dt)
+void cameraMoveHandler(Camera& camera, const ui::Window& window, double dt)
 {
 
     glm::vec3 movement = glm::vec3(0);

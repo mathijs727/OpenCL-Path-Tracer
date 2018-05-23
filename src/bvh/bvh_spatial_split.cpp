@@ -42,12 +42,16 @@ std::optional<SpatialSplit> findSpatialSplitBinned(const AABB& nodeBounds, gsl::
         // Combine bins from left-to-right (summedBins) and right-to-left (inverseSummedBins)
         std::array<SpatialBin, BVH_SPATIAL_BIN_COUNT> summedBins;
         std::array<SpatialBin, BVH_SPATIAL_BIN_COUNT> inverseSummedBins;
-        std::exclusive_scan(bins.begin(), bins.end(), summedBins.begin(), SpatialBin{});
-        std::exclusive_scan(bins.rbegin(), bins.rend(), inverseSummedBins.begin(), SpatialBin{});
+        //std::exclusive_scan(bins.begin(), bins.end(), summedBins.begin(), SpatialBin{});
+        //std::exclusive_scan(bins.rbegin(), bins.rend(), inverseSummedBins.begin(), SpatialBin{});
+        std::partial_sum(bins.begin(), bins.end(), summedBins.begin());
+        std::partial_sum(bins.rbegin(), bins.rend(), inverseSummedBins.begin());
         for (int splitPosition = 1; splitPosition < BVH_SPATIAL_BIN_COUNT; splitPosition++) {
             // Get bounds/primitive counts at the left and right of the split plane
-            SpatialBin mergedLeftBins = summedBins[splitPosition];
-            SpatialBin mergedRightBins = inverseSummedBins[BVH_SPATIAL_BIN_COUNT - splitPosition];
+            //SpatialBin mergedLeftBins = summedBins[splitPosition];
+            //SpatialBin mergedRightBins = inverseSummedBins[BVH_SPATIAL_BIN_COUNT - splitPosition];
+            SpatialBin mergedLeftBins = summedBins[splitPosition - 1];
+            SpatialBin mergedRightBins = inverseSummedBins[BVH_SPATIAL_BIN_COUNT - splitPosition - 1];
 
             size_t enterCount = mergedLeftBins.enter;
             size_t exitCount = mergedRightBins.exit;

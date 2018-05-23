@@ -39,12 +39,16 @@ std::optional<ObjectSplit> findObjectSplitBinned(const AABB& nodeBounds, gsl::sp
         // Combine bins from left-to-right (summedBins) and right-to-left (inverseSummedBins)
         std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> summedBins;
         std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> inverseSummedBins;
-        std::exclusive_scan(bins.begin(), bins.end(), summedBins.begin(), ObjectBin{});
-        std::exclusive_scan(bins.rbegin(), bins.rend(), inverseSummedBins.begin(), ObjectBin{});
+        //std::exclusive_scan(bins.begin(), bins.end(), summedBins.begin(), ObjectBin{});
+        //std::exclusive_scan(bins.rbegin(), bins.rend(), inverseSummedBins.begin(), ObjectBin{});
+        std::partial_sum(bins.begin(), bins.end(), summedBins.begin());
+        std::partial_sum(bins.rbegin(), bins.rend(), inverseSummedBins.begin());
         for (int splitPosition = 1; splitPosition < BVH_OBJECT_BIN_COUNT; splitPosition++) {
             // Get bounds/primitive counts at the left and right of the split plane
-            ObjectBin mergedLeftBins = summedBins[splitPosition];
-            ObjectBin mergedRightBins = inverseSummedBins[BVH_OBJECT_BIN_COUNT - splitPosition];
+            //ObjectBin mergedLeftBins = summedBins[splitPosition];
+            //ObjectBin mergedRightBins = inverseSummedBins[BVH_OBJECT_BIN_COUNT - splitPosition];
+            ObjectBin mergedLeftBins = summedBins[splitPosition - 1];
+            ObjectBin mergedRightBins = inverseSummedBins[BVH_OBJECT_BIN_COUNT - splitPosition - 1];
 
             // If all primitive centers lie on one side of the splitting plane then the split is invalid
             if (mergedLeftBins.primCount == 0 || mergedRightBins.primCount == 0)

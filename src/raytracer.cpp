@@ -8,10 +8,8 @@
 #include "ray.h"
 #include "scene.h"
 //#include "texture.h"
-#include <Windows.h>
 #include <algorithm>
 #include <chrono>
-#include <emmintrin.h>
 #include <fstream>
 #include <iostream>
 #include <random>

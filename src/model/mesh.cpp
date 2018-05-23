@@ -62,6 +62,7 @@ void Mesh::addSubMesh(
                 material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
                 std::string textureFile(texturePath);
                 textureFile += path.C_Str();
+                std::replace(textureFile.begin(), textureFile.end(), '\\', '/');
                 std::cout << "Texture path: " << textureFile << std::endl;
                 m_materials.push_back(Material::Diffuse(textureArray.add(textureFile), ai2glm(colour)));
             } else {

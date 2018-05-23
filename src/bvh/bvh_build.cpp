@@ -153,7 +153,7 @@ static std::tuple<uint32_t, std::vector<PrimitiveData>, std::vector<SubBVHNode>>
         } else {
             auto& node = nodeAllocator[nodeID];
             node.firstTriangleIndex = primOffset;
-            node.triangleCount = static_cast<uint32_t>(primitives.length());
+            node.triangleCount = static_cast<uint32_t>(primitives.size());
         }
     }
 
@@ -173,7 +173,7 @@ BvhBuildReturnType buildBinnedBVH(gsl::span<const VertexSceneData> vertices, gsl
         if (auto split = findObjectSplitBinned(node.bounds, primitives, originalPrimitives); split && getSAH(split->partialSAH, node.bounds) < thresholdSAH) {
             size_t splitIndex = performObjectSplitInPlace(primitives, *split);
             auto leftPrims = primitives.subspan(0, splitIndex);
-            auto rightPrims = primitives.subspan(splitIndex, primitives.length() - splitIndex);
+            auto rightPrims = primitives.subspan(splitIndex, primitives.size() - splitIndex);
             assert(leftPrims.size() > 0 && rightPrims.size() > 0);
             return { { leftPrims, split->leftBounds, rightPrims, split->rightBounds } };
         } else {
@@ -203,7 +203,7 @@ BvhBuildReturnType buildBinnedFastBVH(gsl::span<const VertexSceneData> vertices,
         if (auto split = findObjectSplitBinned(node.bounds, primitives, originalPrimitives, std::array{ axis }); split && getSAH(split->partialSAH, node.bounds) < thresholdSAH) {
             size_t splitIndex = performObjectSplitInPlace(primitives, *split);
             auto leftPrims = primitives.subspan(0, splitIndex);
-            auto rightPrims = primitives.subspan(splitIndex, primitives.length() - splitIndex);
+            auto rightPrims = primitives.subspan(splitIndex, primitives.size() - splitIndex);
             return { { leftPrims, split->leftBounds, rightPrims, split->rightBounds } };
         } else {
             return {};

@@ -17,10 +17,11 @@ add_library(FreeImage INTERFACE)
 target_include_directories(FreeImage INTERFACE ${FREEIMAGE_INCLUDE_DIRS})
 target_link_libraries(FreeImage INTERFACE ${FREEIMAGE_LIBRARIES})
 
-add_library(assimp INTERFACE)
-target_include_directories(assimp INTERFACE ${ASSIMP_INCLUDE_DIRS})
-target_link_libraries(assimp INTERFACE ${ASSIMP_LIBRARIES})
-target_compile_options(assimp INTERFACE "-Wno-pragma-pack")
+add_library(assimptarget INTERFACE)
+target_include_directories(assimptarget INTERFACE ${ASSIMP_INCLUDE_DIRS})
+message("Assimp libs: ${ASSIMP_LIBRARIES}")
+target_link_libraries(assimptarget INTERFACE ${ASSIMP_LIBRARIES})
+target_compile_options(assimptarget INTERFACE "-Wno-pragma-pack")
 
 add_subdirectory("third_party/eastl/")
 add_subdirectory("third_party/clRNG/")
@@ -35,7 +36,7 @@ target_link_libraries(raytracer PRIVATE
 	GLEW::GLEW
 	glfw
 	FreeImage
-	assimp
+	assimptarget
 	glm
 	EASTL
 	clRNG)
