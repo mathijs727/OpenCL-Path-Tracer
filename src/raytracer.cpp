@@ -28,7 +28,7 @@ static void writeToBuffer(cl::CommandQueue& queue, cl::Buffer& buffer, gsl::span
 template <typename T>
 static void writeToBuffer(cl::CommandQueue& queue, cl::Buffer& buffer, gsl::span<T> items, size_t offset, std::vector<cl::Event>& events);
 
-//#define OUTPUT_AVERAGE_GRAYSCALE
+#define OUTPUT_AVERAGE_GRAYSCALE
 //#define RANDOM_XOR32
 #define RANDOM_LFSR113
 
@@ -108,7 +108,7 @@ void RayTracer::rayTrace(const Camera& camera)
     traceRays(camera);
     accumulate(camera);
 #ifdef OUTPUT_AVERAGE_GRAYSCALE
-    CalculateAverageGrayscale();
+    calculateAverageGrayscale();
 #endif
 
     auto queue = m_clContext.getGraphicsQueue();
@@ -124,7 +124,7 @@ void RayTracer::rayTrace(const Camera& camera)
     r[0] = m_screenWidth;
     r[1] = m_screenHeight;
     r[2] = 1;
-    _queue.enqueueReadImage(m_clOutputImage, CL_TRUE, o, r, 0, 0, m_cpuOutputImage.get(), nullptr, nullptr);
+    queue.enqueueReadImage(m_clOutputImage, CL_TRUE, o, r, 0, 0, m_cpuOutputImage.get(), nullptr, nullptr);
 
     // And upload it to teh GPU (OpenGL)
     glBindTexture(GL_TEXTURE_2D, m_glOutputImage);
@@ -156,7 +156,7 @@ void RayTracer::initTarget(GLuint glTexture)
 {
     cl_int err;
 #ifndef OPENCL_GL_INTEROP
-    m_clOutputImage = cl::Image2D(_context,
+    m_clOutputImage = cl::Image2D(m_clContext,
         CL_MEM_WRITE_ONLY,
         cl::ImageFormat(CL_RGBA, CL_SNORM_INT8),
         m_screenWidth,

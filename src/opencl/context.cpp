@@ -147,12 +147,12 @@ CLContext::CLContext()
         std::cout << "Select a device: ";
         std::cin >> deviceIndex;
         //deviceIndex = 0;
-        _device = devices[deviceIndex];
+        m_device = devices[deviceIndex];
     }
 
     // Create OpenCL context
     cl_int lError;
-    _context = cl::Context(devices, NULL, NULL, NULL, &lError);
+    m_context = cl::Context(devices, NULL, NULL, NULL, &lError);
     checkClErr(lError, "cl::Context");
 #endif
 
