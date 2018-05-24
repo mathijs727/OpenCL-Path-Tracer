@@ -1,15 +1,15 @@
-#include "camera.h"
 #include "bvh/bvh_test.h"
+#include "camera.h"
 #include "common.h"
+#include "opencl/texture.h"
 #include "raytracer.h"
 #include "scene.h"
-#include "opencl/texture.h"
 #include "timer.h"
 #include "transform.h"
 #include "ui/gloutput.h"
 #include "ui/window.h"
-#include <string_view>
 #include <glm/glm.hpp>
+#include <string_view>
 
 using namespace ui;
 using namespace raytracer;
@@ -103,13 +103,13 @@ void createScene(Scene& scene, UniqueTextureArray& textureArray)
         scene.addNode(lightPlane, transform);
     }
 
-    /*// Sponza
+    // Sponza
     {
         Transform transform;
         transform.scale = glm::vec3(0.005f);
         auto sponza = std::make_shared<Mesh>("../../assets/3dmodels/sponza-crytek/sponza.obj", textureArray);
         scene.addNode(sponza, transform);
-    }*/
+    }
 
     // Stanford bunny
     {

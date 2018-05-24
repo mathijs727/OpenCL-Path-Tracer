@@ -28,7 +28,7 @@ static void writeToBuffer(cl::CommandQueue& queue, cl::Buffer& buffer, gsl::span
 template <typename T>
 static void writeToBuffer(cl::CommandQueue& queue, cl::Buffer& buffer, gsl::span<T> items, size_t offset, std::vector<cl::Event>& events);
 
-#define OUTPUT_AVERAGE_GRAYSCALE
+//#define OUTPUT_AVERAGE_GRAYSCALE
 //#define RANDOM_XOR32
 #define RANDOM_LFSR113
 

@@ -8,4 +8,4 @@
 #endif
 
 //#define PROFILE_OPENCL 1
-//#define OPENCL_GL_INTEROP 1
+#define OPENCL_GL_INTEROP 1

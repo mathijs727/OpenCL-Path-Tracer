@@ -1,7 +1,7 @@
 #include "context.h"
 #include "opencl/cl_gl_includes.h"
 #include "opencl/cl_helpers.h"
-#ifdef WIN32
+#ifdef _WIN32
 #include <Windows.h>
 #endif
 #include <iostream>
@@ -56,7 +56,7 @@ CLContext::CLContext()
         cl_context_properties lContextProperties[] = {
         // We need to add information about the OpenGL context with
         // which we want to exchange information with the OpenCL context.
-#if defined(WIN32)
+#if defined(_WIN32)
             // We should first check for cl_khr_gl_sharing extension.
             CL_GL_CONTEXT_KHR,
             (cl_context_properties)wglGetCurrentContext(),
@@ -200,7 +200,7 @@ cl::CommandQueue CLContext::getCopyQueue() const
 
 static int setenv(std::string_view name, std::string_view value, int overwrite)
 {
-#ifdef WIN32
+#ifdef _WIN32
     int errcode = 0;
     if (!overwrite) {
         size_t envsize = 0;
