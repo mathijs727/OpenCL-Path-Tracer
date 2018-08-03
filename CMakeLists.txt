@@ -21,7 +21,7 @@ add_library(assimptarget INTERFACE)
 target_include_directories(assimptarget INTERFACE ${ASSIMP_INCLUDE_DIRS})
 message("Assimp libs: ${ASSIMP_LIBRARIES}")
 target_link_libraries(assimptarget INTERFACE ${ASSIMP_LIBRARIES})
-target_compile_options(assimptarget INTERFACE "-Wno-pragma-pack")
+#target_compile_options(assimptarget INTERFACE "-Wno-pragma-pack")
 
 add_subdirectory("third_party/eastl/")
 add_subdirectory("third_party/clRNG/")

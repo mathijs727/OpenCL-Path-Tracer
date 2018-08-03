@@ -1,5 +1,4 @@
 #include "camera.h"
-#include <glm/detail/func_trigonometric.hpp>
 #include <glm/glm.hpp>
 
 namespace raytracer {
@@ -50,6 +49,7 @@ CameraData Camera::get_camera_data() const
     result.eyePoint = m_transform.location;
     result.u = glm::mat3_cast(m_transform.orientation) * glm::vec3(width, 0, 0);
     result.v = glm::mat3_cast(m_transform.orientation) * glm::vec3(0, -height, 0);
+	assert(glm::dot(result.u, result.v) < 0.0001f);
     result.screenPoint = glm::vec3(transformMatrix * glm::vec4(-halfWidth, halfHeight, projectedDistance, 1));
 
     result.thinLensEnabled = m_thinLens;

@@ -85,7 +85,9 @@ void Mesh::addSubMesh(
         if (inMesh->HasTextureCoords(0)) {
             texCoords.x = inMesh->mTextureCoords[0][v].x;
             texCoords.y = inMesh->mTextureCoords[0][v].y;
-        }
+		} else {
+			texCoords = glm::vec3(0.0f);
+		}
 
         // Fill in the vertex
         VertexSceneData vertex;

@@ -1,6 +1,7 @@
 #include "transform.h"
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/matrix_operation.hpp>
+//#include <glm/gtx/matrix_operation.hpp>
+
 namespace raytracer {
 
 Transform::Transform(glm::vec3 location, glm::quat orientation, glm::vec3 scale)
