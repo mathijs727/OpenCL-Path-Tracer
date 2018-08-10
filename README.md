@@ -31,3 +31,4 @@ cmake -DCMAKE_TOOLCHAIN_FILE="[PATH_TO_VCPKG]\\scripts\\buildsystems\\vcpkg.cmak
 - Assimp
 - glm
 - eastl (included as git submodule)
+- clRNG (included as (modified) source)
