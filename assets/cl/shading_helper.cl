@@ -292,7 +292,7 @@ float3 diffuseColour(
 		float2 t2 = vertices[2].texCoord;
 		float2 tex_coords = t0 + (t1-t0) * uv.x + (t2-t0) * uv.y;
 
-		float4 texCoords3d = (float4)(tex_coords.x, 1.0f - tex_coords.y, material->diffuse.tex_id, 0.0f);
+		float4 texCoords3d = (float4)(tex_coords.x, tex_coords.y, material->diffuse.tex_id, 0.0f);
 		float4 colourWithAlpha = read_imagef(
 			textures,
 			sampler,

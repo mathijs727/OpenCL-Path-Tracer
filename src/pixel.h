@@ -1,16 +1,13 @@
 #pragma once
+#include "opencl/cl_helpers.h"
 
-#include "types.h"
-
-union PixelRGBA
-{
-	u32 value;
-	struct
-	{
-		u8 b;
-		u8 g;
-		u8 r;
-		u8 a;
-	};
+union PixelRGBA {
+    uint32_t value;
+    struct
+    {
+        uint8_t b;
+        uint8_t g;
+        uint8_t r;
+        uint8_t a;
+    };
 };
-

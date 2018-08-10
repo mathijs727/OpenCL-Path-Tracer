@@ -2,126 +2,139 @@
 #include <array>
 #include <iostream>
 
-using namespace raytracer;
+namespace raytracer {
 
-void traverse(std::vector<SubBvhNode>& bvhNodes)
-{
-	
-}
-
-raytracer::BvhTester::BvhTester(std::shared_ptr<Mesh> mesh) :
-	_vertices(mesh->getVertices()),
-	_triangles(mesh->getTriangles()),
-	_bvhNodes(mesh->getBvhNodes()),
-	_root_node(mesh->getBvhRootNode())
+void traverse(std::vector<SubBVHNode>& bvhNodes)
 {
 }
 
-raytracer::BvhTester::~BvhTester()
+BvhTester::BvhTester(std::shared_ptr<Mesh> meshPtr)
+    : m_vertices(meshPtr->getVertices())
+    , m_triangles(meshPtr->getTriangles())
+    , m_bvhNodes(meshPtr->getBvhNodes())
+    , m_rootNode(meshPtr->getBvhRootNode())
 {
 }
 
-void raytracer::BvhTester::test()
+BvhTester::~BvhTester()
 {
-	std::cout << "\n\n-----   BVH TEST STARTING   -----" << std::endl;
-	std::cout << "Number of triangles in model: " << _triangles.size() << std::endl;
-	std::cout << "Number of bvh nodes in model: " << _bvhNodes.size() << std::endl;
-	std::cout << "Number of bvh nodes visited: " << countNodes(_root_node) << " out of " << _bvhNodes.size() << std::endl;
-	std::cout << "Recursion depth: " << countDepth(_root_node) << "\n" << std::endl;
-
-	std::cout << "Number of triangles visited: " << countTriangles(_root_node) << " out of " << _triangles.size() << std::endl;
-	std::cout << "Average triangle per leaf: " << (float)countTriangles(_root_node) / countLeafs(_root_node) << std::endl;
-	std::cout << "Max triangles per leaf: " << maxTrianglesPerLeaf(_root_node) << "\n" << std::endl;
-
-	// Histogram
-	std::cout << "Triangle per leaf histogram:" << std::endl;
-	const u32 max = maxTrianglesPerLeaf(_root_node);
-	for (int i = 1; i <= 10; i++)
-	{
-		float stepLin = (float)max / i;
-		float stepQuad = ((stepLin / max) * (stepLin / max)) * max;
-		u32 stepMax = (u32)stepQuad;
-		u32 count = countTrianglesLessThen(_root_node, stepMax);
-
-		std::cout << "< " << stepMax << ":\t\t" << count << std::endl;
-	}
-
-	std::cout << "\n\n" << std::endl;
 }
 
-u32 raytracer::BvhTester::countNodes(u32 nodeId)
+void BvhTester::test()
 {
-	auto& node = _bvhNodes[nodeId];
-	if (node.triangleCount == 0)
-	{
-		return countNodes(node.leftChildIndex) + countNodes(node.leftChildIndex + 1) + 1;
-	}
-	else {
-		return 1;
-	}
+    std::cout << "\n\n-----   BVH TEST STARTING   -----\n";
+    std::cout << "Number of triangles in model: " << m_triangles.size() << "\n";
+    std::cout << "Number of bvh nodes in model: " << m_bvhNodes.size() << "\n";
+    std::cout << "Number of bvh nodes visited: " << countNodes(m_rootNode) << " out of " << m_bvhNodes.size() << "\n";
+    std::cout << "Recursion depth: " << countDepth(m_rootNode) << "\n\n";
+
+    std::cout << "Number of triangles visited: " << countTriangles(m_rootNode) << " out of " << m_triangles.size() << "\n";
+    std::cout << "Average triangle per leaf: " << (float)countTriangles(m_rootNode) / countLeafs(m_rootNode) << "\n";
+    std::cout << "Max triangles per leaf: " << maxTrianglesPerLeaf(m_rootNode) << "\n\n";
+
+    // Histogram
+    std::cout << "Triangle per leaf histogram:\n";
+    const uint32_t max = maxTrianglesPerLeaf(m_rootNode);
+    for (int i = 1; i <= 10; i++) {
+        float stepLin = (float)max / i;
+        float stepQuad = ((stepLin / max) * (stepLin / max)) * max;
+        uint32_t stepMax = (uint32_t)stepQuad;
+        uint32_t count = countTrianglesLessThen(m_rootNode, stepMax);
+
+        std::cout << "< " << stepMax << ":\t\t" << count << "\n";
+    }
+
+    std::cout << "\nTesting node bounds\n";
+    std::cout << (testNodeBounds(m_rootNode) ? "Success" : "Failed") << "\n";
+
+    std::cout << "\n\n"
+              << std::flush;
 }
 
-u32 raytracer::BvhTester::countDepth(u32 nodeId)
+uint32_t BvhTester::countNodes(uint32_t nodeId)
 {
-	auto& node = _bvhNodes[nodeId];
-	if (node.triangleCount == 0)
-	{
-		return std::max(countDepth(node.leftChildIndex), countDepth(node.leftChildIndex + 1)) + 1;
-	}
-	else {
-		return 1;
-	}
+    auto& node = m_bvhNodes[nodeId];
+    if (node.triangleCount == 0) {
+        return countNodes(node.leftChildIndex) + countNodes(node.leftChildIndex + 1) + 1;
+    } else {
+        return 1;
+    }
 }
 
-u32 raytracer::BvhTester::countTriangles(u32 nodeId)
+uint32_t BvhTester::countDepth(uint32_t nodeId)
 {
-	auto& node = _bvhNodes[nodeId];
-	if (node.triangleCount == 0)
-	{
-		return countTriangles(node.leftChildIndex) + countTriangles(node.leftChildIndex + 1);
-	}
-	else {
-		return node.triangleCount;
-	}
+    auto& node = m_bvhNodes[nodeId];
+    if (node.triangleCount == 0) {
+        return std::max(countDepth(node.leftChildIndex), countDepth(node.leftChildIndex + 1)) + 1;
+    } else {
+        return 1;
+    }
 }
 
-u32 raytracer::BvhTester::countLeafs(u32 nodeId)
+uint32_t BvhTester::countTriangles(uint32_t nodeId)
 {
-	auto& node = _bvhNodes[nodeId];
-	if (node.triangleCount == 0)
-	{
-		return countLeafs(node.leftChildIndex) + countLeafs(node.leftChildIndex + 1);
-	}
-	else {
-		return 1;
-	}
+    auto& node = m_bvhNodes[nodeId];
+    if (node.triangleCount == 0) {
+        return countTriangles(node.leftChildIndex) + countTriangles(node.leftChildIndex + 1);
+    } else {
+        return node.triangleCount;
+    }
 }
 
-u32 raytracer::BvhTester::maxTrianglesPerLeaf(u32 nodeId)
+uint32_t BvhTester::countLeafs(uint32_t nodeId)
 {
-	auto& node = _bvhNodes[nodeId];
-	if (node.triangleCount == 0)
-	{
-		return std::max(maxTrianglesPerLeaf(node.leftChildIndex), maxTrianglesPerLeaf(node.leftChildIndex + 1));
-	}
-	else {
-		return node.triangleCount;
-	}
+    auto& node = m_bvhNodes[nodeId];
+    if (node.triangleCount == 0) {
+        return countLeafs(node.leftChildIndex) + countLeafs(node.leftChildIndex + 1);
+    } else {
+        return 1;
+    }
 }
 
-u32 raytracer::BvhTester::countTrianglesLessThen(u32 nodeId, u32 maxCount)
+uint32_t BvhTester::maxTrianglesPerLeaf(uint32_t nodeId)
 {
-	auto& node = _bvhNodes[nodeId];
-	if (node.triangleCount == 0)
-	{
-		return countTrianglesLessThen(node.leftChildIndex, maxCount) + \
-			countTrianglesLessThen(node.leftChildIndex + 1, maxCount);
-	}
-	else {
-		if (node.triangleCount < maxCount)
-			return 1;
-		else
-			return 0;
-	}
+    auto& node = m_bvhNodes[nodeId];
+    if (node.triangleCount == 0) {
+        return std::max(maxTrianglesPerLeaf(node.leftChildIndex), maxTrianglesPerLeaf(node.leftChildIndex + 1));
+    } else {
+        return node.triangleCount;
+    }
 }
 
+uint32_t BvhTester::countTrianglesLessThen(uint32_t nodeId, uint32_t maxCount)
+{
+    auto& node = m_bvhNodes[nodeId];
+    if (node.triangleCount == 0) {
+        return countTrianglesLessThen(node.leftChildIndex, maxCount) + countTrianglesLessThen(node.leftChildIndex + 1, maxCount);
+    } else {
+        if (node.triangleCount < maxCount)
+            return 1;
+        else
+            return 0;
+    }
+}
+
+bool BvhTester::testNodeBounds(uint32_t nodeId)
+{
+    auto& node = m_bvhNodes[nodeId];
+    auto bounds = node.bounds;
+    if (node.triangleCount == 0) {
+        // Check that both child nodes fit in this node
+        bool leftChildFits = node.bounds.fullyContains(m_bvhNodes[node.leftChildIndex + 0].bounds);
+        bool rightChildFits = node.bounds.fullyContains(m_bvhNodes[node.leftChildIndex + 1].bounds);
+        bool left = testNodeBounds(node.leftChildIndex + 0);
+        bool right = testNodeBounds(node.leftChildIndex + 1);
+        return left && right && leftChildFits && rightChildFits;
+    } else {
+        // Check that all triangles fit in the bounds of this leaf node
+        bool allTrianglesFit = true;
+        for (const auto& triangle : m_triangles.subspan(node.firstTriangleIndex, node.triangleCount)) {
+            auto v1 = m_vertices[triangle.indices[0]].vertex;
+            auto v2 = m_vertices[triangle.indices[1]].vertex;
+            auto v3 = m_vertices[triangle.indices[2]].vertex;
+            allTrianglesFit = allTrianglesFit && bounds.contains(v1) && bounds.contains(v2) && bounds.contains(v3);
+        }
+        return allTrianglesFit;
+    }
+}
+}

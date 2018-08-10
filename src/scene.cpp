@@ -1,36 +1,40 @@
 #include "scene.h"
 #include <algorithm>
 #include <iostream>
+#include <limits>
 
-using namespace raytracer;
+namespace raytracer {
 
-raytracer::SceneNode& raytracer::Scene::add_node(std::shared_ptr<IMesh> primitive, const Transform& transform, SceneNode* parent /*= nullptr*/) {
-	//return add_node(std::vector<Mesh>{ primitive }, transform, parent );
-	if (!parent) parent = &get_root_node();
+Scene::Scene()
+    : m_rootNode({ nullptr, {}, {}, {}, {} })
+{
+}
 
-	bool found = false;
-	u32 meshId = 0;
-	for (auto& pair : _meshes)
-	{
-		if (pair.mesh.get() == primitive.get())
-		{
-			found = true;
-			break;
-		}
-		meshId++;
-	}
+const SceneNode& Scene::addNode(std::shared_ptr<IMesh> object, const Transform& transform, SceneNode* parent)
+{
+    if (!parent)
+        parent = &m_rootNode;
 
-	if (!found)
-	{
-		meshId = (u32)_meshes.size();
-		_meshes.emplace_back(primitive, 0);
-	}
+    parent->bounds.fit(object->getBounds());
 
-	auto newChild = std::make_unique<SceneNode>();
-	SceneNode& newChildRef = *newChild.get();
-	newChild->transform = transform;
-	newChild->parent = parent;	
-	newChild->mesh = meshId;
-	parent->children.push_back(std::move(newChild));
-	return newChildRef;
+    uint32_t meshID;
+    if (auto iter = m_meshIDMapping.find(object.get()); iter != m_meshIDMapping.end()) {
+        meshID = iter->second;
+    } else {
+        meshID = (uint32_t)m_meshes.size();
+        m_meshes.emplace_back(object, object->getBvhRootNode());
+        m_meshIDMapping[object.get()] = meshID;
+    }
+
+    auto newChild = std::make_unique<SceneNode>(SceneNode{ parent,
+        {},
+        object->getBounds(),
+        transform,
+        meshID,
+        object->getBvhRootNode() });
+    SceneNode& newChildRef = *newChild.get();
+    parent->children.push_back(std::move(newChild));
+    return newChildRef;
+}
+
 }

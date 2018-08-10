@@ -1,73 +1,54 @@
 #pragma once
-#include <vector>
-#include <memory>
-#include "shapes.h"
-#include "ray.h"
-#include "light.h"
-#include "model/mesh.h"
 #include "model/material.h"
-
-#define MAX_TRACE_DEPTH 6
+#include "model/mesh.h"
+#include "ray.h"
+#include <gsl/gsl>
+#include <memory>
+#include <optional>
+#include <unordered_map>
+#include <vector>
 
 namespace raytracer {
 
-struct SceneNode
-{
-	SceneNode* parent = nullptr;
-	std::vector<std::unique_ptr<SceneNode>> children;
-	Transform transform;
-	u32 mesh = -1;
+struct SceneNode {
+    SceneNode() = delete;
+    SceneNode(SceneNode&&) = default;
+
+    const SceneNode* parent;
+    std::vector<std::unique_ptr<SceneNode>> children;
+    AABB bounds;
+    Transform transform;
+    std::optional<uint32_t> meshID;
+    std::optional<uint32_t> subBvhRootID;
 };
 
-struct MeshBvhPair
-{
-	MeshBvhPair(std::shared_ptr<IMesh>& mesh, u32 offset)
-	{
-		this->mesh = mesh;
-		this->bvh_offset = offset;
-	}
-	std::shared_ptr<IMesh> mesh;
-	u32 bvh_offset;// Offset of meshes bvh into the global bvh array
+struct MeshBvhPair {
+    MeshBvhPair(std::shared_ptr<IMesh>& meshPtr, uint32_t bvhIndexOffset)
+        : meshPtr(meshPtr)
+        , bvhIndexOffset(bvhIndexOffset)
+    {
+    }
+    std::shared_ptr<IMesh> meshPtr;
+    uint32_t bvhIndexOffset; // Offset of meshes bvh into the global bvh array
 };
 
-class Scene
-{
+class Scene {
 public:
-	friend class Bvh;
+    friend class Bvh;
 
-	Scene() { };
+    Scene();
+    ~Scene() = default;
 
-	SceneNode& add_node(const std::shared_ptr<IMesh> primitive, const Transform& transform = Transform(), SceneNode* parent = nullptr);
-	//SceneNode& add_node(const std::vector<Mesh>& primitive, const Transform& transform = Transform(), SceneNode* parent = nullptr);
+    const SceneNode& addNode(const std::shared_ptr<IMesh> object, const Transform& transform = {}, SceneNode* parent = nullptr);
 
-	void add_light(Light& light)
-	{
-		_lights.push_back(light);
-	}
+    SceneNode& getRootNode() { return m_rootNode; }
+    const SceneNode& getRootNode() const { return m_rootNode; }
+    gsl::span<MeshBvhPair> getMeshes() { return m_meshes; };
 
-	SceneNode& get_root_node() { return _root_node; }
-
-	const std::vector<Light>& get_lights() const { return _lights; };
-	std::vector<MeshBvhPair>& get_meshes() { return _meshes; };
-public:
-	struct LightIterableConst {
-		const Scene& scene;
-
-		LightIterableConst(const Scene& scene) : scene(scene) { }
-
-		typedef std::vector<Light>::const_iterator const_iterator;
-
-		const_iterator begin() { return scene._lights.cbegin(); }
-		const_iterator end() { return scene._lights.cend(); }
-	};
-
-	LightIterableConst lights() const { return LightIterableConst(*this); }
-public:
-	float refractive_index = 1.000277f;
 private:
-	SceneNode _root_node;
+    SceneNode m_rootNode;
 
-	std::vector<Light> _lights;
-	std::vector<MeshBvhPair> _meshes;
+    std::unordered_map<const IMesh*, uint32_t> m_meshIDMapping;
+    std::vector<MeshBvhPair> m_meshes;
 };
 }

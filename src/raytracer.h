@@ -1,12 +1,11 @@
 #pragma once
-//#include "template/template.h"// Includes template/cl.hpp
-#include "template/includes.h"
-#include "bvh/top_bvh.h"
-#include "vertices.h"
 #include "model/material.h"
+#include "scene.h"
+#include "opencl/texture.h"
+#include "vertices.h"
 #include <memory>
+#include <string_view>
 #include <vector>
-#include "hdrtexture.h"
 
 namespace Tmpl8 {
 class Surface;
@@ -17,105 +16,92 @@ namespace raytracer {
 class Camera;
 class Scene;
 
-
-class RayTracer
-{
+class RayTracer {
 public:
-	RayTracer(int width, int height);
-	~RayTracer();
+    RayTracer(int width, int height, std::shared_ptr<Scene> scene, const UniqueTextureArray& materialTextures, const UniqueTextureArray& skydomeTextures, GLuint outputTarget);
+    ~RayTracer();
 
-	void SetSkydome(const char* filePathFormat, bool isLinear, float multiplier);
+    void rayTrace(const Camera& camera);
 
-	void SetScene(std::shared_ptr<Scene> scene);
-	void SetTarget(GLuint glTexture);
-	void RayTrace(Camera& camera);
+    void frameTick(); // Load next animation frame data
 
-	void FrameTick();// Load next animation frame data
+    int getSamplesPerPixel() const;
+    int getMaxSamplesPerPixel() const;
 
-	int GetNumPasses();
-	int GetMaxPasses();
 private:
-	void TraceRays(const Camera& camera);
+    void initBuffersAndTransferStaticData(std::shared_ptr<Scene> scene, const UniqueTextureArray& textureArray);
+    void initAndTransferSkydome(const UniqueTextureArray& skydomeTextureArray);
+    void initTarget(GLuint glTexture);
 
-	void Accumulate(const Camera& camera);
-	void ClearAccumulationBuffer();
-	void CalculateAverageGrayscale();
+    void traceRays(const Camera& camera);
 
-	void CopyNextAnimationFrameData();
-	void CollectTransformedLights(const SceneNode* node, const glm::mat4& transform);
+    void accumulate(const Camera& camera);
+    void clearAccumulationBuffer();
+    void calculateAverageGrayscale();
 
-	void InitOpenCL();
-	void InitBuffers(
-		u32 numVertices,
-		u32 numTriangles,
-		u32 numEmissiveTriangles,
-		u32 numMaterials,
-		u32 numSubBvhNodes,
-		u32 numTopBvhNodes,
-		u32 numLights);
+    void transferDynamicData();
+    void collectTransformedLights(const SceneNode* node, const glm::mat4& transform);
 
-	cl::Kernel LoadKernel(const char* fileName, const char* funcName);
+    void initBuffers(
+        uint32_t numVertices,
+        uint32_t numTriangles,
+        uint32_t numEmissiveTriangles,
+        uint32_t numMaterials,
+        uint32_t numSubBvhNodes,
+        uint32_t numTopBvhNodes);
+
+    cl::Kernel loadKernel(std::string_view fileName, std::string_view funcName);
+
 private:
-	std::shared_ptr<Scene> _scene;
+    CLContext m_clContext;
 
-	std::unique_ptr<HDRTexture> _skydome;
-	bool _skydome_loaded;
+    std::shared_ptr<Scene> m_scene;
+    std::unique_ptr<CLTextureArray> m_skydomeTextures;
+    std::unique_ptr<CLTextureArray> m_materialTextures;
 
-	cl_uint _scr_width, _scr_height;
+    cl_uint m_screenWidth, m_screenHeight;
+    GLuint m_glOutputImage;
+    cl::Image2D m_clOutputImage;
+    std::unique_ptr<float[]> m_cpuOutputImage;
 
-	cl::Context _context;
-	cl::Device _device;
-	cl::CommandQueue _queue;
-	cl::CommandQueue _copyQueue;
+    cl::Kernel m_generateRaysKernel;
+    cl::Kernel m_intersectWalkKernel;
+    cl::Kernel m_shadingKernel;
+    cl::Kernel m_intersectShadowsKernel;
+    cl::Kernel m_updateKernelDataKernel;
 
-	cl::Kernel _generate_rays_kernel;
-	cl::Kernel _intersect_walk_kernel;
-	cl::Kernel _shading_kernel;
-	cl::Kernel _intersect_shadows_kernel;
-	cl::Kernel _update_kernel_data_kernel;
+    cl::Buffer m_rayTraversalBuffer;
+    cl::Buffer m_kernelDataBuffer;
+    cl::Buffer m_randomStreamBuffer;
+    cl::Buffer m_raysBuffer[2];
+    cl::Buffer m_shadingRequestBuffer;
+    cl::Buffer m_shadowRaysBuffer;
 
-	cl::Buffer _ray_traversal_buffer;
-	cl::Buffer _ray_kernel_data;
-	cl::Buffer _random_streams;
-	cl::Buffer _rays_buffers[2];
-	cl::Buffer _shading_buffer;
-	cl::Buffer _shadow_rays_buffer;
+    cl_uint m_samplesPerPixel;
+    cl::Kernel m_accumulateKernel;
+    cl::Buffer m_accumulationBuffer;
+    cl::ImageGL m_clGLInteropOutputImage;
 
-	cl_uint _rays_per_pixel;
-	cl::Kernel _accumulate_kernel;
-	cl::Buffer _accumulation_buffer;
-	cl::ImageGL _output_image;
+    std::vector<VertexSceneData> m_verticesHost;
+    std::vector<TriangleSceneData> m_trianglesHost;
+    std::vector<EmissiveTriangle> m_emissiveTrianglesHost;
+    std::vector<Material> m_materialsHost;
+    std::vector<TopBVHNode> m_topBvhNodesHost;
+    std::vector<SubBVHNode> m_subBvhNodesHost;
 
-	GLuint _output_image_gl;
-	cl::Image2D _output_image_cl;
-	std::unique_ptr<float[]> _output_image_cpu;
+    unsigned m_activeBuffer = 0;
+    cl_uint m_numStaticVertices;
+    cl_uint m_numStaticTriangles;
+    cl_uint m_numEmissiveTriangles[2];
+    cl_uint m_numStaticMaterials;
+    cl_uint m_numStaticBvhNodes;
+    cl_uint m_topBvhRootNode[2];
 
-	std::vector<VertexSceneData> _vertices_host;
-	std::vector<TriangleSceneData> _triangles_host;
-	std::vector<EmissiveTriangle> _emissive_triangles_host;
-	std::vector<Material> _materials_host;
-	std::vector<SubBvhNode> _sub_bvh_nodes_host;
-
-	cl_uint _num_static_vertices;
-	cl_uint _num_static_triangles;
-	cl_uint _num_emissive_triangles[2];
-	cl_uint _num_static_materials;
-	cl_uint _num_static_bvh_nodes;
-	uint _active_buffers = 0;
-	cl::Buffer _vertices[2];
-	cl::Buffer _triangles[2];
-	cl::Buffer _emissive_trangles[2];
-	cl::Buffer _materials[2];
-	cl::Buffer _sub_bvh[2];
-	
-	cl::Image2D _no_texture;
-	cl::Image2D _skydome_texture;
-	cl::Image2DArray _material_textures;
-
-	std::vector<TopBvhNode> _top_bvh_nodes_host;
-	cl_uint _top_bvh_root_node[2];
-	cl::Buffer _top_bvh[2];
+    cl::Buffer m_verticesBuffers[2];
+    cl::Buffer m_trianglesBuffers[2];
+    cl::Buffer m_emissiveTrianglesBuffers[2];
+    cl::Buffer m_materialsBuffers[2];
+    cl::Buffer m_topBvhBuffers[2];
+    cl::Buffer m_subBvhBuffers[2];
 };
-
 }
-

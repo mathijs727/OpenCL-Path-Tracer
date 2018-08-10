@@ -1,47 +1,30 @@
 #pragma once
-#include "types.h"
-#include "template/includes.h"
+#include "opencl/cl_gl_includes.h"
+#include "opencl/cl_helpers.h"
 #include <glm/glm.hpp>
 
 namespace raytracer {
-	struct AABB
-	{
-		union
-		{
-			glm::vec3 min;
-			cl_float3 __min_cl;
-		};
-		union
-		{
-			glm::vec3 max;
-			cl_float3 __max_cl;
-		};
+struct AABB {
+    CL_VEC3(min);
+    CL_VEC3(max);
 
-		AABB() {
-			min = glm::vec3(std::numeric_limits<float>::max());
-			max = glm::vec3(std::numeric_limits<float>::lowest());
-		};
-		AABB(const AABB& other)
-		{
-			memcpy(this, &other, sizeof(AABB));
-		}
-		AABB& operator=(const AABB& other)
-		{
-			memcpy(this, &other, sizeof(AABB));
-			return *this;
-		}
+    AABB();
+    AABB(glm::vec3 min, glm::vec3 max);
+    AABB(const AABB& other) : min(other.min), max(other.max){};// For some reason "= default" creates runtime crashes on Windows with clang-cl
+    AABB& operator=(const AABB& other) = default;
 
-		void fit(const AABB& other)
-		{
-			min = glm::min(min, other.min);
-			max = glm::max(max, other.max);
-		}
+    void fit(glm::vec3 vec);
+    void fit(const AABB& other);
+    AABB operator+(const AABB& other) const;
+    AABB intersection(const AABB& other) const;
 
-		glm::vec3 size() { return max - min; }
+    bool contains(glm::vec3 vec) const;
+    bool partiallyContains(const AABB& other) const;
+    bool fullyContains(const AABB& other) const;
+    bool operator==(const AABB& other) const;
 
-		float surfaceArea() {
-			glm::vec3 size = max - min;
-			return 2.0f * (size.x * size.y + size.y * size.z + size.z * size.x);
-		}
-	};
+    glm::vec3 center() const;
+    glm::vec3 extent() const;
+    float surfaceArea() const;
+};
 }
