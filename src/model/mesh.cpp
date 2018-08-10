@@ -175,11 +175,10 @@ void Mesh::loadFromFile(
     std::string bvhFileName(fileName);
     bvhFileName += ".bvh";
     bool buildBvh = true;
-    // TODO: Re-enable BVH caching (currently disabled for testing BVH builders)
-    /*if (fileExists(bvhFileName)) {
+    if (fileExists(bvhFileName)) {
         std::cout << "Loading bvh from file: " << bvhFileName << std::endl;
         buildBvh = !loadBvh(bvhFileName.c_str());
-    }*/
+    }
 
     if (buildBvh) {
         std::cout << "Starting bvh build..." << std::endl;
