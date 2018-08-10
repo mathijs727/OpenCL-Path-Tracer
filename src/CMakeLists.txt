@@ -1,6 +1,6 @@
 include(${CMAKE_CURRENT_LIST_DIR}/bvh/CMakeLists.txt)
 include(${CMAKE_CURRENT_LIST_DIR}/model/CMakeLists.txt)
-#include(${CMAKE_CURRENT_LIST_DIR}/imgui/CMakeLists.txt)
+include(${CMAKE_CURRENT_LIST_DIR}/imgui/CMakeLists.txt)
 include(${CMAKE_CURRENT_LIST_DIR}/ui/CMakeLists.txt)
 include(${CMAKE_CURRENT_LIST_DIR}/opencl/CMakeLists.txt)
 

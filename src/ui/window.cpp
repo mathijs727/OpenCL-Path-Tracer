@@ -1,6 +1,10 @@
 #include "window.h"
 #include <iostream>
 #include <string>
+#include <GL/glew.h>
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 
 static void fail(std::string_view errorMessage)
 {
@@ -42,10 +46,32 @@ Window::Window(uint32_t width, uint32_t height, std::string_view title)
     glfwSetKeyCallback(m_window, keyCallback);
     glfwSetMouseButtonCallback(m_window, mouseButtonCallback);
     glfwSetCursorPosCallback(m_window, mouseMoveCallback);
+
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	(void)io;
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
+
+	ImGui_ImplGlfw_InitForOpenGL(m_window, false);
+	ImGui_ImplOpenGL3_Init("#version 150");
+
+	// Start first ImGui frame
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	// Style
+	ImGui::StyleColorsDark();
 }
 
 Window::~Window()
 {
+	// Cleanup
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+
     glfwDestroyWindow(m_window);
     glfwTerminate();
 }
@@ -57,7 +83,16 @@ void Window::processInput()
 
 void Window::swapBuffers()
 {
+	// ImGui rendering
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
     glfwSwapBuffers(m_window);
+
+	// Start new ImGui frame
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
 }
 
 bool Window::shouldClose() const

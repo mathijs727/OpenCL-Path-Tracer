@@ -1,6 +1,9 @@
 #include "bvh/bvh_test.h"
 #include "camera.h"
 #include "common.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 #include "opencl/texture.h"
 #include "raytracer.h"
 #include "scene.h"
@@ -16,8 +19,8 @@ using namespace raytracer;
 
 static const uint32_t screenWidth = 1280;
 static const uint32_t screenHeight = 720;
-static const double cameraViewSpeed = 0.1;
-static const double cameraMoveSpeed = 1.0f;
+static const double cameraViewSpeed = 0.05;
+static const double cameraMoveSpeed = 1.0;
 
 void createScene(Scene& scene, UniqueTextureArray& textureArray);
 void createSkydome(std::string_view fileName, bool isLinear, float brightnessMultiplier, UniqueTextureArray& textureArray);
@@ -74,6 +77,30 @@ int main(int argc, char* argv[])
 
     RayTracer rayTracer(screenWidth, screenHeight, scene, materialTextures, skydomeTextures, output.getGLTexture());
 
+    auto updateUI = [&]() {
+        // Taken from the example code
+        // 1. Show a simple window
+        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
+        ImGui::Begin("Camera Widget");
+
+        //ImGui::Text("Hello, world!");
+        ImGui::Checkbox("Thin lens", &camera.m_thinLens);
+        if (camera.m_thinLens) {
+            ImGui::SliderFloat("Focal distance (m)", &camera.m_focalDistance, 0.1f, 5.0f);
+            ImGui::SliderFloat("Focal length (mm)", &camera.m_focalLengthMm, 10.0f, 100.0f);
+        }
+        ImGui::SliderFloat("Aperture (f-stops)", &camera.m_aperture, 1.0f, 10.0f);
+        ImGui::SliderFloat("Shutter time (s)", &camera.m_shutterTime, 1.0f / 500.0f, 1.0f / 32.0f);
+        ImGui::SliderFloat("Sensitivity (ISO)", &camera.m_iso, 100.0f, 3200.0f);
+
+        ImGui::Separator();
+
+        ImGui::Text("%d / %d samples per pixel", rayTracer.getSamplesPerPixel(), rayTracer.getMaxSamplesPerPixel());
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+        ImGui::End();
+    };
+
     Timer timer;
     while (!window.shouldClose() && !userClose) {
         auto now = std::chrono::high_resolution_clock::now();
@@ -86,6 +113,7 @@ int main(int argc, char* argv[])
         rayTracer.rayTrace(camera);
         output.render();
 
+		updateUI();
         window.swapBuffers();
     }
 #endif

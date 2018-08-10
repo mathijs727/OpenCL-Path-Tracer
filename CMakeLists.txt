@@ -19,7 +19,6 @@ target_link_libraries(FreeImage INTERFACE ${FREEIMAGE_LIBRARIES})
 
 add_library(assimptarget INTERFACE)
 target_include_directories(assimptarget INTERFACE ${ASSIMP_INCLUDE_DIRS})
-message("Assimp libs: ${ASSIMP_LIBRARIES}")
 target_link_libraries(assimptarget INTERFACE ${ASSIMP_LIBRARIES})
 #target_compile_options(assimptarget INTERFACE "-Wno-pragma-pack")
 
@@ -45,5 +44,4 @@ target_compile_definitions(raytracer PUBLIC NOMINMAX=1)
 set_target_properties(raytracer PROPERTIES
     CXX_STANDARD 17# Require C++ 17
     CXX_STANDARD_REQUIRED ON
-    CXX_EXTENSIONS OFF
-)
+    CXX_EXTENSIONS OFF)
