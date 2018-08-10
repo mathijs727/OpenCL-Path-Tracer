@@ -25,7 +25,7 @@ static const double cameraMoveSpeed = 1.0;
 void createScene(Scene& scene, UniqueTextureArray& textureArray);
 void createSkydome(std::string_view fileName, bool isLinear, float brightnessMultiplier, UniqueTextureArray& textureArray);
 
-void cameraLookHandler(Camera& camera, glm::dvec2 mousePosition);
+void cameraLookHandler(Camera& camera, glm::dvec2 mousePosition, bool ignoreMovement);
 void cameraMoveHandler(Camera& camera, const ui::Window& window, double dt);
 
 int main(int argc, char* argv[])
@@ -58,9 +58,7 @@ int main(int argc, char* argv[])
     bool mouseCaptured = false;
     window.setMouseCapture(mouseCaptured);
     window.registerMouseMoveCallback([&](glm::dvec2 mousePosition) {
-        if (mouseCaptured) {
-            cameraLookHandler(camera, mousePosition);
-        }
+        cameraLookHandler(camera, mousePosition, !mouseCaptured);
     });
 
     bool userClose = false;
@@ -113,7 +111,7 @@ int main(int argc, char* argv[])
         rayTracer.rayTrace(camera);
         output.render();
 
-		updateUI();
+        updateUI();
         window.swapBuffers();
     }
 #endif
@@ -160,7 +158,7 @@ void createSkydome(std::string_view fileName, bool isLinear, float brightnessMul
     textureArray.add(fileName, isLinear, brightnessMultiplier);
 }
 
-void cameraLookHandler(Camera& camera, glm::dvec2 mousePosition)
+void cameraLookHandler(Camera& camera, glm::dvec2 mousePosition, bool ignoreMovement)
 {
     static glm::vec3 cameraEuler = glm::vec3(0.0f, Pi<float>::value, 0.0f);
     static glm::dvec2 prevMousePosition = glm::dvec2(0.0f);
@@ -169,18 +167,20 @@ void cameraLookHandler(Camera& camera, glm::dvec2 mousePosition)
         firstFrame = false;
     }
 
-    glm::dvec2 delta = mousePosition - prevMousePosition;
-    prevMousePosition = mousePosition;
+    if (!ignoreMovement) {
+        glm::dvec2 delta = mousePosition - prevMousePosition;
+        cameraEuler.x += glm::radians(static_cast<float>(delta.y * cameraViewSpeed));
+        cameraEuler.y += glm::radians(static_cast<float>(delta.x * cameraViewSpeed));
+        cameraEuler.x = glm::clamp(cameraEuler.x, -glm::half_pi<float>(), glm::half_pi<float>());
 
-    cameraEuler.x += glm::radians(static_cast<float>(delta.y * cameraViewSpeed));
-    cameraEuler.y += glm::radians(static_cast<float>(delta.x * cameraViewSpeed));
-    cameraEuler.x = glm::clamp(cameraEuler.x, -glm::half_pi<float>(), glm::half_pi<float>());
-
-    if (delta.x != 0.0 || delta.y != 0.0) {
-        Transform transform = camera.getTransform();
-        transform.orientation = glm::quat(cameraEuler);
-        camera.setTransform(transform);
+        if (delta.x != 0.0 || delta.y != 0.0) {
+            Transform transform = camera.getTransform();
+            transform.orientation = glm::quat(cameraEuler);
+            camera.setTransform(transform);
+        }
     }
+
+    prevMousePosition = mousePosition;
 }
 
 void cameraMoveHandler(Camera& camera, const ui::Window& window, double dt)
