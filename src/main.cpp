@@ -103,8 +103,6 @@ void createScene(Scene& scene, UniqueTextureArray& textureArray)
         scene.addNode(lightPlane, transform);
     }
 
-	return;
-
     // Sponza
     {
         Transform transform;

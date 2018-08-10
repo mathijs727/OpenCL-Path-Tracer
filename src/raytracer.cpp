@@ -551,7 +551,7 @@ void RayTracer::transferDynamicData()
 
     // Get the light emmiting triangles transformed by the scene graph
     m_emissiveTrianglesHost.clear();
-    collectTransformedLights(&m_scene->getRootNode(), glm::mat4());
+    collectTransformedLights(&m_scene->getRootNode(), glm::mat4(1.0f));
     m_numEmissiveTriangles[copyBuffers] = (uint32_t)m_emissiveTrianglesHost.size();
     writeToBuffer(copyQueue, m_emissiveTrianglesBuffers[copyBuffers], gsl::make_span(m_emissiveTrianglesHost), 0, waitEvents);
 

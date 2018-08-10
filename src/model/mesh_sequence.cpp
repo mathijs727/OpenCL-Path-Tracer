@@ -171,7 +171,7 @@ void MeshSequence::loadFile(std::string_view fileName, const Transform& offset, 
     struct StackElement {
         aiNode* node;
         glm::mat4x4 transform;
-        StackElement(aiNode* node, const glm::mat4& transform = glm::mat4())
+        StackElement(aiNode* node, const glm::mat4& transform = glm::mat4(1.0f))
             : node(node)
             , transform(transform)
         {

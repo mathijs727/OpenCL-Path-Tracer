@@ -16,7 +16,7 @@ BvhBuildReturnType buildTopBVH(const SceneNode& rootSceneNode, gsl::span<const u
     // Add the scene graph nodes to the top-level BVH buffer
     std::vector<uint32_t> list;
     std::stack<std::pair<const SceneNode&, glm::mat4>> nodeStack;
-    nodeStack.push(std::make_pair(std::ref(rootSceneNode), glm::mat4()));
+    nodeStack.push(std::make_pair(std::ref(rootSceneNode), glm::mat4(1.0f)));
     while (!nodeStack.empty()) {
         auto [sceneNode, baseTransformMatrix] = nodeStack.top();
         nodeStack.pop();
@@ -105,7 +105,7 @@ static TopBVHNode mergeNodes(uint32_t nodeAIndex, const TopBVHNode nodeA, uint32
 {
     TopBVHNode node;
     node.bounds = nodeA.bounds + nodeB.bounds;
-    node.invTransform = glm::mat4(); // Identity
+    node.invTransform = glm::mat4(1.0f); // Identity
     node.leftChildIndex = nodeAIndex;
     node.rightChildIndex = nodeBIndex;
     node.isLeaf = false;
