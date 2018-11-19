@@ -78,10 +78,7 @@ std::optional<SpatialSplit> findSpatialSplitBinned(const AABB& nodeBounds, gsl::
         }
     }
 
-    if (bestSplit)
-        return bestSplit;
-    else
-        return {};
+    return bestSplit;
 }
 
 std::pair<AABB, AABB> performSpatialSplit(gsl::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives, const SpatialSplit& split, PrimInsertIter left, PrimInsertIter right)

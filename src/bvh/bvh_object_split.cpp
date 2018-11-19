@@ -70,10 +70,7 @@ std::optional<ObjectSplit> findObjectSplitBinned(const AABB& nodeBounds, gsl::sp
         }
     }
 
-    if (bestSplit)
-        return bestSplit;
-    else
-        return {};
+    return bestSplit;
 }
 
 std::pair<AABB, AABB> performObjectSplit(gsl::span<const PrimitiveData> primitives, const OriginalPrimitives&, const ObjectSplit& split, PrimInsertIter left, PrimInsertIter right)
