@@ -1,0 +1,4 @@
+-i bunny.obj
+-pointlight 10 10 10 500 600 500
+-pointlight -8 -5 10 400 500 350
+-vp 0 0 3 -vi 0 0 0 -vu 0 1 0 -fov 45 
