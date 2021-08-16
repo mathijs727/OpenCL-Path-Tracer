@@ -25,6 +25,16 @@ Like mentioned before, the material models that we support are (Lambert) diffuse
 
 More details about our renderer are described in the lab reports (in the "labreports" folder).
 
+## Installation
+
+We use the [vcpkg](https://github.com/Microsoft/vcpkg) package maanger to download dependencies. Please [install vcpkg](https://vcpkg.io/en/getting-started.html) before invoking CMake.
+
+
+Make sure that your GPU manufacturers OpenCL SDK is installed:
+
+[CUDA Toolkit (Nvidia)]: https://developer.nvidia.com/cuda-downloads
+
+
 ## Pretty images
 
 Of coarse, an image is worth a thousand words. And what is a path tracer without nice images?
@@ -34,36 +44,3 @@ Of coarse, an image is worth a thousand words. And what is a path tracer without
 ![glass](https://github.com/mathijs727/OpenCL-Path-Tracer/blob/master/images/glass.png)
 
 ![ceramic](https://github.com/mathijs727/OpenCL-Path-Tracer/blob/master/images/ceramic.png)
-
-## Install using vcpkg
-
-Make sure that your GPU manufacturers OpenCL SDK is installed:
-
-[CUDA Toolkit (Nvidia)]: https://developer.nvidia.com/cuda-downloads
-
-
-
-Download and install [vcpkg](https://github.com/Microsoft/vcpkg) and use it to install the dependencies:
-
-```bash
-vcpkg install glew glfw3 freeimage assimp glm
-```
-
-
-When configuring CMake pass the location of your vcpkg toolchain file as CMAKE_TOOLCHAIN_FILE:
-
-```bash
-cmake -DCMAKE_TOOLCHAIN_FILE="[PATH_TO_VCPKG]\\scripts\\buildsystems\\vcpkg.cmake" (...)
-```
-
-## Dependencies
-- OpenCL
-- OpenGL
-- GLEW
-- glfw3
-- FreeImage
-- Assimp
-- glm
-- eastl (included as git submodule)
-- imgui (included by source)
-- clRNG (included by (modified) source)
