@@ -1,11 +1,13 @@
 #pragma once
-#include "transform.h"
 #include "opencl/cl_helpers.h"
+#include "transform.h"
 
 namespace raytracer {
 
-struct CameraData {
-    CameraData(){}; // For some reaso =default doesn't work
+struct alignas(16) CameraData {
+    inline CameraData() {
+        std::memset(this, 0, sizeof(CameraData));
+    }
 
     CL_VEC3(eyePoint);
     CL_VEC3(screenPoint);
@@ -22,8 +24,6 @@ struct CameraData {
     float ISO;
 
     char thinLensEnabled;
-
-    std::byte __cl_padding[11];
 };
 
 class Camera {
