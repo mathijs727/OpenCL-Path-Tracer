@@ -2,7 +2,7 @@
 #include "bvh_nodes.h"
 #include "model/mesh.h"
 #include "vertices.h"
-#include <gsl/gsl>
+#include <span>
 
 namespace raytracer {
 class BvhTester {
@@ -24,8 +24,8 @@ private:
 
 private:
     uint32_t m_rootNode;
-    gsl::span<const VertexSceneData> m_vertices;
-    gsl::span<const TriangleSceneData> m_triangles;
-    gsl::span<const SubBVHNode> m_bvhNodes;
+    std::span<const VertexSceneData> m_vertices;
+    std::span<const TriangleSceneData> m_triangles;
+    std::span<const SubBVHNode> m_bvhNodes;
 };
 }

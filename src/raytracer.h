@@ -4,7 +4,8 @@
 #include "opencl/texture.h"
 #include "vertices.h"
 #include <memory>
-#include <string_view>
+#include <filesystem>
+#include <string>
 #include <vector>
 
 namespace Tmpl8 {
@@ -50,7 +51,7 @@ private:
         uint32_t numSubBvhNodes,
         uint32_t numTopBvhNodes);
 
-    cl::Kernel loadKernel(std::string_view fileName, std::string_view funcName);
+    cl::Kernel loadKernel(const std::filesystem::path& filePath, const std::string& funcName);
 
 private:
     CLContext m_clContext;

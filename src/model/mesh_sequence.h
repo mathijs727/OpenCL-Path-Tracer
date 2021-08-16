@@ -17,18 +17,18 @@ class MeshSequence : public IMesh {
 public:
     MeshSequence(std::string_view fileName, bool refitting, UniqueTextureArray& textureArray);
     MeshSequence(std::string_view fileName, const Transform& transform, bool refitting, UniqueTextureArray& textureArray);
-    MeshSequence(gsl::span<std::string_view> files, bool refitting, UniqueTextureArray& textureArray);
-    MeshSequence(gsl::span<std::string_view> files, const Transform& transform, bool refitting, UniqueTextureArray& textureArray);
+    MeshSequence(std::span<std::string_view> files, bool refitting, UniqueTextureArray& textureArray);
+    MeshSequence(std::span<std::string_view> files, const Transform& transform, bool refitting, UniqueTextureArray& textureArray);
     ~MeshSequence() = default;
 
     void goToNextFrame();
 
-    gsl::span<const VertexSceneData> getVertices() const override { return m_frames[m_currentFrame].vertices; }
-    gsl::span<const TriangleSceneData> getTriangles() const override { return m_frames[m_currentFrame].triangles; }
-    gsl::span<const Material> getMaterials() const override { return m_frames[m_currentFrame].materials; }
-    gsl::span<const SubBVHNode> getBvhNodes() const override { return m_bvhNodes; }
+    std::span<const VertexSceneData> getVertices() const override { return m_frames[m_currentFrame].vertices; }
+    std::span<const TriangleSceneData> getTriangles() const override { return m_frames[m_currentFrame].triangles; }
+    std::span<const Material> getMaterials() const override { return m_frames[m_currentFrame].materials; }
+    std::span<const SubBVHNode> getBvhNodes() const override { return m_bvhNodes; }
 
-    gsl::span<const uint32_t> getEmissiveTriangles() const override { return {}; } // Not implemented yet
+    std::span<const uint32_t> getEmissiveTriangles() const override { return {}; } // Not implemented yet
 
     uint32_t getBvhRootNode() const override { return m_bvhRootNode; };
 
@@ -50,7 +50,7 @@ private:
         std::vector<TriangleSceneData>& outTriangles,
         std::vector<Material>& outMaterials);
     void loadFile(std::string_view fileName, const Transform& offset, UniqueTextureArray& textureArray);
-    void loadFiles(gsl::span<std::string_view> files, const Transform& offset, UniqueTextureArray& textureArray);
+    void loadFiles(std::span<std::string_view> files, const Transform& offset, UniqueTextureArray& textureArray);
 
 private:
     struct MeshFrame {

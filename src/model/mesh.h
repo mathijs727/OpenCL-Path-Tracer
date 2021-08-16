@@ -4,9 +4,9 @@
 #include "opencl/texture.h"
 #include "transform.h"
 #include "vertices.h"
+#include <filesystem>
 #include <glm/glm.hpp>
 #include <optional>
-#include <string_view>
 #include <vector>
 
 struct aiMesh;
@@ -16,18 +16,17 @@ namespace raytracer {
 
 class Mesh : public IMesh {
 public:
-    Mesh() = delete;
+    Mesh(const std::filesystem::path& filePath, const Transform& offset, const Material& overrideMaterial, UniqueTextureArray& textureArray);
+    Mesh(const std::filesystem::path& filePath, const Transform& offset, UniqueTextureArray& textureArray);
+    Mesh(const std::filesystem::path& filePath, const Material& overrideMaterial, UniqueTextureArray& textureArray);
+    Mesh(const std::filesystem::path& filePath, UniqueTextureArray& textureArray);
     ~Mesh() = default;
-    Mesh(std::string_view fileName, const Transform& offset, const Material& overrideMaterial, UniqueTextureArray& textureArray);
-    Mesh(std::string_view fileName, const Transform& offset, UniqueTextureArray& textureArray);
-    Mesh(std::string_view fileName, const Material& overrideMaterial, UniqueTextureArray& textureArray);
-    Mesh(std::string_view fileName, UniqueTextureArray& textureArray);
 
-    gsl::span<const VertexSceneData> getVertices() const override { return m_vertices; }
-    gsl::span<const TriangleSceneData> getTriangles() const override { return m_triangles; }
-    gsl::span<const Material> getMaterials() const override { return m_materials; }
-    gsl::span<const SubBVHNode> getBvhNodes() const override { return m_bvhNodes; }
-    gsl::span<const uint32_t> getEmissiveTriangles() const override { return m_emissiveTriangles; }
+    std::span<const VertexSceneData> getVertices() const override { return m_vertices; }
+    std::span<const TriangleSceneData> getTriangles() const override { return m_triangles; }
+    std::span<const Material> getMaterials() const override { return m_materials; }
+    std::span<const SubBVHNode> getBvhNodes() const override { return m_bvhNodes; }
+    std::span<const uint32_t> getEmissiveTriangles() const override { return m_emissiveTriangles; }
 
     uint32_t getBvhRootNode() const override { return m_bvhRootNode; };
 
@@ -37,10 +36,10 @@ public:
     uint32_t maxNumTriangles() const override { return (uint32_t)m_triangles.size(); };
     uint32_t maxNumMaterials() const override { return (uint32_t)m_materials.size(); };
     uint32_t maxNumBvhNodes() const override { return (uint32_t)m_bvhNodes.size(); };
-    void buildBvh() override{}; // Only necessary for dynamic objects
+    void buildBvh() override {}; // Only necessary for dynamic objects
 private:
     void loadFromFile(
-        std::string_view fileName,
+        const std::filesystem::path& filePath,
         const Transform& offset,
         std::optional<Material> overrideMaterial,
         UniqueTextureArray& textureArray);
@@ -49,7 +48,7 @@ private:
         const aiScene* scene,
         unsigned meshIndex,
         const glm::mat4& transformMatrix,
-        std::string_view texturePath,
+        const std::filesystem::path& textureBasePath,
         UniqueTextureArray& textureArray,
         std::optional<Material> overrideMaterial);
     void collectEmissiveTriangles();

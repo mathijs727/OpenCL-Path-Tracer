@@ -5,6 +5,7 @@
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
+#include <cassert>
 #include <fstream>
 #include <iostream>
 #include <stack>
@@ -12,31 +13,31 @@
 
 namespace raytracer {
 
-Mesh::Mesh(std::string_view fileName, const Transform& offset, const Material& overrideMaterial, UniqueTextureArray& textureArray)
+Mesh::Mesh(const std::filesystem::path& filePath, const Transform& offset, const Material& overrideMaterial, UniqueTextureArray& textureArray)
 {
-    loadFromFile(fileName, offset, overrideMaterial, textureArray);
+    loadFromFile(filePath, offset, overrideMaterial, textureArray);
 }
 
-Mesh::Mesh(std::string_view fileName, const Transform& offset, UniqueTextureArray& textureArray)
+Mesh::Mesh(const std::filesystem::path& filePath, const Transform& offset, UniqueTextureArray& textureArray)
 {
-    loadFromFile(fileName, offset, {}, textureArray);
+    loadFromFile(filePath, offset, {}, textureArray);
 }
 
-Mesh::Mesh(std::string_view fileName, const Material& overrideMaterial, UniqueTextureArray& textureArray)
+Mesh::Mesh(const std::filesystem::path& filePath, const Material& overrideMaterial, UniqueTextureArray& textureArray)
 {
-    loadFromFile(fileName, {}, overrideMaterial, textureArray);
+    loadFromFile(filePath, {}, overrideMaterial, textureArray);
 }
 
-Mesh::Mesh(std::string_view fileName, UniqueTextureArray& textureArray)
+Mesh::Mesh(const std::filesystem::path& filePath, UniqueTextureArray& textureArray)
 {
-    loadFromFile(fileName, {}, {}, textureArray);
+    loadFromFile(filePath, {}, {}, textureArray);
 }
 
 void Mesh::addSubMesh(
     const aiScene* scene,
     unsigned meshIndex,
     const glm::mat4& transformMatrix,
-    std::string_view texturePath,
+    const std::filesystem::path& textureBasePath,
     UniqueTextureArray& textureArray,
     std::optional<Material> overrideMaterial)
 {
@@ -60,9 +61,7 @@ void Mesh::addSubMesh(
             if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
                 aiString path;
                 material->GetTexture(aiTextureType_DIFFUSE, 0, &path);
-                std::string textureFile(texturePath);
-                textureFile += path.C_Str();
-                std::replace(textureFile.begin(), textureFile.end(), '\\', '/');
+                std::filesystem::path textureFile = textureBasePath / path.C_Str();
                 std::cout << "Texture path: " << textureFile << std::endl;
                 m_materials.push_back(Material::Diffuse(textureArray.add(textureFile), ai2glm(colour)));
             } else {
@@ -85,9 +84,9 @@ void Mesh::addSubMesh(
         if (inMesh->HasTextureCoords(0)) {
             texCoords.x = inMesh->mTextureCoords[0][v].x;
             texCoords.y = inMesh->mTextureCoords[0][v].y;
-		} else {
-			texCoords = glm::vec3(0.0f);
-		}
+        } else {
+            texCoords = glm::vec3(0.0f);
+        }
 
         // Fill in the vertex
         VertexSceneData vertex;
@@ -133,7 +132,7 @@ void Mesh::collectEmissiveTriangles()
 }
 
 void Mesh::loadFromFile(
-    std::string_view fileName,
+    const std::filesystem::path& filePath,
     const Transform& offset,
     std::optional<Material> overrideMaterial,
     UniqueTextureArray& textureArray)
@@ -148,13 +147,13 @@ void Mesh::loadFromFile(
         }
     };
 
-    std::string path = getPath(fileName);
+    const std::string folderPath = filePath.parent_path().string();
 
+    assert(std::filesystem::exists(filePath));
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(fileName.data(), aiProcessPreset_TargetRealtime_MaxQuality);
-
-    if (scene == nullptr || scene->mRootNode == nullptr)
-        std::cout << "Mesh not found: " << fileName << std::endl;
+    const aiScene* scene = importer.ReadFile(filePath.string().c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
+    assert(scene != nullptr);
+    assert(scene->mRootNode != nullptr);
 
     if (scene != nullptr && scene->mFlags != AI_SCENE_FLAGS_INCOMPLETE && scene->mRootNode != nullptr) {
         std::stack<StackElement> stack;
@@ -164,7 +163,7 @@ void Mesh::loadFromFile(
             stack.pop();
             glm::mat4 cur_transform = current.transform * ai2glm(current.node->mTransformation);
             for (unsigned i = 0; i < current.node->mNumMeshes; ++i) {
-                addSubMesh(scene, current.node->mMeshes[i], cur_transform, path, textureArray, overrideMaterial);
+                addSubMesh(scene, current.node->mMeshes[i], cur_transform, folderPath, textureArray, overrideMaterial);
             }
             for (unsigned i = 0; i < current.node->mNumChildren; ++i) {
                 stack.push(StackElement(current.node->mChildren[i], cur_transform));
@@ -172,8 +171,7 @@ void Mesh::loadFromFile(
         }
     }
 
-    std::string bvhFileName(fileName);
-    bvhFileName += ".bvh";
+    std::string bvhFileName = filePath.string() + ".bvh";
     bool buildBvh = true;
     if (fileExists(bvhFileName)) {
         std::cout << "Loading bvh from file: " << bvhFileName << std::endl;

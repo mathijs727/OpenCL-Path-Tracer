@@ -2,7 +2,7 @@
 #include "aabb.h"
 #include "bvh_nodes.h"
 #include "opencl/cl_helpers.h"
-#include <gsl/gsl>
+#include <span>
 #include <limits>
 #include <optional>
 
@@ -19,10 +19,10 @@ struct ObjectSplit {
 
 std::optional<ObjectSplit> findObjectSplitBinned(
     const AABB& nodeBounds,
-    gsl::span<const PrimitiveData> primitives,
+    std::span<const PrimitiveData> primitives,
     const OriginalPrimitives& orignalPrimitives,
-    gsl::span<const int> axisToConsider = std::array{ 0, 1, 2 });
-std::pair<AABB, AABB> performObjectSplit(gsl::span<const PrimitiveData> primitives, const OriginalPrimitives&, const ObjectSplit& split, PrimInsertIter left, PrimInsertIter right);
-size_t performObjectSplitInPlace(gsl::span<PrimitiveData> primitives, const ObjectSplit& split);
+    std::span<const int> axisToConsider);
+std::pair<AABB, AABB> performObjectSplit(std::span<const PrimitiveData> primitives, const OriginalPrimitives&, const ObjectSplit& split, PrimInsertIter left, PrimInsertIter right);
+size_t performObjectSplitInPlace(std::span<PrimitiveData> primitives, const ObjectSplit& split);
 
 }

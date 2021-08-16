@@ -21,9 +21,9 @@ struct ObjectBin {
     }
 };
 
-static std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> performObjectBinning(const AABB& nodeBounds, int axis, gsl::span<const PrimitiveData> primitives);
+static std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> performObjectBinning(const AABB& nodeBounds, int axis, std::span<const PrimitiveData> primitives);
 
-std::optional<ObjectSplit> findObjectSplitBinned(const AABB& nodeBounds, gsl::span<const PrimitiveData> primitives, const OriginalPrimitives&, gsl::span<const int> axisToConsider)
+std::optional<ObjectSplit> findObjectSplitBinned(const AABB& nodeBounds, std::span<const PrimitiveData> primitives, const OriginalPrimitives&, std::span<const int> axisToConsider)
 {
     glm::vec3 extent = nodeBounds.extent();
 
@@ -73,7 +73,7 @@ std::optional<ObjectSplit> findObjectSplitBinned(const AABB& nodeBounds, gsl::sp
     return bestSplit;
 }
 
-std::pair<AABB, AABB> performObjectSplit(gsl::span<const PrimitiveData> primitives, const OriginalPrimitives&, const ObjectSplit& split, PrimInsertIter left, PrimInsertIter right)
+std::pair<AABB, AABB> performObjectSplit(std::span<const PrimitiveData> primitives, const OriginalPrimitives&, const ObjectSplit& split, PrimInsertIter left, PrimInsertIter right)
 {
     std::partition_copy(primitives.begin(), primitives.end(), left, right, [&](const PrimitiveData& primitive) -> bool {
         return primitive.bounds.center()[split.axis] < split.position;
@@ -81,7 +81,7 @@ std::pair<AABB, AABB> performObjectSplit(gsl::span<const PrimitiveData> primitiv
     return { split.leftBounds, split.rightBounds };
 }
 
-size_t performObjectSplitInPlace(gsl::span<PrimitiveData> primitives, const ObjectSplit& split)
+size_t performObjectSplitInPlace(std::span<PrimitiveData> primitives, const ObjectSplit& split)
 {
     auto iter = std::partition(primitives.begin(), primitives.end(), [&](const PrimitiveData& primitive) {
         return primitive.bounds.center()[split.axis] < split.position;
@@ -89,7 +89,7 @@ size_t performObjectSplitInPlace(gsl::span<PrimitiveData> primitives, const Obje
     return std::distance(primitives.begin(), iter);
 }
 
-static std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> performObjectBinning(const AABB& nodeBounds, int axis, gsl::span<const PrimitiveData> primitives)
+static std::array<ObjectBin, BVH_OBJECT_BIN_COUNT> performObjectBinning(const AABB& nodeBounds, int axis, std::span<const PrimitiveData> primitives)
 {
     glm::vec3 extent = nodeBounds.max - nodeBounds.min;
 

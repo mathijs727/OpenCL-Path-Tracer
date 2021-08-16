@@ -6,7 +6,7 @@
 namespace raytracer {
 
 Scene::Scene()
-    : m_rootNode({ nullptr, {}, {}, {}, {} })
+    : m_rootNode()
 {
 }
 

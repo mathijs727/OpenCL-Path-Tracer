@@ -10,6 +10,8 @@
 //#include "texture.h"
 #include <algorithm>
 #include <chrono>
+#include <clRNG/lfsr113.h>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <random>
@@ -18,15 +20,16 @@
 #include <utility>
 #include <vector>
 
-#include <clRNG/lfsr113.h>
+const std::filesystem::path basePath = BASE_PATH;
+const std::filesystem::path clRngIncludeDir = CLRNG_INCLUDE_DIR;
 
 static size_t toMultipleOf(size_t N, size_t base);
 static int roundUp(int numToRound, int multiple);
 
 template <typename T>
-static void writeToBuffer(cl::CommandQueue& queue, cl::Buffer& buffer, gsl::span<T> items, size_t offset = 0);
+static void writeToBuffer(cl::CommandQueue& queue, cl::Buffer& buffer, std::span<T> items, size_t offset = 0);
 template <typename T>
-static void writeToBuffer(cl::CommandQueue& queue, cl::Buffer& buffer, gsl::span<T> items, size_t offset, std::vector<cl::Event>& events);
+static void writeToBuffer(cl::CommandQueue& queue, cl::Buffer& buffer, std::span<T> items, size_t offset, std::vector<cl::Event>& events);
 
 //#define OUTPUT_AVERAGE_GRAYSCALE
 //#define RANDOM_XOR32
@@ -63,15 +66,15 @@ RayTracer::RayTracer(int width, int height, std::shared_ptr<Scene> scene, const 
     , m_samplesPerPixel(0)
     , m_screenWidth(width)
     , m_screenHeight(height)
-    , m_topBvhRootNode{ 0, 0 }
-    , m_numEmissiveTriangles{ 0, 0 }
+    , m_topBvhRootNode { 0, 0 }
+    , m_numEmissiveTriangles { 0, 0 }
 {
-    m_generateRaysKernel = loadKernel("../../assets/cl/kernel.cl", "generatePrimaryRays");
-    m_intersectShadowsKernel = loadKernel("../../assets/cl/kernel.cl", "intersectShadows");
-    m_intersectWalkKernel = loadKernel("../../assets/cl/kernel.cl", "intersectWalk");
-    m_shadingKernel = loadKernel("../../assets/cl/kernel.cl", "shade");
-    m_updateKernelDataKernel = loadKernel("../../assets/cl/kernel.cl", "updateKernelData");
-    m_accumulateKernel = loadKernel("../../assets/cl/accumulate.cl", "accumulate");
+    m_generateRaysKernel = loadKernel(basePath  / "assets/cl/kernel.cl", "generatePrimaryRays");
+    m_intersectShadowsKernel = loadKernel(basePath  / "assets/cl/kernel.cl", "intersectShadows");
+    m_intersectWalkKernel = loadKernel(basePath / "assets/cl/kernel.cl", "intersectWalk");
+    m_shadingKernel = loadKernel(basePath / "assets/cl/kernel.cl", "shade");
+    m_updateKernelDataKernel = loadKernel(basePath / "assets/cl/kernel.cl", "updateKernelData");
+    m_accumulateKernel = loadKernel(basePath / "assets/cl/accumulate.cl", "accumulate");
 
     initBuffersAndTransferStaticData(scene, materialTextures);
     initAndTransferSkydome(skydomeTextures);
@@ -268,15 +271,15 @@ void RayTracer::initBuffersAndTransferStaticData(std::shared_ptr<Scene> scene, c
     }
 
     auto queue = m_clContext.getGraphicsQueue();
-    writeToBuffer(queue, m_verticesBuffers[0], gsl::make_span(m_verticesHost));
-    writeToBuffer(queue, m_trianglesBuffers[0], gsl::make_span(m_trianglesHost));
-    writeToBuffer(queue, m_materialsBuffers[0], gsl::make_span(m_materialsHost));
-    writeToBuffer(queue, m_subBvhBuffers[0], gsl::make_span(m_subBvhNodesHost));
+    writeToBuffer(queue, m_verticesBuffers[0], std::span(m_verticesHost));
+    writeToBuffer(queue, m_trianglesBuffers[0], std::span(m_trianglesHost));
+    writeToBuffer(queue, m_materialsBuffers[0], std::span(m_materialsHost));
+    writeToBuffer(queue, m_subBvhBuffers[0], std::span(m_subBvhNodesHost));
 
-    writeToBuffer(queue, m_verticesBuffers[1], gsl::make_span(m_verticesHost));
-    writeToBuffer(queue, m_trianglesBuffers[1], gsl::make_span(m_trianglesHost));
-    writeToBuffer(queue, m_materialsBuffers[1], gsl::make_span(m_materialsHost));
-    writeToBuffer(queue, m_subBvhBuffers[1], gsl::make_span(m_subBvhNodesHost));
+    writeToBuffer(queue, m_verticesBuffers[1], std::span(m_verticesHost));
+    writeToBuffer(queue, m_trianglesBuffers[1], std::span(m_trianglesHost));
+    writeToBuffer(queue, m_materialsBuffers[1], std::span(m_materialsHost));
+    writeToBuffer(queue, m_subBvhBuffers[1], std::span(m_subBvhNodesHost));
 
     m_materialTextures = std::make_unique<CLTextureArray>(textureArray, m_clContext, 1024, 1024, false);
 
@@ -553,15 +556,15 @@ void RayTracer::transferDynamicData()
     m_emissiveTrianglesHost.clear();
     collectTransformedLights(&m_scene->getRootNode(), glm::mat4(1.0f));
     m_numEmissiveTriangles[copyBuffers] = (uint32_t)m_emissiveTrianglesHost.size();
-    writeToBuffer(copyQueue, m_emissiveTrianglesBuffers[copyBuffers], gsl::make_span(m_emissiveTrianglesHost), 0, waitEvents);
+    writeToBuffer(copyQueue, m_emissiveTrianglesBuffers[copyBuffers], std::span(m_emissiveTrianglesHost), 0, waitEvents);
 
     if (m_verticesHost.size() > static_cast<size_t>(m_numStaticVertices)) // Only copy if there is any dynamic geometry
     {
         // Dynamic data is appended after the static data
-        writeToBuffer(copyQueue, m_verticesBuffers[copyBuffers], gsl::make_span(m_verticesHost), m_numStaticVertices, waitEvents);
-        writeToBuffer(copyQueue, m_trianglesBuffers[copyBuffers], gsl::make_span(m_trianglesHost), m_numStaticTriangles, waitEvents);
-        writeToBuffer(copyQueue, m_materialsBuffers[copyBuffers], gsl::make_span(m_materialsHost), m_numStaticMaterials, waitEvents);
-        writeToBuffer(copyQueue, m_subBvhBuffers[copyBuffers], gsl::make_span(m_subBvhNodesHost), m_numStaticBvhNodes, waitEvents);
+        writeToBuffer(copyQueue, m_verticesBuffers[copyBuffers], std::span(m_verticesHost), m_numStaticVertices, waitEvents);
+        writeToBuffer(copyQueue, m_trianglesBuffers[copyBuffers], std::span(m_trianglesHost), m_numStaticTriangles, waitEvents);
+        writeToBuffer(copyQueue, m_materialsBuffers[copyBuffers], std::span(m_materialsHost), m_numStaticMaterials, waitEvents);
+        writeToBuffer(copyQueue, m_subBvhBuffers[copyBuffers], std::span(m_subBvhNodesHost), m_numStaticBvhNodes, waitEvents);
     }
 
     // Update the top level BVH and copy it to the GPU on a separate copy queue
@@ -572,7 +575,7 @@ void RayTracer::transferDynamicData()
     auto [topBvhRootNodeID, topBvhRootNodes] = buildTopBVH(m_scene->getRootNode(), meshBvhOffsets);
     m_topBvhRootNode[copyBuffers] = topBvhRootNodeID;
     m_topBvhNodesHost = std::move(topBvhRootNodes);
-    writeToBuffer(copyQueue, m_topBvhBuffers[copyBuffers], gsl::make_span(m_topBvhNodesHost), 0, waitEvents);
+    writeToBuffer(copyQueue, m_topBvhBuffers[copyBuffers], std::span(m_topBvhNodesHost), 0, waitEvents);
 
     if (m_verticesHost.size() > static_cast<size_t>(m_numStaticVertices)) {
         timeOpenCL(waitEvents[0], "vertex upload");
@@ -784,14 +787,14 @@ void RayTracer::initBuffers(
     checkClErr(err, "cl::Buffer");
 }
 
-cl::Kernel RayTracer::loadKernel(std::string_view fileName, std::string_view funcName)
+cl::Kernel RayTracer::loadKernel(const std::filesystem::path& filePath, const std::string& funcName)
 {
     cl_int err;
 
-    std::ifstream file(fileName.data());
+    std::ifstream file(filePath);
     {
         std::string errorMessage = "Cannot open file: ";
-        errorMessage += fileName;
+        errorMessage += filePath.string();
         checkClErr(file.is_open() ? CL_SUCCESS : -1, errorMessage.c_str());
     }
 
@@ -803,7 +806,7 @@ cl::Kernel RayTracer::loadKernel(std::string_view fileName, std::string_view fun
     cl::Program::Sources sources;
     sources.push_back(std::make_pair(prog.c_str(), prog.length()));
     cl::Program program(m_clContext, sources);
-    std::string opts = "-I ../../assets/cl/ -I ../../assets/cl/clRNG/ ";
+    std::string opts = "-I " + basePath.string() + "/assets/cl/ -I " + clRngIncludeDir.string() + " ";
 #ifdef RANDOM_XOR32
     opts += "-D RANDOM_XOR32 ";
 #elif defined(RANDOM_LFSR113)
@@ -820,8 +823,8 @@ cl::Kernel RayTracer::loadKernel(std::string_view fileName, std::string_view fun
     {
         if (err != CL_SUCCESS) {
             std::string errorMessage = "Cannot build program: ";
-            errorMessage += fileName;
-            std::cout << "Cannot build program: " << fileName << std::endl;
+            errorMessage += filePath.string();
+            std::cout << "Cannot build program: " << filePath << std::endl;
 
             std::string error;
             program.getBuildInfo(m_clContext.getDevice(), CL_PROGRAM_BUILD_LOG, &error);
@@ -834,10 +837,10 @@ cl::Kernel RayTracer::loadKernel(std::string_view fileName, std::string_view fun
         }
     }
 
-    cl::Kernel kernel(program, funcName.data(), &err);
+    cl::Kernel kernel(program, funcName.c_str(), &err);
     {
         std::string errorMessage = "Cannot create kernel: ";
-        errorMessage += fileName;
+        errorMessage += filePath.string();
         checkClErr(err, errorMessage.c_str());
     }
 
@@ -867,7 +870,7 @@ template <typename T>
 static void writeToBuffer(
     cl::CommandQueue& queue,
     cl::Buffer& buffer,
-    gsl::span<T> items,
+    std::span<T> items,
     size_t offset)
 {
     if (items.size() == 0)
@@ -886,7 +889,7 @@ template <typename T>
 static void writeToBuffer(
     cl::CommandQueue& queue,
     cl::Buffer& buffer,
-    gsl::span<T> items,
+    std::span<T> items,
     size_t offset,
     std::vector<cl::Event>& events)
 {

@@ -1,0 +1,15 @@
+{
+  "name": "opencl-path-tracer",
+  "version": "0.0.1",
+  "dependencies": [
+    "assimp",
+    "clrng",
+    "eabase",
+    "eastl",
+    "freeimage",
+    "glew",
+    "glfw3",
+    "glm"
+  ],
+  "builtin-baseline": "6bc4362fb49e53f1fff7f51e4e27e1946755ecc6"
+}

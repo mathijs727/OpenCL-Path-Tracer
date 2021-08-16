@@ -1,7 +1,7 @@
 #pragma once
 #include "aabb.h"
 #include "bvh_nodes.h"
-#include <gsl/gsl>
+#include <span>
 #include <optional>
 #include <tuple>
 
@@ -21,9 +21,9 @@ struct SpatialSplit {
 
 std::optional<SpatialSplit> findSpatialSplitBinned(
     const AABB& nodeBounds,
-    gsl::span<const PrimitiveData> primitives,
+    std::span<const PrimitiveData> primitives,
     const OriginalPrimitives& orignalPrimitives,
-    gsl::span<const int> axisToConsider = std::array{ 0, 1, 2 });
-std::pair<AABB, AABB> performSpatialSplit(gsl::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives, const SpatialSplit& split, PrimInsertIter left, PrimInsertIter right);
+    std::span<const int> axisToConsider);
+std::pair<AABB, AABB> performSpatialSplit(std::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives, const SpatialSplit& split, PrimInsertIter left, PrimInsertIter right);
 
 }

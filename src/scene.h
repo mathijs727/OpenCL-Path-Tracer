@@ -2,7 +2,7 @@
 #include "model/material.h"
 #include "model/mesh.h"
 #include "ray.h"
-#include <gsl/gsl>
+#include <span>
 #include <memory>
 #include <optional>
 #include <unordered_map>
@@ -11,10 +11,7 @@
 namespace raytracer {
 
 struct SceneNode {
-    SceneNode() = delete;
-    SceneNode(SceneNode&&) = default;
-
-    const SceneNode* parent;
+    const SceneNode* parent { nullptr };
     std::vector<std::unique_ptr<SceneNode>> children;
     AABB bounds;
     Transform transform;
@@ -43,7 +40,7 @@ public:
 
     SceneNode& getRootNode() { return m_rootNode; }
     const SceneNode& getRootNode() const { return m_rootNode; }
-    gsl::span<MeshBvhPair> getMeshes() { return m_meshes; };
+    std::span<MeshBvhPair> getMeshes() { return m_meshes; };
 
 private:
     SceneNode m_rootNode;

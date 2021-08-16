@@ -10,8 +10,8 @@
 #define randRandomInteger(STREAM, min, max) xor32RandomInteger(STREAM, min, max)
 #else
 
-#include <clRNG/clRNG.clh>
-#include <clRNG/lfsr113.clh>
+#include "clRNG/clRNG.clh"
+#include "clRNG/lfsr113.clh"
 #ifdef RANDOM_LFSR113
 #define randStream clrngLfsr113Stream
 #define randHostStream clrngLfsr113HostStream

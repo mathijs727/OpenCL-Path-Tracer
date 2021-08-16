@@ -1,5 +1,6 @@
 #pragma once
 #include "opencl/cl_gl_includes.h" // Includes GLEW
+#include <filesystem>
 
 class GLOutput {
 public:
@@ -10,7 +11,7 @@ public:
     inline GLuint getGLTexture() const { return m_texture; };
 
 private:
-    GLuint loadShader(const char* fileName, GLenum type);
+    GLuint loadShader(const std::filesystem::path& filePath, GLenum type);
 
 private:
     GLuint m_texture;

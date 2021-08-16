@@ -1,6 +1,9 @@
 #include "gloutput.h"
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+
+const std::filesystem::path basePath = BASE_PATH;
 
 GLOutput::GLOutput(int width, int height)
 {
@@ -45,8 +48,8 @@ GLOutput::GLOutput(int width, int height)
 
     // Load shader
     {
-        GLuint vertexShader = loadShader("../../assets/gl/vs_tex.glsl", GL_VERTEX_SHADER);
-        GLuint fragmentShader = loadShader("../../assets/gl/fs_tex.glsl", GL_FRAGMENT_SHADER);
+        GLuint vertexShader = loadShader(basePath  / "assets/gl/vs_tex.glsl", GL_VERTEX_SHADER);
+        GLuint fragmentShader = loadShader(basePath  / "assets/gl/fs_tex.glsl", GL_FRAGMENT_SHADER);
 
         m_shader = glCreateProgram();
         glAttachShader(m_shader, vertexShader);
@@ -81,12 +84,12 @@ void GLOutput::render()
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
-GLuint GLOutput::loadShader(const char* fileName, GLenum type)
+GLuint GLOutput::loadShader(const std::filesystem::path& filePath, GLenum type)
 {
-    std::ifstream file(fileName);
+    std::ifstream file(filePath);
     if (!file.is_open()) {
         std::string errorMessage = "Cannot open file: ";
-        errorMessage += fileName;
+        errorMessage += filePath.string();
         std::cout << errorMessage.c_str() << std::endl;
     }
 

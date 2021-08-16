@@ -1,14 +1,14 @@
 #pragma once
 #include "aabb.h"
 #include "vertices.h"
-#include <gsl/gsl>
+#include <span>
 #include <vector>
 
 namespace raytracer {
 
 struct OriginalPrimitives {
-    gsl::span<const VertexSceneData> vertices;
-    gsl::span<const TriangleSceneData> triangles;
+    std::span<const VertexSceneData> vertices;
+    std::span<const TriangleSceneData> triangles;
 };
 
 struct PrimitiveData {

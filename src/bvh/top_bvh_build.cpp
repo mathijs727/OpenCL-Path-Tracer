@@ -1,15 +1,19 @@
 #include "top_bvh_build.h"
 #include "scene.h"
+#include <algorithm>
+#include <array>
+#include <span>
 #include <stack>
+#include <vector>
 
 namespace raytracer {
 
-static uint32_t findBestMatch(gsl::span<const TopBVHNode> allNodes, gsl::span<uint32_t> indicesToConsider, uint32_t thisNodeID);
-static TopBVHNode createNode(const SceneNode& sceneNode, const glm::mat4& transform, gsl::span<const uint32_t> meshBvhOffsets);
+static uint32_t findBestMatch(std::span<const TopBVHNode> allNodes, std::span<uint32_t> indicesToConsider, uint32_t thisNodeID);
+static TopBVHNode createNode(const SceneNode& sceneNode, const glm::mat4& transform, std::span<const uint32_t> meshBvhOffsets);
 static TopBVHNode mergeNodes(uint32_t aID, const TopBVHNode nodeA, uint32_t bID, const TopBVHNode nodeB);
 static AABB calcTransformedAABB(const AABB& bounds, glm::mat4 transform);
 
-BvhBuildReturnType buildTopBVH(const SceneNode& rootSceneNode, gsl::span<const uint32_t> meshBvhOffsets)
+BvhBuildReturnType buildTopBVH(const SceneNode& rootSceneNode, std::span<const uint32_t> meshBvhOffsets)
 {
     std::vector<TopBVHNode> outBvhNodes;
 
@@ -73,7 +77,7 @@ static float calcCombinedSurfaceArea(const TopBVHNode& a, const TopBVHNode& b)
     return 2.0f * (leftArea + topArea + backArea);
 }
 
-static uint32_t findBestMatch(gsl::span<const TopBVHNode> allNodes, gsl::span<uint32_t> indicesToConsider, uint32_t thisNodeID)
+static uint32_t findBestMatch(std::span<const TopBVHNode> allNodes, std::span<uint32_t> indicesToConsider, uint32_t thisNodeID)
 {
     auto iter = std::min_element(indicesToConsider.begin(), indicesToConsider.end(), [&](uint32_t a, uint32_t b) -> bool {
         if (a == thisNodeID)
@@ -88,7 +92,7 @@ static uint32_t findBestMatch(gsl::span<const TopBVHNode> allNodes, gsl::span<ui
     return *iter;
 }
 
-static TopBVHNode createNode(const SceneNode& sceneNode, const glm::mat4& transform, gsl::span<const uint32_t> meshBvhOffsets)
+static TopBVHNode createNode(const SceneNode& sceneNode, const glm::mat4& transform, std::span<const uint32_t> meshBvhOffsets)
 {
     assert(sceneNode.subBvhRootID);
     assert(sceneNode.meshID);

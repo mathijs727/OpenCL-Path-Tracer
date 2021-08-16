@@ -13,6 +13,9 @@
 #include "ui/window.h"
 #include <glm/glm.hpp>
 #include <string_view>
+#include <filesystem>
+
+const std::filesystem::path basePath = BASE_PATH;
 
 using namespace ui;
 using namespace raytracer;
@@ -23,7 +26,7 @@ static const double cameraViewSpeed = 0.05;
 static const double cameraMoveSpeed = 1.0;
 
 void createScene(Scene& scene, UniqueTextureArray& textureArray);
-void createSkydome(std::string_view fileName, bool isLinear, float brightnessMultiplier, UniqueTextureArray& textureArray);
+void createSkydome(const std::filesystem::path& filePath, bool isLinear, float brightnessMultiplier, UniqueTextureArray& textureArray);
 
 void cameraLookHandler(Camera& camera, glm::dvec2 mousePosition, bool ignoreMovement);
 void cameraMoveHandler(Camera& camera, const ui::Window& window, double dt);
@@ -49,7 +52,7 @@ int main(int argc, char* argv[])
     UniqueTextureArray materialTextures;
     createScene(*scene, materialTextures);
     UniqueTextureArray skydomeTextures;
-    createSkydome("../../assets/skydome/DF360_005_Ref.hdr", true, 75.0f, skydomeTextures);
+    createSkydome(basePath  / "assets/skydome/DF360_005_Ref.hdr", true, 75.0f, skydomeTextures);
 
     // Window creates OpenGL context so all OpenGL code should come afterwards.
     ui::Window window(screenWidth, screenHeight, "Hello world!");
@@ -125,7 +128,7 @@ void createScene(Scene& scene, UniqueTextureArray& textureArray)
         transform.location = glm::vec3(0, 10, -0.5f);
         transform.scale = glm::vec3(20, 1, 10);
         transform.orientation = glm::quat(glm::vec3(Pi<float>::value, 0, 0)); // Flip upside down
-        auto lightPlane = std::make_shared<Mesh>("../../assets/3dmodels/plane/plane.obj", Material::Emissive(5500.0f, 1000.0f), textureArray);
+        auto lightPlane = std::make_shared<Mesh>(basePath / "assets/3dmodels/plane/plane.obj", Material::Emissive(5500.0f, 1000.0f), textureArray);
         scene.addNode(lightPlane, transform);
     }
 
@@ -133,7 +136,7 @@ void createScene(Scene& scene, UniqueTextureArray& textureArray)
     {
         Transform transform;
         transform.scale = glm::vec3(0.005f);
-        auto sponza = std::make_shared<Mesh>("../../assets/3dmodels/sponza-crytek/sponza.obj", textureArray);
+        auto sponza = std::make_shared<Mesh>(basePath  / "assets/3dmodels/sponza-crytek/sponza.obj", textureArray);
         scene.addNode(sponza, transform);
     }
 
@@ -142,7 +145,7 @@ void createScene(Scene& scene, UniqueTextureArray& textureArray)
         Transform transform;
         transform.scale = glm::vec3(4.0f);
         auto bunny = std::make_shared<Mesh>(
-            "../../assets/3dmodels/stanford/bunny/bun_zipper.ply",
+            basePath  / "assets/3dmodels/stanford/bunny/bun_zipper.ply",
             Material::PBRMetal(
                 glm::vec3(0.955f, 0.638f, 0.538f), // Copper
                 0.8f),
@@ -153,9 +156,9 @@ void createScene(Scene& scene, UniqueTextureArray& textureArray)
     }
 }
 
-void createSkydome(std::string_view fileName, bool isLinear, float brightnessMultiplier, UniqueTextureArray& textureArray)
+void createSkydome(const std::filesystem::path& filePath, bool isLinear, float brightnessMultiplier, UniqueTextureArray& textureArray)
 {
-    textureArray.add(fileName, isLinear, brightnessMultiplier);
+    textureArray.add(filePath, isLinear, brightnessMultiplier);
 }
 
 void cameraLookHandler(Camera& camera, glm::dvec2 mousePosition, bool ignoreMovement)

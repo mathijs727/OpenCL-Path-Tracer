@@ -3,7 +3,7 @@
 
 namespace raytracer {
 
-AABB recurse(gsl::span<SubBVHNode> nodes, uint32_t nodeID, gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
+AABB recurse(std::span<SubBVHNode> nodes, uint32_t nodeID, std::span<const VertexSceneData> vertices, std::span<const TriangleSceneData> triangles)
 {
     auto& node = nodes[nodeID];
     if (node.triangleCount == 0) { // Inner node
@@ -28,7 +28,7 @@ AABB recurse(gsl::span<SubBVHNode> nodes, uint32_t nodeID, gsl::span<const Verte
     }
 }
 
-void refitBVH(gsl::span<SubBVHNode> nodes, uint32_t rootNodeID, gsl::span<const VertexSceneData> vertices, gsl::span<const TriangleSceneData> triangles)
+void refitBVH(std::span<SubBVHNode> nodes, uint32_t rootNodeID, std::span<const VertexSceneData> vertices, std::span<const TriangleSceneData> triangles)
 {
     recurse(nodes, rootNodeID, vertices, triangles);
 }

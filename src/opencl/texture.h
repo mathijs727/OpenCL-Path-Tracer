@@ -1,9 +1,9 @@
 #pragma once
 #include "opencl/cl_gl_includes.h"
 #include "opencl/context.h"
-#include <gsl/gsl>
+#include <filesystem>
 #include <memory>
-#include <string_view>
+#include <span>
 #include <unordered_map>
 #include <vector>
 
@@ -20,8 +20,8 @@ public:
     UniqueTextureArray() = default;
     ~UniqueTextureArray() = default;
 
-    int add(std::string_view filename, bool isLinear = false, float brightnessMultiplier = 1.0f);
-    gsl::span<const TextureFile> getTextureFiles() const;
+    int add(const std::filesystem::path& filePath, bool isLinear = false, float brightnessMultiplier = 1.0f);
+    std::span<const TextureFile> getTextureFiles() const;
 
 private:
     std::vector<TextureFile> m_textureFiles;
@@ -37,8 +37,8 @@ public:
     cl::Image2DArray getImage2DArray() const;
 
 private:
-    void copy(gsl::span<const TextureFile> files, cl::CommandQueue commandQueue);
-    std::unique_ptr<std::byte[]> loadImage(std::string_view filename, bool isLinear, float brightnessMultiplier);
+    void copy(std::span<const TextureFile> files, cl::CommandQueue commandQueue);
+    std::unique_ptr<std::byte[]> loadImage(const std::filesystem::path& filePath, bool isLinear, float brightnessMultiplier);
 
     static cl::Image2DArray createImageArray(cl::Context context, size_t width, size_t height, size_t arrayLength, bool storeAsFloat);
 

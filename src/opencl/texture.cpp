@@ -2,22 +2,23 @@
 #include "opencl/cl_helpers.h"
 #include <FreeImage.h>
 #include <iostream>
+#include <cassert>
 
 namespace raytracer {
 
-int UniqueTextureArray::add(std::string_view filename, bool isLinear, float brightnessMultiplier)
+int UniqueTextureArray::add(const std::filesystem::path& filePath, bool isLinear, float brightnessMultiplier)
 {
-    if (auto iter = m_textureLookupTable.find(std::string(filename)); iter != m_textureLookupTable.end()) {
+    if (auto iter = m_textureLookupTable.find(filePath.string()); iter != m_textureLookupTable.end()) {
         return iter->second;
     } else {
         int id = static_cast<int>(m_textureFiles.size());
-        m_textureFiles.push_back({ std::string(filename), isLinear, brightnessMultiplier });
-        m_textureLookupTable[std::string(filename)] = id;
+        m_textureFiles.push_back({ filePath.string(), isLinear, brightnessMultiplier });
+        m_textureLookupTable[filePath.string()] = id;
         return id;
     }
 }
 
-gsl::span<const TextureFile> UniqueTextureArray::getTextureFiles() const
+std::span<const TextureFile> UniqueTextureArray::getTextureFiles() const
 {
     return m_textureFiles;
 }
@@ -41,9 +42,9 @@ cl::Image2DArray CLTextureArray::getImage2DArray() const
     return m_imageArray;
 }
 
-void CLTextureArray::copy(gsl::span<const TextureFile> files, cl::CommandQueue commandQueue)
+void CLTextureArray::copy(std::span<const TextureFile> files, cl::CommandQueue commandQueue)
 {
-    for (std::ptrdiff_t i = 0; i < files.size(); i++) {
+    for (size_t i = 0; i != files.size(); i++) {
         auto [filename, isLinear, brightnessMultiplier] = files[i];
         auto buffer = loadImage(filename, isLinear, brightnessMultiplier);
         cl::size_t<3> origin;
@@ -68,14 +69,20 @@ void CLTextureArray::copy(gsl::span<const TextureFile> files, cl::CommandQueue c
     }
 }
 
-std::unique_ptr<std::byte[]> CLTextureArray::loadImage(std::string_view filename, bool isLinear, float brightnessMultiplier)
+std::unique_ptr<std::byte[]> CLTextureArray::loadImage(const std::filesystem::path& filePath, bool isLinear, float brightnessMultiplier)
 {
+    assert(std::filesystem::exists(filePath));
+
+    const auto filePathStr = filePath.string();
+    const char* pFilePathCstr = filePathStr.c_str();
+
     // Load file
     FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
-    fif = FreeImage_GetFileType(filename.data(), 0);
+    fif = FreeImage_GetFileType(pFilePathCstr, 0);
     if (fif == FIF_UNKNOWN)
-        fif = FreeImage_GetFIFFromFilename(filename.data());
-    FIBITMAP* tmp = FreeImage_Load(fif, filename.data());
+        fif = FreeImage_GetFIFFromFilename(pFilePathCstr);
+    FIBITMAP* tmp = FreeImage_Load(fif, pFilePathCstr);
+    assert(tmp);
 
     // Resize
     tmp = FreeImage_Rescale(tmp, (int)m_width, (int)m_height, FILTER_LANCZOS3);

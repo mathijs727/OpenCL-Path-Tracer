@@ -24,13 +24,13 @@ MeshSequence::MeshSequence(std::string_view fileName, const Transform& transform
     loadFile(fileName, transform, textureArray);
 }
 
-MeshSequence::MeshSequence(gsl::span<std::string_view> files, bool refitting, UniqueTextureArray& textureArray)
+MeshSequence::MeshSequence(std::span<std::string_view> files, bool refitting, UniqueTextureArray& textureArray)
     : m_refitting(refitting)
 {
     loadFiles(files, {}, textureArray);
 }
 
-MeshSequence::MeshSequence(gsl::span<std::string_view> files, const Transform& transform, bool refitting, UniqueTextureArray& textureArray)
+MeshSequence::MeshSequence(std::span<std::string_view> files, const Transform& transform, bool refitting, UniqueTextureArray& textureArray)
     : m_refitting(refitting)
 {
     loadFiles(files, transform, textureArray);
@@ -214,7 +214,7 @@ void MeshSequence::loadFile(std::string_view fileName, const Transform& offset, 
     }
 }
 
-void MeshSequence::loadFiles(gsl::span<std::string_view> files, const Transform& offset, UniqueTextureArray& textureArray)
+void MeshSequence::loadFiles(std::span<std::string_view> files, const Transform& offset, UniqueTextureArray& textureArray)
 {
 
     for (auto fileName : files) {

@@ -1,7 +1,9 @@
 #include "bvh_spatial_split.h"
-#include "EASTL/fixed_vector.h"
+#include <EASTL/fixed_vector.h>
 #include <algorithm>
 #include <array>
+#include <numeric>
+#include <stdexcept>
 
 namespace raytracer {
 
@@ -22,10 +24,10 @@ struct SpatialBin {
     }
 };
 
-static std::array<SpatialBin, BVH_SPATIAL_BIN_COUNT> performSpatialBinning(const AABB& nodeBounds, int axis, gsl::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives);
+static std::array<SpatialBin, BVH_SPATIAL_BIN_COUNT> performSpatialBinning(const AABB& nodeBounds, int axis, std::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives);
 static std::optional<AABB> clipTriangleBounds(AABB bounds, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3);
 
-std::optional<SpatialSplit> findSpatialSplitBinned(const AABB& nodeBounds, gsl::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives, gsl::span<const int> axisToConsider)
+std::optional<SpatialSplit> findSpatialSplitBinned(const AABB& nodeBounds, std::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives, std::span<const int> axisToConsider)
 {
     glm::vec3 extent = nodeBounds.extent();
 
@@ -65,7 +67,7 @@ std::optional<SpatialSplit> findSpatialSplitBinned(const AABB& nodeBounds, gsl::
             if (!bestSplit || partialSAH < bestSplit->partialSAH) { // Lower surface area heuristic is better
                 assert(mergedLeftBins.rightPlane == mergedRightBins.leftPlane);
                 float position = mergedLeftBins.rightPlane;
-                bestSplit = SpatialSplit{
+                bestSplit = SpatialSplit {
                     axis,
                     position,
                     enterCount,
@@ -81,7 +83,7 @@ std::optional<SpatialSplit> findSpatialSplitBinned(const AABB& nodeBounds, gsl::
     return bestSplit;
 }
 
-std::pair<AABB, AABB> performSpatialSplit(gsl::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives, const SpatialSplit& split, PrimInsertIter left, PrimInsertIter right)
+std::pair<AABB, AABB> performSpatialSplit(std::span<const PrimitiveData> primitives, const OriginalPrimitives& originalPrimitives, const SpatialSplit& split, PrimInsertIter left, PrimInsertIter right)
 {
     // http://www.nvidia.com/docs/IO/77714/sbvh.pdf
     // Reference unsplitting
@@ -129,13 +131,13 @@ std::pair<AABB, AABB> performSpatialSplit(gsl::span<const PrimitiveData> primiti
 
                 if (leftPrimBoundsOpt) {
                     leftBounds.fit(*leftPrimBoundsOpt);
-                    *left++ = PrimitiveData{ primitive.globalIndex, *leftPrimBoundsOpt };
+                    *left++ = PrimitiveData { primitive.globalIndex, *leftPrimBoundsOpt };
                     leftCount++;
                 }
 
                 if (rightPrimBoundsOpt) {
                     rightBounds.fit(*rightPrimBoundsOpt);
-                    *right++ = PrimitiveData{ primitive.globalIndex, *rightPrimBoundsOpt };
+                    *right++ = PrimitiveData { primitive.globalIndex, *rightPrimBoundsOpt };
                     rightCount++;
                 }
             }
@@ -159,7 +161,7 @@ std::pair<AABB, AABB> performSpatialSplit(gsl::span<const PrimitiveData> primiti
     return { leftBounds, rightBounds };
 }
 
-static std::array<SpatialBin, BVH_SPATIAL_BIN_COUNT> performSpatialBinning(const AABB& nodeBounds, int axis, gsl::span<const PrimitiveData> primitives, const OriginalPrimitives& triangleData)
+static std::array<SpatialBin, BVH_SPATIAL_BIN_COUNT> performSpatialBinning(const AABB& nodeBounds, int axis, std::span<const PrimitiveData> primitives, const OriginalPrimitives& triangleData)
 {
     glm::vec3 extent = nodeBounds.max - nodeBounds.min;
 
